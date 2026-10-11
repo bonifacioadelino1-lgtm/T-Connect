@@ -1,4 +1,4 @@
-window.TC_APP_VERSION='2.39.28';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
+window.TC_APP_VERSION='2.39.29';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
 const tcTimeout=(p,ms=10000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado')),ms))]);
 const POS=[-25.9692,32.5732];
 const state={page:'overview',mapType:'roadmap',menuOpen:false,pairingBusy:false,pairingMessage:'',update:{auto:localStorage.getItem('tc_auto_updates')!=='0',checking:false,latest:null,error:''},events:JSON.parse(localStorage.getItem('tc_events')||'[]'),notifications:JSON.parse(localStorage.getItem('tc_notifications')||'[]'),search:'',authenticated:false,authMode:'login',loading:false,recoverySent:false,profile:null,devices:[],messages:[],calls:[],contactsList:[],appsList:[],contactStats:[],trailOn:false,commsSub:false,pairCode:'',pairLink:'',realtime:false,authError:'',lastLocation:null,mapTerminalEvents:JSON.parse(localStorage.getItem('tc_map_terminal_events')||'[]')};
@@ -572,7 +572,7 @@ function openEmergency(){
   el.innerHTML=`<div class="tc-emg-card"><div style="font-size:30px">🆘</div><h2>Emergência</h2><p class="emg-sub">Aja rápido. Escolha uma opção abaixo.</p>${locHtml}
     <button class="tc-emg-btn emg-call" onclick="tcEmergencyCall()">📞 Ligar para emergência (112)</button>
     ${hasLoc?'<button class="tc-emg-btn emg-map" onclick="document.getElementById(\'tc-emg-ov\').remove();go(\'map\')">🗺️ Ver localização no mapa</button>':''}
-    <button class="tc-emg-btn emg-alarm" onclick="tcEmergencyAlarm(this)">🔊 Tocar alarme</button>
+    <button class="tc-emg-btn emg-alarm" onclick="tcEmergencyAlarm(this)">🔊 Tocar alarme no telemóvel da criança</button>
     <button class="tc-emg-close" onclick="document.getElementById('tc-emg-ov').remove()">Fechar</button>
   </div>`;
   document.body.appendChild(el);
@@ -580,8 +580,9 @@ function openEmergency(){
   try{addEvent('SOS','Painel de emergência aberto no Guardian.',{status:'EMERGÊNCIA',source:'Guardian'});}catch(_){}
 }
 function tcEmergencyCall(){ if(!confirm('Ligar para o número de emergência 112?'))return; try{location.href='tel:112';}catch(_){ alert('Não foi possível iniciar a chamada. Ligue manualmente para 112.'); } }
-function tcEmergencyAlarm(btn){ try{ if(typeof tcSound==='function'){tcSound('sos');} else { const a=new (window.AudioContext||window.webkitAudioContext)();const o=a.createOscillator();const g=a.createGain();o.connect(g);g.connect(a.destination);o.type='square';o.frequency.value=880;g.gain.value=0.2;o.start();let hi=true;const iv=setInterval(()=>{hi=!hi;o.frequency.value=hi?880:620;},350);setTimeout(()=>{clearInterval(iv);o.stop();a.close&&a.close();},4000);} if(btn)btn.textContent='🔊 A tocar…'; }catch(_){ } }
-window.openEmergency=openEmergency;window.tcEmergencyCall=tcEmergencyCall;window.tcEmergencyAlarm=tcEmergencyAlarm;
+async function tcRingChild(){const d=state.devices&&state.devices[0];if(!d){alert('Nenhum dispositivo vinculado.');return false;}const code=d.device_code||d.deviceCode||d.code;if(!code){alert('Dispositivo sem código de vinculação.');return false;}try{if(window.TC_DB&&window.TC_DB.client){const {error}=await window.TC_DB.client.rpc('guardian_ring',{p_device_code:code});if(error)throw error;addEvent('EMERGÊNCIA','Alarme enviado para o telemóvel da criança.',{status:'ENVIADO',source:'Guardian'});return true;}}catch(e){console.warn('ring',e&&e.message);addEvent('EMERGÊNCIA','Falha ao enviar alarme: '+(e&&e.message||''),{status:'ERRO',source:'Guardian'});}return false;}
+async function tcEmergencyAlarm(btn){ if(btn){btn.disabled=true;btn.textContent='🔊 A enviar pedido…';} const ok=await tcRingChild(); if(btn){btn.disabled=false;btn.textContent=ok?'🔊 Alarme enviado ✓ (o telemóvel vai apitar)':'🔊 Falhou — tentar novamente';} if(!ok){try{const a=new (window.AudioContext||window.webkitAudioContext)();const o=a.createOscillator();const g=a.createGain();o.connect(g);g.connect(a.destination);o.type='square';o.frequency.value=880;g.gain.value=.15;o.start();setTimeout(()=>{o.stop();a.close&&a.close();},1200);}catch(_){}} }
+window.openEmergency=openEmergency;window.tcEmergencyCall=tcEmergencyCall;window.tcEmergencyAlarm=tcEmergencyAlarm;window.tcRingChild=tcRingChild;
 const mpesaIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18"/><circle cx="7.5" cy="14.5" r="1.4"/></svg>';
 const emolaIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M4 10h16"/><path d="M8 15h4"/></svg>';
 const waIcon='<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3C9.4 3 4 8.4 4 15c0 2.3.6 4.5 1.8 6.4L4 29l7.8-1.8c1.8 1 3.9 1.5 6.2 1.5 6.6 0 12-5.4 12-12S22.6 3 16 3Z"/><path d="M21.5 18.2c-.3-.2-1.9-1-2.2-1.1-.3-.1-.5-.2-.8.2-.2.3-.8 1-1 1.2-.2.2-.4.2-.7.1-1.8-.7-3-1.9-4-3.5-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5 0-.2-.8-1.9-1-2.5-.3-.6-.5-.5-.8-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.3 3.1c.2.2 2.2 3.4 5.4 4.6 2.6 1 3.1.8 3.7.8.6-.1 1.9-.8 2.1-1.5.3-.7.3-1.3.2-1.4-.1-.2-.3-.2-.6-.4Z" fill="#fff"/></svg>';

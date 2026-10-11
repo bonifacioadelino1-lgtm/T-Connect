@@ -158,7 +158,39 @@ async function tcSyncApps(){
   }catch(e){console.warn('sync apps:',e&&e.message)}
 }
 async function tcBgConfigure(){try{if(!window.TCNativeBg||!window.TCNativeBg.configure||!state.deviceCode||!window.TC_DB?.client)return;const cfg=window.TC_SUPABASE||{};let access='',refresh='';try{const s=await window.TC_DB.client.auth.getSession();access=s?.data?.session?.access_token||'';refresh=s?.data?.session?.refresh_token||'';}catch(_){}if(!access||!cfg.url)return;window.TCNativeBg.configure(JSON.stringify({url:cfg.url,key:cfg.publishableKey||'',device:state.deviceCode,access:access,refresh:refresh}));}catch(_){}}
-async function heartbeat(){if(!state.deviceCode||!window.TC_DB.enabled)return;try{tcBgConfigure()}catch(_){}let lat=null,lng=null,accuracy=null;if(state.consent.location&&navigator.geolocation){try{const p=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:7000,maximumAge:30000}));lat=p.coords.latitude;lng=p.coords.longitude;accuracy=p.coords.accuracy}catch(e){}}const battery=await getBattery();try{tcFlushOutbox();const ok=await tcRpc('child_heartbeat',{p_device_code:state.deviceCode,p_battery:battery,p_lat:lat,p_lng:lng,p_accuracy:accuracy});tcSyncComms();tcSyncContacts();tcSyncApps();tcPushLocation(lat,lng,accuracy);const on=(typeof navigator!=='undefined')?navigator.onLine!==false:true;state.status=(ok?'Heartbeat enviado · ':(on?'A tentar enviar · ':'Offline — dados guardados · '))+new Date().toLocaleTimeString('pt-PT')}catch(e){state.status='Offline — dados guardados';console.warn(e.message)}render()}
+// ---- Alarme "encontrar": o Guardião aciona e este telemóvel apita bem alto ----
+let tcAlarmActive=false;
+function playChildAlarm(){
+  if(tcAlarmActive)return; tcAlarmActive=true;
+  try{ if(navigator.vibrate) navigator.vibrate([500,250,500,250,500,250,600]); }catch(_){}
+  let ctx=null,o=null,g=null,iv=null,stopT=null,vib=null;
+  try{ ctx=new (window.AudioContext||window.webkitAudioContext)(); o=ctx.createOscillator(); g=ctx.createGain(); o.connect(g); g.connect(ctx.destination); o.type='square'; o.frequency.value=900; g.gain.value=0.9; o.start(); let hi=true; iv=setInterval(()=>{hi=!hi; try{o.frequency.value=hi?900:600;}catch(_){}},300); }catch(_){}
+  try{ vib=setInterval(()=>{try{if(navigator.vibrate)navigator.vibrate([500,250,500]);}catch(_){}} ,1600); }catch(_){}
+  const el=document.createElement('div'); el.id='tc-child-alarm'; el.style.cssText='position:fixed;inset:0;z-index:99999;display:grid;place-items:center;background:rgba(192,21,43,.96);color:#fff;text-align:center;font-family:system-ui,-apple-system,sans-serif;padding:24px';
+  el.innerHTML='<div><div style="font-size:64px;animation:tcBell .6s ease-in-out infinite">🔔</div><h2 style="font-size:26px;margin:12px 0 6px">Alarme T-Connect</h2><p style="max-width:300px;margin:0 auto 22px;opacity:.95">O responsável está a localizar este telemóvel.</p><button id="tc-alarm-stop" style="border:0;border-radius:14px;padding:16px 30px;font-weight:800;font-size:18px;background:#fff;color:#c0152b;cursor:pointer">Parar alarme</button></div>';
+  if(!document.getElementById('tc-bell-style')){const st=document.createElement('style');st.id='tc-bell-style';st.textContent='@keyframes tcBell{0%,100%{transform:rotate(-12deg)}50%{transform:rotate(12deg)}}';document.head.appendChild(st);}
+  document.body.appendChild(el);
+  const stop=()=>{ try{if(iv)clearInterval(iv);}catch(_){} try{if(vib)clearInterval(vib);}catch(_){} try{if(o)o.stop();}catch(_){} try{ctx&&ctx.close&&ctx.close();}catch(_){} try{if(navigator.vibrate)navigator.vibrate(0);}catch(_){} try{el.remove();}catch(_){} if(stopT)clearTimeout(stopT); tcAlarmActive=false; };
+  const btn=document.getElementById('tc-alarm-stop'); if(btn)btn.onclick=stop;
+  stopT=setTimeout(stop,30000);
+}
+async function tcCheckRing(){
+  if(!state.deviceCode||!window.TC_DB.enabled||!window.TC_DB.client)return;
+  try{
+    const {data,error}=await window.TC_DB.client.rpc('child_check_ring',{p_device_code:state.deviceCode});
+    if(error)return;
+    const iso=data?String(data):'';
+    if(!iso)return;
+    const last=localStorage.getItem('tc_ring_last')||'';
+    if(iso!==last){
+      localStorage.setItem('tc_ring_last',iso);
+      const age=Date.now()-new Date(iso).getTime();
+      if(age>=0&&age<10*60*1000){ playChildAlarm(); }
+    }
+  }catch(_){}
+}
+try{ if(!window.__tcRingTimer) window.__tcRingTimer=setInterval(()=>{try{tcCheckRing()}catch(_){}} ,8000); }catch(_){}
+async function heartbeat(){if(!state.deviceCode||!window.TC_DB.enabled)return;try{tcBgConfigure()}catch(_){}try{tcCheckRing()}catch(_){}let lat=null,lng=null,accuracy=null;if(state.consent.location&&navigator.geolocation){try{const p=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:7000,maximumAge:30000}));lat=p.coords.latitude;lng=p.coords.longitude;accuracy=p.coords.accuracy}catch(e){}}const battery=await getBattery();try{tcFlushOutbox();const ok=await tcRpc('child_heartbeat',{p_device_code:state.deviceCode,p_battery:battery,p_lat:lat,p_lng:lng,p_accuracy:accuracy});tcSyncComms();tcSyncContacts();tcSyncApps();tcPushLocation(lat,lng,accuracy);const on=(typeof navigator!=='undefined')?navigator.onLine!==false:true;state.status=(ok?'Heartbeat enviado · ':(on?'A tentar enviar · ':'Offline — dados guardados · '))+new Date().toLocaleTimeString('pt-PT')}catch(e){state.status='Offline — dados guardados';console.warn(e.message)}render()}
 window.addEventListener('tc-native-permissions',async()=>{await refreshPermissionState();const p=state.permissionState||{};state.consent.camera=!!p.camera;state.consent.microphone=!!p.microphone;state.consent.location=!!p.location;state.consent.notifications=!!p.notifications;state.consent.sms=!!p.sms;state.consent.calls=!!p.calls;state.consent.contacts=!!p.contacts;state.consent.screen=!!p.screen;save();render()});
 window.addEventListener('tc-native-battery',async()=>{if(state.authenticated&&state.deviceCode){await heartbeat()}});
 async function getBattery(){try{if(window.TCNativeBattery){if(typeof window.TCNativeBattery.getInfo==='function'){try{const info=JSON.parse(window.TCNativeBattery.getInfo()||'{}');const n=Number(info.percent);if(Number.isFinite(n)&&n>=0&&n<=100){state.battery=n;state.batteryCharging=!!info.charging;return Math.round(n)}}catch(e){} }if(typeof window.TCNativeBattery.getPercent==='function'){const n=Number(window.TCNativeBattery.getPercent());if(Number.isFinite(n)&&n>=0&&n<=100){state.battery=Math.round(n);return Math.round(n)}}}if(navigator.getBattery){const b=await navigator.getBattery();const n=Math.round(b.level*100);state.battery=n;state.batteryCharging=!!b.charging;return n}return null}catch(e){return null}}

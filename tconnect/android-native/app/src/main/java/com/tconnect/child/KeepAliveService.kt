@@ -13,7 +13,13 @@ import android.content.pm.ServiceInfo
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.media.AudioAttributes
+import android.media.AudioManager
+import android.media.MediaPlayer
+import android.media.RingtoneManager
 import android.os.BatteryManager
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
@@ -138,7 +144,80 @@ class KeepAliveService : Service() {
                 lb.put("p_epoch", System.currentTimeMillis())
                 rpc(url, key, token, "child_push_location", lb.toString())
             }
+            // Pedido de alarme ("encontrar telemóvel") — funciona mesmo com a app fechada.
+            try { checkRing(url, key, token, device, sp) } catch (_: Exception) {}
         } catch (_: Exception) {}
+    }
+
+    /** Verifica se o Guardião pediu para tocar o alarme; se for novo e recente, toca. */
+    private fun checkRing(url: String, key: String, token: String, device: String, sp: android.content.SharedPreferences) {
+        val body = JSONObject().put("p_device_code", device).toString()
+        val resp = rpcBody(url, key, token, "child_check_ring", body) ?: return
+        val iso = resp.trim().trim('"')
+        if (iso.isBlank() || iso == "null") return
+        val last = sp.getString("ring_last", "") ?: ""
+        if (iso == last) return
+        sp.edit().putString("ring_last", iso).apply()
+        val t = parseIso(iso)
+        if (t > 0 && System.currentTimeMillis() - t < 10 * 60 * 1000L) playAlarm()
+    }
+
+    private fun parseIso(iso: String): Long {
+        return try {
+            val s = if (iso.length >= 19) iso.substring(0, 19) else iso
+            val f = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US)
+            f.timeZone = java.util.TimeZone.getTimeZone("UTC")
+            f.parse(s)?.time ?: 0L
+        } catch (_: Exception) { 0L }
+    }
+
+    private fun playAlarm() {
+        try {
+            try {
+                val am = getSystemService(AUDIO_SERVICE) as AudioManager
+                am.setStreamVolume(AudioManager.STREAM_ALARM, am.getStreamMaxVolume(AudioManager.STREAM_ALARM), 0)
+            } catch (_: Exception) {}
+            val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE) ?: return
+            val mp = MediaPlayer()
+            mp.setDataSource(this, uri)
+            mp.setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ALARM)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+            )
+            mp.isLooping = true
+            mp.prepare()
+            mp.start()
+            try {
+                val v = getSystemService(VIBRATOR_SERVICE) as Vibrator
+                val pattern = longArrayOf(0, 600, 300, 600, 300, 600)
+                if (Build.VERSION.SDK_INT >= 26) v.vibrate(VibrationEffect.createWaveform(pattern, 0))
+                else @Suppress("DEPRECATION") v.vibrate(pattern, 0)
+            } catch (_: Exception) {}
+            handler.postDelayed({
+                try { mp.stop(); mp.release() } catch (_: Exception) {}
+                try { (getSystemService(VIBRATOR_SERVICE) as Vibrator).cancel() } catch (_: Exception) {}
+            }, 30000)
+        } catch (_: Exception) {}
+    }
+
+    /** Como rpc(), mas devolve o corpo da resposta (para ler o ring_at). */
+    private fun rpcBody(url: String, key: String, token: String, fn: String, json: String): String? {
+        var conn: HttpURLConnection? = null
+        return try {
+            val u = URL(url.trimEnd('/') + "/rest/v1/rpc/" + fn)
+            conn = u.openConnection() as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.connectTimeout = 12000; conn.readTimeout = 12000
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.setRequestProperty("apikey", key)
+            conn.setRequestProperty("Authorization", "Bearer $token")
+            conn.doOutput = true
+            conn.outputStream.use { it.write(json.toByteArray(Charsets.UTF_8)) }
+            if (conn.responseCode in 200..299) conn.inputStream.bufferedReader().use { it.readText() } else null
+        } catch (_: Exception) { null } finally { try { conn?.disconnect() } catch (_: Exception) {} }
     }
 
     /** POST {url}/rest/v1/rpc/{fn}. Devolve o código HTTP (ou -1). */
