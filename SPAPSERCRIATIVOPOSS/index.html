@@ -3396,6 +3396,7 @@ async function scannerFechar() {
     { id: 'lingua',             secao: 'outro',   emoji: '🌐', cor: 'cor-verde',    label: 'Idioma',                  acao: 'escolherLingua' },
     { id: 'suporte',            secao: 'outro',   emoji: '💬', cor: 'cor-verde',    label: 'Suporte',                 acao: 'abrirSuporte' },
     { id: 'upgrade',            secao: 'outro',   emoji: '⬆️', cor: 'cor-amarelo',  label: 'Ver planos / Upgrade',    acao: 'verPlanos' },
+    { id: 'mudar-modo',         secao: 'outro',   emoji: '🎨', cor: 'cor-azul',     label: 'Mudar design (modo)',     acao: 'mudarModo' },
     { id: 'instalacao',         secao: 'outro',   emoji: 'ℹ️', cor: 'cor-cinza',    label: 'Sobre o Sistema',        acao: 'sobreSistema' },
   ];
 
@@ -3423,6 +3424,7 @@ async function scannerFechar() {
     if (acao === 'novoProduto') { fecharMenu(); abrirModalProduto(); return; }
     if (acao === 'gerirProdutos') { fecharMenu(); abrirModalProduto(); mostrarGestao(); return; }
     if (acao === 'retornar') { fecharMenu(); abrirModalDevolucao(); return; }
+    if (acao === 'mudarModo') { fecharMenu(); if (typeof mudarModoDesign === 'function') mudarModoDesign(); return; }
     if (acao === 'sobreSistema') { fecharMenu(); abrirSobreSistema(); return; }
     if (acao === 'abrirImpressora') { fecharMenu(); abrirModalImpressora(); return; }
     if (acao === 'abrirEtiquetadora') { fecharMenu(); abrirModalEtiquetadora(); return; }
@@ -5359,7 +5361,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.118';
+  const VERSAO_ATUAL = '2.9.119';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
