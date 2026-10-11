@@ -5361,7 +5361,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.119';
+  const VERSAO_ATUAL = '2.9.120';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
@@ -5661,15 +5661,11 @@ body.modo2 #modo2-app { display:grid; grid-template-columns:230px 1fr; min-heigh
       <div class="m2-logo-ico">🛒</div>
       <div><b id="m2-logo-nome">SPAP</b><small>PDV | Vendas | Stock</small></div>
     </div>
-    <div class="m2-nav ativo" onclick="m2Nav('home',this)"><span class="ico">🏠</span><span>Visão geral</span></div>
-    <div class="m2-nav" onclick="executarAcaoMenu('abrirPainelVendas')"><span class="ico">🧾</span><span>Vendas</span></div>
-    <div class="m2-nav" onclick="abrirMenu()"><span class="ico">📦</span><span>Produtos</span></div>
-    <div class="m2-nav" onclick="executarAcaoMenu('avisoDespacho')"><span class="ico">📥</span><span>Stock</span></div>
-    <div class="m2-nav" onclick="abrirMenu()"><span class="ico">📊</span><span>Relatórios</span></div>
-    <div class="m2-nav" onclick="abrirMenu()" title="Abre o menu com tudo"><span class="ico">⚙️</span><span>Definições</span></div>
+    <div class="m2-nav ativo" onclick="m2Nav('home',this)"><span class="ico">🏠</span><span>Loja (vender)</span></div>
+    <!-- Todos os itens do menu aparecem aqui (preenchido por renderM2Nav) -->
+    <div id="m2-nav-lista"></div>
     <div class="m2-flex"></div>
     <div class="m2-rodape">
-      <div class="m2-nav" onclick="executarAcaoMenu('abrirImpressora')"><span class="ico">🖨️</span><span>Impressora / Scanner</span></div>
       <div class="m2-nav" onclick="mudarModoDesign()"><span class="ico">🎨</span><span>Mudar design</span></div>
       <div class="m2-nav" onclick="fazerLogout()"><span class="ico">🚪</span><span>Sair</span></div>
       <div class="m2-status">🟢 <b>Sistema online</b><br><span id="m2-versao"></span></div>
@@ -5816,7 +5812,38 @@ body.modo2 #modo2-app { display:grid; grid-template-columns:230px 1fr; min-heigh
     try { mostrarNotif('🧾 Pedido guardado. Usa "Retomar" para continuar.'); } catch(e){}
   }
 
-  function renderModo2(){ renderM2Topo(); renderM2Chips(); renderM2Grid(); renderM2Cart(); }
+  function renderM2Nav(){
+    var el = document.getElementById('m2-nav-lista'); if (!el) return;
+    var itens = [];
+    try { if (typeof menuItensPadrao !== 'undefined' && menuItensPadrao.length) itens = menuItensPadrao; } catch(e){}
+    if (!itens.length){
+      // Reserva: lista fixa, caso não consiga ler o menu
+      itens = [
+        {emoji:'🧾',label:'Recibo de venda',acao:'abrirPainelVendas'},
+        {emoji:'↩️',label:'Retornar',acao:'retornar'},
+        {emoji:'📉',label:'Perda',acao:'verPerdas'},
+        {emoji:'🏷️',label:'Fazer Etiqueta',acao:'fazerEtiqueta'},
+        {emoji:'🚚',label:'Aviso de despacho',acao:'avisoDespacho'},
+        {emoji:'🔄',label:'Transferir p/ outra loja',acao:'transferirLoja'},
+        {emoji:'🆘',label:'Emergência',acao:'emergencia'},
+        {emoji:'🏷️',label:'Criar Código de Barras',acao:'abrirEtiquetadora'},
+        {emoji:'🖨️',label:'Impressora & Scanner',acao:'abrirImpressora'},
+        {emoji:'🌐',label:'Idioma',acao:'escolherLingua'},
+        {emoji:'💬',label:'Suporte',acao:'abrirSuporte'},
+        {emoji:'⬆️',label:'Ver planos / Upgrade',acao:'verPlanos'},
+        {emoji:'ℹ️',label:'Sobre o Sistema',acao:'sobreSistema'}
+      ];
+    }
+    el.innerHTML = itens.filter(function(it){ return it.acao !== 'mudarModo'; }).map(function(it){
+      return '<div class="m2-nav" onclick="m2AcaoMenu(\''+it.acao+'\')"><span class="ico">'+(it.emoji||'•')+'</span><span>'+(it.label||it.acao)+'</span></div>';
+    }).join('');
+  }
+  function m2AcaoMenu(acao){
+    document.body.classList.remove('m2-menu-aberto');
+    try { executarAcaoMenu(acao); } catch(e){}
+  }
+
+  function renderModo2(){ renderM2Topo(); renderM2Nav(); renderM2Chips(); renderM2Grid(); renderM2Cart(); }
 
   function aplicarModoVisual(){
     if (_modoGuardado()==='2'){ document.body.classList.add('modo2'); renderModo2(); }
