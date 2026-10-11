@@ -41,6 +41,7 @@
 
   // ---- Subscrições (planos por conta/email) ----
   window.tcLoadSubscriptions=async()=>{await ready();const {data,error}=await window.TC_DB.client.from('subscriptions').select('*').order('updated_at',{ascending:false});if(error)throw error;return(data||[]).map(s=>({email:s.email,plan:s.plan||'',days:s.days||0,paidAt:s.paid_at,status:s.status}));};
+  window.tcAdminListUsers=async()=>{await ready();const {data,error}=await window.TC_DB.client.rpc('tc_admin_list_users');if(error)throw error;return(data||[]).map(s=>({email:s.email,plan:s.plan||'',days:s.days||0,paidAt:s.paid_at,status:s.status}));};
   window.tcMySubscription=async()=>{await ready();const email=(window.TC_DB.user?.email||'').toLowerCase();const {data,error}=await window.TC_DB.client.from('subscriptions').select('*').eq('email',email).maybeSingle();if(error)throw error;if(!data)return null;return{email:data.email,plan:data.plan||'',days:data.days||0,paidAt:data.paid_at,status:data.status};};
   window.tcSetMyPlan=async(planId)=>{await ready();const {data,error}=await window.TC_DB.client.rpc('tc_set_my_plan',{p_plan:planId});if(error)throw error;return data;};
   window.tcAdminUpsertSubscription=async(sub)=>{await ready();const {error}=await window.TC_DB.client.from('subscriptions').upsert({email:(sub.email||'').toLowerCase(),plan:sub.plan||null,days:sub.days||0,paid_at:sub.paidAt||null,status:sub.status||'active',updated_at:new Date().toISOString()},{onConflict:'email'});if(error)throw error;return true;};

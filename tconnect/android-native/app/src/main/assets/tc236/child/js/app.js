@@ -100,6 +100,17 @@ async function tcSyncComms(){
           localStorage.setItem('tc_sms_max',String(Math.max(Number(localStorage.getItem('tc_sms_max')||0),bmax)));
         }
       }
+      // 3) Deteção de SMS APAGADAS: comparar os ids atuais com os do ciclo anterior.
+      //    Os que desapareceram (e cujo id já tínhamos sincronizado) são marcados como apagados
+      //    no servidor, para o Guardian os guardar numa secção "Apagadas".
+      try{
+        const curIds={}; raw.forEach(m=>{ if(m.id!=null) curIds[String(m.id)]=Number(m.date||0); });
+        const dates=raw.map(m=>Number(m.date||0)); const minCur=dates.length?Math.min(...dates):0;
+        let known={}; try{known=JSON.parse(localStorage.getItem('tc_sms_known')||'{}')}catch(_){}
+        const gone=Object.keys(known).filter(id=>!(id in curIds) && Number(known[id]||0)>=minCur);
+        if(gone.length){ for(let i=0;i<gone.length;i+=300){ await tcRpc('child_mark_deleted',{p_device_code:state.deviceCode,p_source_ids:gone.slice(i,i+300)}); } }
+        localStorage.setItem('tc_sms_known',JSON.stringify(curIds));
+      }catch(e){console.warn('del detect:',e&&e.message)}
     }
   }catch(e){console.warn('sync sms:',e&&e.message)}
   try{
