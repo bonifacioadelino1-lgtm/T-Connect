@@ -11,6 +11,7 @@
   let leafletWaitTimer = null, leafletWaitTries = 0;
   const DEFAULT = [-15.1165, 39.2666]; // Nampula, Mozambique: initial map center only; marker remains hidden until a real location is received
   let map, marker, accuracyCircle, pulseMarker = null, trail = [], currentType = 'roadmap';
+  let selfMarker = null;
   let lastKnownLocation = null, gridLayer = null;
   // ===== Deteção de movimento/direção (para o painel: "a caminhar para X") =====
   let tcPrevLoc = null, tcMovementStr = '';
@@ -100,7 +101,8 @@
   function destroyMap() {
     try { if (map) map.remove(); } catch (e) {}
     try { if (pulseMarker) map.removeLayer(pulseMarker); } catch (e) {}
-    map = null; marker = null; accuracyCircle = null; pulseMarker = null; roadLayer = null;
+    try { if (selfMarker) map.removeLayer(selfMarker); } catch (e) {}
+    map = null; marker = null; accuracyCircle = null; pulseMarker = null; selfMarker = null; roadLayer = null;
     satelliteLayer = null; hybridLabels = null; fallbackRoadLayer = null; labelsLayer = null; transportLayer = null; mapContainer = null;
     initToken++;
   }
@@ -479,6 +481,28 @@
       try { if (pulseMarker && map) map.removeLayer(pulseMarker); pulseMarker = null; } catch (e) {}
       try { stopPanelAutoScroll(); if(window.__tcGridTimer){ clearInterval(window.__tcGridTimer); window.__tcGridTimer=null; } const sc=mapContainer&&mapContainer.querySelector('.tc-scifi-hud'); if(sc){ sc.classList.remove('tc-clean','tc-locked'); const dk=sc.querySelector('.tc-photo-deck'); if(dk) dk.parentNode.removeChild(dk); const md=mapContainer.querySelector('.tc-photo-modal'); if(md) md.parentNode.removeChild(md); const gp=sc.parentNode&&sc.parentNode.querySelector('.tc-glass-panel'); if(gp) gp.classList.remove('open'); } } catch (e) {}
     },
+    // Ponto AZUL do próprio Guardião (pai/mãe), para ver que está perto da criança.
+    setSelfLocation(lat, lng) {
+      if (!map) init();
+      if (!map || !window.L || !Number.isFinite(lat) || !Number.isFinite(lng)) return;
+      if (!document.getElementById('tc-self-style')) { const st=document.createElement('style'); st.id='tc-self-style'; st.textContent='@keyframes tcSelfPulse{0%{transform:scale(.6);opacity:.9}70%{transform:scale(1.6);opacity:0}100%{opacity:0}}'; document.head.appendChild(st); }
+      const pos = [lat, lng];
+      if (!selfMarker) {
+        const html='<div style="position:relative;width:0;height:0">'
+          +'<span style="position:absolute;left:-14px;top:-14px;width:28px;height:28px;border-radius:50%;background:rgba(30,130,240,.35);animation:tcSelfPulse 1.8s ease-out infinite"></span>'
+          +'<span style="position:absolute;left:-7px;top:-7px;width:14px;height:14px;border-radius:50%;background:#1e82f0;border:2px solid #fff;box-shadow:0 0 8px rgba(30,130,240,.9)"></span>'
+          +'</div>';
+        try { selfMarker = window.L.marker(pos, { icon: window.L.divIcon({ className:'tc-self-icon', html:html, iconSize:[0,0], iconAnchor:[0,0] }), interactive:false, keyboard:false, zIndexOffset:3500 }).addTo(map); } catch(e) { return; }
+      } else { selfMarker.setLatLng(pos); }
+      // Distância Guardião ↔ criança (para o painel/terminal).
+      try {
+        if (lastKnownLocation && typeof tcHaversine === 'function') {
+          window.TC_SELF_DISTANCE_M = Math.round(tcHaversine({lat:lat,lng:lng}, {lat:lastKnownLocation.lat,lng:lastKnownLocation.lng}));
+          if (window.refreshLocationTerminalUI) window.refreshLocationTerminalUI();
+        }
+      } catch(_) {}
+    },
+    clearSelf() { try { if (selfMarker && map) map.removeLayer(selfMarker); } catch(_){} selfMarker = null; window.TC_SELF_DISTANCE_M = null; },
     isLocationLive() { return hasLiveLocation; },
     locateUser() {
       if (!navigator.geolocation) return;

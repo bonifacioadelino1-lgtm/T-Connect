@@ -1,4 +1,4 @@
-window.TC_APP_VERSION='2.39.27';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
+window.TC_APP_VERSION='2.39.28';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
 const tcTimeout=(p,ms=10000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado')),ms))]);
 const POS=[-25.9692,32.5732];
 const state={page:'overview',mapType:'roadmap',menuOpen:false,pairingBusy:false,pairingMessage:'',update:{auto:localStorage.getItem('tc_auto_updates')!=='0',checking:false,latest:null,error:''},events:JSON.parse(localStorage.getItem('tc_events')||'[]'),notifications:JSON.parse(localStorage.getItem('tc_notifications')||'[]'),search:'',authenticated:false,authMode:'login',loading:false,recoverySent:false,profile:null,devices:[],messages:[],calls:[],contactsList:[],appsList:[],contactStats:[],trailOn:false,commsSub:false,pairCode:'',pairLink:'',realtime:false,authError:'',lastLocation:null,mapTerminalEvents:JSON.parse(localStorage.getItem('tc_map_terminal_events')||'[]')};
@@ -965,6 +965,17 @@ function setMap(t){
   pushMapTerminal('MAPA',`CAMADA_${String(nextType).toUpperCase()}_SELECIONADA`,'OK',{detail:`Modo ${nextType} selecionado`});
   if(window.TC_MAP?.setType) window.TC_MAP.setType(nextType);
 }
+let tcSelfWatchId=null;
+function tcStartSelfLocation(){
+  if(tcSelfWatchId!=null||!('geolocation'in navigator))return;
+  try{
+    tcSelfWatchId=navigator.geolocation.watchPosition(
+      p=>{try{window.TC_MAP&&window.TC_MAP.setSelfLocation&&window.TC_MAP.setSelfLocation(p.coords.latitude,p.coords.longitude);}catch(_){}} ,
+      ()=>{},
+      {enableHighAccuracy:true,maximumAge:15000,timeout:20000}
+    );
+  }catch(_){}
+}
 async function initMap(_retry){
   const node=document.getElementById('map');
   if(!node)return;
@@ -980,6 +991,7 @@ async function initMap(_retry){
     // Vários refreshes escalonados: em alguns aparelhos o contentor só ganha
     // tamanho depois de pintar, e o mapa ficava em branco sem estes ajustes.
     [120,400,900,1600].forEach(ms=>setTimeout(()=>{try{window.TC_MAP.refresh?.();window.TC_MAP.invalidate?.();window.TC_MAP.setType?.(state.mapType);}catch(_){}},ms));
+    tcStartSelfLocation();
     // Sincroniza a camada escolhida (Mapa/Satélite/Híbrido) entre as duas telas que
     // mostram o mapa (Monitoramento inicial e Localização do menu): ambas partilham
     // state.mapType, por isso o mapa abre sempre na mesma camada em que foi deixado.
