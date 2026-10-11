@@ -5361,7 +5361,7 @@ async function scannerFechar() {
 
   // ===== SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA =====
   // Versão instalada nesta build. Mantém em sincronia com version.json a cada deploy.
-  const VERSAO_ATUAL = '2.9.120';
+  const VERSAO_ATUAL = '2.9.122';
   // Funciona comparando version.json do servidor com a versão guardada no localStorage.
   // Quando fazes deploy novo no Vercel, só precisas de mudar o número em version.json.
   // O PDV detecta automaticamente e pede para atualizar — sem alterar o index.html.
@@ -5549,10 +5549,14 @@ async function mostrarEcraSuspenso(motivo){
 /* ===== App do Modo 2 ===== */
 #modo2-app { display:none; }
 body.modo2 #tela-pdv { display:none !important; }
-body.modo2 #modo2-app { display:grid; grid-template-columns:230px 1fr; min-height:100vh; background:#eef2f6; }
+body.modo2 #modo2-app { display:block; min-height:100vh; background:#eef2f6; }
 
-/* Sidebar */
-#m2-sidebar { background:#0b1220; color:#cbd5e1; display:flex; flex-direction:column; padding:16px 12px; position:sticky; top:0; height:100vh; box-sizing:border-box; overflow-y:auto; }
+/* Sidebar = GAVETA: escondida, aparece ao clicar nas 3 barras (☰) */
+#m2-sidebar { background:#0b1220; color:#cbd5e1; display:flex; flex-direction:column; padding:16px 12px; position:fixed; top:0; left:-280px; width:250px; height:100vh; box-sizing:border-box; overflow-y:auto; z-index:1200; transition:left .22s ease; box-shadow:3px 0 20px rgba(0,0,0,.25); }
+body.modo2.m2-menu-aberto #m2-sidebar { left:0; }
+/* Fundo escuro ao abrir a gaveta */
+#m2-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1100; }
+body.modo2.m2-menu-aberto #m2-backdrop { display:block; }
 #m2-sidebar .m2-logo { display:flex; align-items:center; gap:10px; padding:4px 8px 20px; }
 #m2-sidebar .m2-logo .m2-logo-ico { width:40px; height:40px; border-radius:10px; background:#16a34a; display:flex; align-items:center; justify-content:center; font-size:20px; }
 #m2-sidebar .m2-logo b { color:#fff; font-size:17px; line-height:1.05; display:block; }
@@ -5629,11 +5633,48 @@ body.modo2 #modo2-app { display:grid; grid-template-columns:230px 1fr; min-heigh
 #m2-cart .m2-finalizar { width:100%; padding:15px; background:#16a34a; color:#fff; border:none; border-radius:12px; font-size:16px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:10px; }
 #m2-cart .m2-guardar { width:100%; padding:14px; background:#fff; color:#0f172a; border:1.5px solid #e5e9ef; border-radius:12px; font-size:15px; font-weight:bold; cursor:pointer; }
 
-@media(max-width:820px){
-  body.modo2 #modo2-app { grid-template-columns:1fr; }
-  #m2-sidebar { position:fixed; left:-240px; z-index:50; transition:left .2s; }
-  body.modo2.m2-menu-aberto #m2-sidebar { left:0; }
-}
+@media(max-width:1100px){ #m2-corpo { grid-template-columns:1fr; } }
+
+/* ===== TEMA ESCURO ===== */
+body.modo2.m2-escuro #modo2-app { background:#0b1220; }
+body.modo2.m2-escuro #m2-topbar { background:#111c33; border-bottom-color:#1e293b; }
+body.modo2.m2-escuro #m2-topbar .m2-busca input { background:#1e293b; border-color:#334155; color:#e2e8f0; }
+body.modo2.m2-escuro #m2-topbar .m2-loja { background:#1e293b; border-color:#334155; color:#e2e8f0; }
+body.modo2.m2-escuro #m2-topbar .m2-user span { color:#e2e8f0; }
+body.modo2.m2-escuro #m2-cabecalho h1 { color:#f1f5f9; }
+body.modo2.m2-escuro #m2-painel, body.modo2.m2-escuro #m2-cart { background:#111c33; border-color:#1e293b; }
+body.modo2.m2-escuro #m2-chips .chip { background:#1e293b; color:#cbd5e1; }
+body.modo2.m2-escuro #m2-chips .chip.ativo { background:#16a34a; color:#fff; }
+body.modo2.m2-escuro #m2-subrow input { background:#1e293b; border-color:#334155; color:#e2e8f0; }
+body.modo2.m2-escuro .m2-card { background:#1e293b; border-color:#334155; }
+body.modo2.m2-escuro .m2-card .m2-nome, body.modo2.m2-escuro .m2-card .m2-preco { color:#f1f5f9; }
+body.modo2.m2-escuro #m2-cart .m2-cart-top b { color:#f1f5f9; }
+body.modo2.m2-escuro #m2-cart .m2-item { border-bottom-color:#1e293b; }
+body.modo2.m2-escuro #m2-cart .m2-item .m2-it-nome, body.modo2.m2-escuro #m2-cart .m2-item .m2-it-tot { color:#f1f5f9; }
+body.modo2.m2-escuro #m2-cart .m2-total-box { background:#14331f; }
+body.modo2.m2-escuro #m2-cart .m2-guardar { background:#1e293b; color:#f1f5f9; border-color:#334155; }
+
+/* ===== TEMA VERDE ===== */
+body.modo2.m2-verde #modo2-app { background:#e8f5ec; }
+body.modo2.m2-verde #m2-topbar { background:#14532d; border-bottom-color:#166534; }
+body.modo2.m2-verde #m2-topbar .m2-busca input { background:#dcfce7; border-color:#86efac; }
+body.modo2.m2-verde #m2-topbar .m2-loja { background:#166534; border-color:#166534; color:#fff; }
+body.modo2.m2-verde #m2-topbar .m2-user span { color:#fff; }
+body.modo2.m2-verde #m2-topbar .m2-sino { color:#dcfce7; }
+body.modo2.m2-verde #m2-sidebar { background:#052e16; }
+body.modo2.m2-verde #m2-cabecalho h1 { color:#14532d; }
+body.modo2.m2-verde #m2-painel, body.modo2.m2-verde #m2-cart { background:#fff; border-color:#bbf7d0; }
+body.modo2.m2-verde #m2-chips .chip.ativo { background:#166534; }
+body.modo2.m2-verde .m2-card:hover { border-color:#166534; }
+body.modo2.m2-verde #m2-cart .m2-total-box { background:#dcfce7; }
+
+/* Seletor de tema na barra lateral */
+#m2-temas { display:flex; gap:10px; padding:10px 8px 4px; }
+#m2-temas .tdot { width:30px; height:30px; border-radius:50%; cursor:pointer; border:2px solid transparent; }
+#m2-temas .tdot.sel { border-color:#22c55e; }
+#m2-temas .tdot.branco { background:#ffffff; }
+#m2-temas .tdot.escuro { background:#0b1220; }
+#m2-temas .tdot.verde { background:#166534; }
 </style>
 
 <div id="escolher-modo">
@@ -5656,6 +5697,7 @@ body.modo2 #modo2-app { display:grid; grid-template-columns:230px 1fr; min-heigh
 </div>
 
 <div id="modo2-app">
+  <div id="m2-backdrop" onclick="document.body.classList.remove('m2-menu-aberto')"></div>
   <aside id="m2-sidebar">
     <div class="m2-logo">
       <div class="m2-logo-ico">🛒</div>
@@ -5666,7 +5708,13 @@ body.modo2 #modo2-app { display:grid; grid-template-columns:230px 1fr; min-heigh
     <div id="m2-nav-lista"></div>
     <div class="m2-flex"></div>
     <div class="m2-rodape">
-      <div class="m2-nav" onclick="mudarModoDesign()"><span class="ico">🎨</span><span>Mudar design</span></div>
+      <div style="font-size:12px;color:#64748b;padding:4px 8px 0;">🎨 Tema</div>
+      <div id="m2-temas">
+        <div class="tdot branco" title="Branco" onclick="setTemaM2('branco')"></div>
+        <div class="tdot escuro" title="Escuro" onclick="setTemaM2('escuro')"></div>
+        <div class="tdot verde" title="Verde" onclick="setTemaM2('verde')"></div>
+      </div>
+      <div class="m2-nav" onclick="mudarModoDesign()"><span class="ico">🔁</span><span>Mudar design</span></div>
       <div class="m2-nav" onclick="fazerLogout()"><span class="ico">🚪</span><span>Sair</span></div>
       <div class="m2-status">🟢 <b>Sistema online</b><br><span id="m2-versao"></span></div>
     </div>
@@ -5674,7 +5722,7 @@ body.modo2 #modo2-app { display:grid; grid-template-columns:230px 1fr; min-heigh
 
   <div id="m2-main">
     <div id="m2-topbar">
-      <button class="m2-loja" style="cursor:pointer;background:#f1f5f9;border:none;" onclick="document.body.classList.toggle('m2-menu-aberto')" title="Menu">☰</button>
+      <button style="cursor:pointer;background:#16a34a;color:#fff;border:none;border-radius:11px;width:46px;height:46px;font-size:22px;flex-shrink:0;" onclick="document.body.classList.toggle('m2-menu-aberto')" title="Menu (todas as opções)">☰</button>
       <div class="m2-busca">
         <span class="lupa">🔎</span>
         <input type="text" id="m2-busca-input" placeholder="Pesquisar produto ou código de barras..." oninput="_m2Busca=this.value; renderM2Grid();">
@@ -5843,7 +5891,23 @@ body.modo2 #modo2-app { display:grid; grid-template-columns:230px 1fr; min-heigh
     try { executarAcaoMenu(acao); } catch(e){}
   }
 
-  function renderModo2(){ renderM2Topo(); renderM2Nav(); renderM2Chips(); renderM2Grid(); renderM2Cart(); }
+  function setTemaM2(t){
+    try { localStorage.setItem('pdv_m2_tema', t); } catch(e){}
+    aplicarTemaM2();
+  }
+  function aplicarTemaM2(){
+    var t = 'branco';
+    try { t = localStorage.getItem('pdv_m2_tema') || 'branco'; } catch(e){}
+    document.body.classList.remove('m2-escuro','m2-verde');
+    if (t==='escuro') document.body.classList.add('m2-escuro');
+    else if (t==='verde') document.body.classList.add('m2-verde');
+    try {
+      document.querySelectorAll('#m2-temas .tdot').forEach(function(d){ d.classList.remove('sel'); });
+      var sel = document.querySelector('#m2-temas .tdot.'+t); if (sel) sel.classList.add('sel');
+    } catch(e){}
+  }
+
+  function renderModo2(){ renderM2Topo(); renderM2Nav(); renderM2Chips(); renderM2Grid(); renderM2Cart(); aplicarTemaM2(); }
 
   function aplicarModoVisual(){
     if (_modoGuardado()==='2'){ document.body.classList.add('modo2'); renderModo2(); }
