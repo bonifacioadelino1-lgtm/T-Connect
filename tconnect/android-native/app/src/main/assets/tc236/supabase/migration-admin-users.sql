@@ -25,6 +25,7 @@ begin
            s.status
     from auth.users u
     left join public.subscriptions s on lower(s.email) = lower(u.email::text)
+    where s.status is distinct from 'deleted'   -- contas eliminadas no app ficam escondidas
     order by u.created_at desc;
 end;
 $$;
