@@ -11,8 +11,29 @@
   let leafletWaitTimer = null, leafletWaitTries = 0;
   const DEFAULT = [-15.1165, 39.2666]; // Nampula, Mozambique: initial map center only; marker remains hidden until a real location is received
   let map, marker, accuracyCircle, pulseMarker = null, trail = [], currentType = 'roadmap';
-  let selfMarker = null;
+  let selfMarker = null, lastSelfLocation = null;
+  let tcUserMovedAt = 0; // quando o utilizador mexeu no mapa com os dedos (para não recentrar por cima)
   let lastKnownLocation = null, gridLayer = null;
+  // Desenha/atualiza o ponto AZUL do Guardião com a MESMA animação do ponto vermelho (em azul).
+  function drawSelfMarker(lat, lng) {
+    try {
+      if (!map || !window.L) return;
+      const pos = [Number(lat), Number(lng)];
+      if (!selfMarker) {
+        const html = '<div class="tc-pulse blue"><span class="pr r1"></span><span class="pr r2"></span><span class="pc"></span></div>';
+        selfMarker = window.L.marker(pos, { icon: window.L.divIcon({ className:'tc-pulse-icon', html:html, iconSize:[0,0], iconAnchor:[0,0] }), interactive:false, keyboard:false, zIndexOffset:3500 }).addTo(map);
+      } else {
+        selfMarker.setLatLng(pos);
+      }
+    } catch(_){}
+  }
+  function restoreSelfMarker() {
+    if (!map) return;
+    if (!lastSelfLocation) {
+      try { const s = JSON.parse(localStorage.getItem('tc:selfLocation') || 'null'); if (s && Number.isFinite(Number(s.lat)) && Number.isFinite(Number(s.lng))) lastSelfLocation = { lat:Number(s.lat), lng:Number(s.lng) }; } catch(_){}
+    }
+    if (lastSelfLocation) drawSelfMarker(lastSelfLocation.lat, lastSelfLocation.lng);
+  }
   // ===== Deteção de movimento/direção (para o painel: "a caminhar para X") =====
   // Robusta: usa um ponto de referência e um limiar que acompanha a precisão do GPS,
   // com histerese para NÃO oscilar entre "Parado" e "A caminhar" a cada tremor do sinal.
@@ -349,6 +370,9 @@
     map.on('zoomend', () => { updateGrid(); restoreLastKnownLocation(); term('zoom',1500,'ZOOM', `ZOOM_${map.getZoom().toFixed(2)}`, 'OK', {detail:`Zoom ${map.getZoom().toFixed(2)}`}); });
     map.on('moveend', () => { updateGrid(); restoreLastKnownLocation(); term('move',1500,'MAPA', 'MOVIMENTO_CONCLUÍDO', 'OK', {detail:`Centro ${map.getCenter().lat.toFixed(6)}, ${map.getCenter().lng.toFixed(6)}`}); });
     map.on('click', (e) => { term('click',400,'CLICK', 'CLIQUE_NO_MAPA', 'OK', {detail:`${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}`}); });
+    // O utilizador pode mover/aproximar o mapa com os dedos. Quando o faz, deixamos de
+    // recentrar automaticamente durante uns segundos, para o mapa não "fugir" da mão.
+    map.on('dragstart zoomstart', () => { tcUserMovedAt = Date.now(); });
     map.whenReady(() => {
       if (token !== initToken || !map) return;
       [60,180,400,800].forEach(ms => setTimeout(() => { try { if (token === initToken && map && mapContainer === el) map.invalidateSize(false); } catch (_) {} }, ms));
@@ -392,6 +416,8 @@
     // This prevents the first render/resize event from calling setLatLng on null.
     updateLayers();
     restoreLastKnownLocation();
+    // Repõe o ponto azul do Guardião (persistido), para não desaparecer ao mudar de aba.
+    restoreSelfMarker();
   }
 
   function updateGrid() {
@@ -500,15 +526,18 @@
           // nesse caso repinta (trava) de imediato, sem a cinemática.
           // Mapa estável: só recentra quando o alvo sai da área visível (evita o mapa
           // a "descontrolar" a cada pequena oscilação do GPS). O ponto exato segue sozinho.
+          // Se o utilizador mexeu no mapa há pouco (arrastar/zoom com os dedos), NÃO recentramos
+          // por cima — deixamos o mapa onde ele o pôs. O ponto continua a atualizar na coordenada.
+          const userBusy = (Date.now() - tcUserMovedAt) < 25000;
           try {
             const ll = window.L.latLng(pos);
             const inside = map.getBounds && map.getBounds().pad(-0.28).contains(ll);
-            if (!inside) map.panTo(pos, { animate: true, duration: 0.6 });
+            if (!inside && !userBusy) map.panTo(pos, { animate: true, duration: 0.6 });
           } catch(_) {}
           const scifi = mapContainer && mapContainer.querySelector('.tc-scifi-hud');
           const lostHud = scifi && (!scifi.classList.contains('tc-locked') || !mapContainer.querySelector('.tc-glass-panel'));
           try {
-            if (lostHud) { try { map.setView(pos, Math.max(map.getZoom()||0, 16), { animate:false }); } catch(_){} positionReticle(); scifiLock(); }
+            if (lostHud && !userBusy) { try { map.setView(pos, Math.max(map.getZoom()||0, 16), { animate:false }); } catch(_){} positionReticle(); scifiLock(); }
             else { positionReticle(); updateGrid(); updateGlassPanel(); }
           } catch (_) {}
         }
@@ -530,6 +559,8 @@
     reset() {
       // Chamado no logout: nenhuma localização do Child fica guardada neste navegador.
       lastKnownLocation = null; hasLiveLocation = false; areaName = ''; lastGeocodeKey = ''; tcAcquired = false; tcAcquiring = false; tcMoveRef = null; tcMovementStr = '';
+      lastSelfLocation = null; try { localStorage.removeItem('tc:selfLocation'); } catch(_){}
+      try { if (selfMarker && map) map.removeLayer(selfMarker); } catch(_){} selfMarker = null;
       try { localStorage.removeItem('tc:lastKnownLocation'); } catch (e) {}
       try { if (marker) marker.setOpacity(0); } catch (e) {}
       try { if (accuracyCircle) accuracyCircle.setStyle({opacity:0, fillOpacity:0}); } catch (e) {}
@@ -540,15 +571,11 @@
     setSelfLocation(lat, lng) {
       if (!map) init();
       if (!map || !window.L || !Number.isFinite(lat) || !Number.isFinite(lng)) return;
-      if (!document.getElementById('tc-self-style')) { const st=document.createElement('style'); st.id='tc-self-style'; st.textContent='@keyframes tcSelfPulse{0%{transform:scale(.6);opacity:.9}70%{transform:scale(1.6);opacity:0}100%{opacity:0}}'; document.head.appendChild(st); }
-      const pos = [lat, lng];
-      if (!selfMarker) {
-        const html='<div style="position:relative;width:0;height:0">'
-          +'<span style="position:absolute;left:-14px;top:-14px;width:28px;height:28px;border-radius:50%;background:rgba(30,130,240,.35);animation:tcSelfPulse 1.8s ease-out infinite"></span>'
-          +'<span style="position:absolute;left:-7px;top:-7px;width:14px;height:14px;border-radius:50%;background:#1e82f0;border:2px solid #fff;box-shadow:0 0 8px rgba(30,130,240,.9)"></span>'
-          +'</div>';
-        try { selfMarker = window.L.marker(pos, { icon: window.L.divIcon({ className:'tc-self-icon', html:html, iconSize:[0,0], iconAnchor:[0,0] }), interactive:false, keyboard:false, zIndexOffset:3500 }).addTo(map); } catch(e) { return; }
-      } else { selfMarker.setLatLng(pos); }
+      // Guarda a última posição do Guardião para o ponto azul NÃO desaparecer quando a
+      // página é re-renderizada (o mapa é recriado) nem entre leituras do GPS.
+      lastSelfLocation = { lat: Number(lat), lng: Number(lng) };
+      try { localStorage.setItem('tc:selfLocation', JSON.stringify(lastSelfLocation)); } catch(_){}
+      drawSelfMarker(lat, lng);
       // Distância Guardião ↔ criança (para o painel/terminal).
       try {
         if (lastKnownLocation && typeof tcHaversine === 'function') {
@@ -557,7 +584,7 @@
         }
       } catch(_) {}
     },
-    clearSelf() { try { if (selfMarker && map) map.removeLayer(selfMarker); } catch(_){} selfMarker = null; window.TC_SELF_DISTANCE_M = null; },
+    clearSelf() { try { if (selfMarker && map) map.removeLayer(selfMarker); } catch(_){} selfMarker = null; lastSelfLocation = null; try{localStorage.removeItem('tc:selfLocation');}catch(_){} window.TC_SELF_DISTANCE_M = null; },
     isLocationLive() { return hasLiveLocation; },
     locateUser() {
       if (!navigator.geolocation) return;
