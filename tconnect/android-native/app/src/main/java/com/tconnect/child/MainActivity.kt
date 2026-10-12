@@ -143,6 +143,17 @@ class MainActivity : Activity() {
                 if (cameraOk && micOk) request.grant(resources.toTypedArray()) else request.deny()
             }
         }
+        // 4400 = permissão de localização pedida pelo WebView (ponto azul do Guardian).
+        // Quando o utilizador concede, reinicia já o rastreio para o ponto azul aparecer sem esperar.
+        if (requestCode == 4400) {
+            val locOk = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            if (locOk) {
+                web.postDelayed({
+                    web.evaluateJavascript("try{if(typeof tcStartSelfLocation==='function')tcStartSelfLocation();}catch(e){}void 0", null)
+                }, 300)
+            }
+        }
         // Em qualquer pedido de permissão (4300 ou os pedidos diretos 4101/4102/4200/4201/4202),
         // atualiza a interface web com o estado atual das permissões.
         web.evaluateJavascript("window.dispatchEvent(new Event('tc-native-permissions-updated'));void 0", null)
