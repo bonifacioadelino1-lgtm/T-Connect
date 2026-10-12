@@ -12,11 +12,19 @@ window.TC_SUPABASE = {
   updateManifestUrl: ''
 };
 
-// Configuração WebRTC (câmara/áudio/projeção). STUN é grátis; para funcionar
-// em dados móveis/NAT restritivo, acrescente um servidor TURN em iceServers.
+// Configuração WebRTC (câmara/áudio/projeção).
+// Em dados móveis / NAT do operador (muito comum), só STUN não chega: a ligação
+// falha e o Guardian não recebe som nem imagem. Por isso incluímos também servidores
+// TURN públicos gratuitos (OpenRelay/Metered), que fazem o relay do áudio/vídeo quando
+// a ligação direta não é possível. Para uso intensivo, troque por um TURN próprio.
 window.TC_RTC = {
   iceServers: [
-    { urls: ['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302'] }
-    // ,{ urls:'turn:SEU_TURN:3478', username:'USUARIO', credential:'SENHA' }
-  ]
+    { urls: ['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302'] },
+    { urls: 'stun:stun.relay.metered.ca:80' },
+    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+    // ,{ urls:'turn:SEU_TURN:3478', username:'USUARIO', credential:'SENHA' }  // TURN próprio (opcional)
+  ],
+  iceCandidatePoolSize: 4
 };

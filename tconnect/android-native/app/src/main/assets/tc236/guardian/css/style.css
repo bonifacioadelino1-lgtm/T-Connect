@@ -1224,3 +1224,18 @@ body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Ari
 .tc-about-pc li{color:#c3d4e0;font-size:12.5px;line-height:1.5;margin-bottom:4px}
 .tc-about-note{margin:18px 0;background:rgba(6,22,34,.6);border:1px solid rgba(34,211,238,.25);border-radius:12px;padding:12px;color:#b6cad8;font-size:13px;line-height:1.55}
 .tc-about-body .btn.wide{width:100%;margin-top:4px}
+
+/* ===== v2.39.32 · Câmera ao vivo: janela MENOR (não ocupa o app todo) ===== */
+/* Painel compacto, ancorado em baixo ao centro, acima do botão SOS. Continua a
+   permitir ampliar com os dedos (pinça) e arrastar; isto é só o tamanho inicial. */
+.tc-screen-preview{
+  top:auto!important; left:0!important; right:0!important; bottom:92px!important;
+  margin-left:auto!important; margin-right:auto!important;
+  width:min(90vw,380px)!important; height:auto!important; max-height:56vh!important;
+  inset:auto!important; border-radius:16px!important;
+}
+.tc-screen-preview-video{ height:auto!important; max-height:40vh!important; width:100%!important; }
+@media(max-width:520px){
+  .tc-screen-preview{ width:min(92vw,360px)!important; bottom:88px!important; max-height:54vh!important; }
+  .tc-screen-preview-video{ max-height:38vh!important; }
+}

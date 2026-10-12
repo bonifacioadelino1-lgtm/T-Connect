@@ -14,11 +14,38 @@
   let selfMarker = null;
   let lastKnownLocation = null, gridLayer = null;
   // ===== Deteção de movimento/direção (para o painel: "a caminhar para X") =====
-  let tcPrevLoc = null, tcMovementStr = '';
+  // Robusta: usa um ponto de referência e um limiar que acompanha a precisão do GPS,
+  // com histerese para NÃO oscilar entre "Parado" e "A caminhar" a cada tremor do sinal.
+  let tcMoveRef = null, tcMovementStr = '';
   function tcCompassPt(brg){ const dirs=['Norte','Nordeste','Este','Sudeste','Sul','Sudoeste','Oeste','Noroeste']; return dirs[Math.round(((brg%360)/45))%8]; }
   function tcBearing(a,b){ const r=Math.PI/180; const f1=a.lat*r,f2=b.lat*r,dl=(b.lng-a.lng)*r; const y=Math.sin(dl)*Math.cos(f2); const x=Math.cos(f1)*Math.sin(f2)-Math.sin(f1)*Math.cos(f2)*Math.cos(dl); return (Math.atan2(y,x)*180/Math.PI+360)%360; }
   function tcHaversine(a,b){ const R=6371000,r=Math.PI/180; const dLat=(b.lat-a.lat)*r,dLng=(b.lng-a.lng)*r; const s=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dLng/2)*Math.sin(dLng/2); return 2*R*Math.asin(Math.min(1,Math.sqrt(s))); }
-  function tcUpdateMovement(lat,lng){ const now=Date.now(); const cur={lat:Number(lat),lng:Number(lng),t:now}; if(tcPrevLoc){ const d=tcHaversine(tcPrevLoc,cur); const dt=Math.max(1,(now-tcPrevLoc.t)/1000); const spd=d/dt; const ad=window.TC_MAP_ADDRESS||{}; const area=ad.bairro||ad.distrito||ad.cidade||''; if(d<6){ tcMovementStr='Parado'+(area?' · '+area:''); } else { const dir=tcCompassPt(tcBearing(tcPrevLoc,cur)); const verb=spd>2.2?'Em movimento para':'A caminhar para'; tcMovementStr=verb+' '+dir+(area?' · '+area:''); } if(d>=6) tcPrevLoc=cur; } else { tcPrevLoc=cur; tcMovementStr=''; } }
+  function tcUpdateMovement(lat,lng,accuracy){
+    const now=Date.now();
+    const cur={lat:Number(lat),lng:Number(lng),t:now};
+    if(!Number.isFinite(cur.lat)||!Number.isFinite(cur.lng)) return;
+    const ad=window.TC_MAP_ADDRESS||{}; const area=ad.bairro||ad.distrito||ad.cidade||'';
+    const suf=area?(' · '+area):'';
+    // Limiar que ignora o ruído do GPS: nunca menor que ~25 m e cresce com a imprecisão.
+    const acc=Math.min(120, Math.max(0, Number(accuracy)||0));
+    const moveThresh=Math.max(25, acc*1.3);
+    if(!tcMoveRef){ tcMoveRef=cur; if(!tcMovementStr) tcMovementStr='Parado'+suf; return; }
+    const d=tcHaversine(tcMoveRef,cur);
+    const dt=Math.max(1,(now-tcMoveRef.t)/1000);
+    if(d>=moveThresh){
+      // Deslocação real e sustentada: declara movimento e avança a referência.
+      const spd=d/dt; // m/s
+      const dir=tcCompassPt(tcBearing(tcMoveRef,cur));
+      const verb=spd>1.8?'Em movimento para':'A caminhar para';
+      tcMovementStr=verb+' '+dir+suf;
+      tcMoveRef=cur;
+    } else if(dt>=12){
+      // Ficou dentro do limiar durante um tempo razoável: está realmente parado.
+      tcMovementStr='Parado'+suf;
+      tcMoveRef=cur; // reinicia a referência para não acumular deriva do GPS
+    }
+    // Caso contrário (pequena variação e há pouco tempo): mantém o estado anterior (histerese).
+  }
   let mapContainer = null;
   let hasLiveLocation = false;
   let roadLayer, satelliteLayer, hybridLabels, fallbackRoadLayer, labelsLayer, transportLayer;
@@ -36,42 +63,70 @@
 
   function escapeHtml(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   async function reverseGeocode(lat, lng) {
-    // ~11 m de precisão: evita pedir ao Nominatim a cada oscilação do GPS.
+    // ~11 m de precisão: evita pedir geocodificação a cada oscilação do GPS.
     const key = lat.toFixed(4)+','+lng.toFixed(4);
     if (key === lastGeocodeKey) return;
-    areaName = '';
     clearTimeout(geocodeTimer);
     const wait = Math.max(350, 1100 - (Date.now() - lastGeocodeAt));
     geocodeTimer = setTimeout(async () => {
+      lastGeocodeAt = Date.now();
+      let via='', bairro='', distrito='', cidade='', provincia='', pais='', full='';
+      // 1) BigDataCloud: nomes administrativos REAIS da zona (bairro/localidade, cidade,
+      //    província, país). Feito para uso no cliente (CORS aberto, sem chave) e dá nomes
+      //    oficiais da área em vez de rótulos obscuros/inexistentes do OSM.
       try {
-        lastGeocodeAt = Date.now();
+        const u = 'https://api.bigdatacloud.net/data/reverse-geocode-client?latitude='+encodeURIComponent(lat)+'&longitude='+encodeURIComponent(lng)+'&localityLanguage=pt';
+        const r = await fetch(u);
+        if (r.ok) {
+          const d = await r.json();
+          bairro    = d.locality || '';
+          cidade    = d.city || d.locality || '';
+          provincia = d.principalSubdivision || '';
+          pais      = d.countryName || '';
+          // Tenta um nível administrativo intermédio (distrito/município) real.
+          try {
+            const adm = (d.localityInfo && d.localityInfo.administrative) || [];
+            // Ordenado do mais geral (país) ao mais específico. Procura um nível de
+            // distrito/município distinto da cidade e da província.
+            for (let i = adm.length - 1; i >= 0; i--) {
+              const nm = adm[i] && adm[i].name;
+              if (nm && nm !== cidade && nm !== provincia && nm !== bairro) { distrito = nm; break; }
+            }
+          } catch(_){}
+        }
+      } catch(_){}
+      // 2) Nominatim: acrescenta a RUA/avenida (quando existe) e serve de reforço/alternativa.
+      try {
         const url = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&accept-language=pt&lat='+encodeURIComponent(lat)+'&lon='+encodeURIComponent(lng)+'&zoom=18&addressdetails=1';
         const r = await fetch(url, {headers:{'Accept':'application/json'}});
-        if (!r.ok) return;
-        const data = await r.json();
-        lastGeocodeKey = key; // só memoriza depois de sucesso, para permitir nova tentativa
-        const a = data.address || {};
-        // Endereço detalhado como no Google Maps: via/avenida, bairro, distrito,
-        // cidade e província/estado. Igual para Mapa, Satélite e Híbrido (mesmo areaName).
-        const via = a.road || a.pedestrian || a.footway || a.residential || '';
-        const bairro = a.neighbourhood || a.suburb || a.quarter || a.hamlet || '';
-        const distrito = a.city_district || a.district || a.county || a.municipality || '';
-        const cidade = a.city || a.town || a.village || '';
-        const provincia = a.state || a.region || a.province || '';
-        const parts = [via, bairro, distrito, cidade, provincia].filter((v,i,arr)=>v && arr.indexOf(v)===i);
-        areaName = parts.length ? parts.join(', ') : (data.display_name || '');
-        window.TC_MAP_ADDRESS = {via, bairro, distrito, cidade, provincia, pais:a.country||'', full:areaName, lat, lng};
-        if (marker) {
-          const coords = lat.toFixed(6)+', '+lng.toFixed(6);
-          const title = areaName ? escapeHtml(areaName) : 'Localização detectada';
-          marker.bindPopup('<b>Child localizado</b><br>'+title+'<br><span style="font-family:monospace">'+coords+'</span>');
+        if (r.ok) {
+          const data = await r.json(); const a = data.address || {};
+          via = a.road || a.pedestrian || a.footway || a.residential || '';
+          if (!bairro)    bairro    = a.neighbourhood || a.suburb || a.quarter || a.hamlet || '';
+          if (!distrito)  distrito  = a.city_district || a.district || a.county || a.municipality || '';
+          if (!cidade)    cidade    = a.city || a.town || a.village || '';
+          if (!provincia) provincia = a.state || a.region || a.province || '';
+          if (!pais)      pais      = a.country || '';
+          full = data.display_name || '';
         }
-        window.TC_MAP_AREA_NAME = areaName;
-        if (window.refreshLocationTerminalUI) window.refreshLocationTerminalUI();
-        const hud = mapContainer && mapContainer.querySelector('.tc-exact-coordinate-hud');
-        if (hud && hud.querySelector('small')) hud.querySelector('small').textContent = '✓ Localizado · ' + (areaName || 'posição recebida');
-        try{ const gp=mapContainer&&mapContainer.querySelector('.tc-glass-panel'); if(gp&&gp.classList.contains('open')){ const ael=gp.querySelector('[data-k=addr]'); if(ael) tcTypeInto(ael, areaName||'—'); } }catch(_){}
-      } catch(e) {}
+      } catch(_){}
+      // Nome final: só termos reais e não repetidos. Inclui sempre cidade/província/país
+      // para nunca ficar só com um rótulo isolado e irreconhecível.
+      const parts = [via, bairro, distrito, cidade, provincia].filter((v,i,arr)=>v && arr.indexOf(v)===i);
+      const built = parts.length ? parts.join(', ') : full;
+      if (!built) return; // nada fiável: mantém as coordenadas, nunca escreve um nome falso
+      areaName = built;
+      lastGeocodeKey = key; // memoriza só após obter um nome real (permite nova tentativa se falhar)
+      window.TC_MAP_ADDRESS = {via, bairro, distrito, cidade, provincia, pais, full: areaName, lat, lng};
+      window.TC_MAP_AREA_NAME = areaName;
+      if (marker) {
+        const coords = lat.toFixed(6)+', '+lng.toFixed(6);
+        marker.bindPopup('<b>Child localizado</b><br>'+escapeHtml(areaName)+'<br><span style="font-family:monospace">'+coords+'</span>');
+      }
+      if (window.refreshLocationTerminalUI) window.refreshLocationTerminalUI();
+      const hud = mapContainer && mapContainer.querySelector('.tc-exact-coordinate-hud');
+      if (hud && hud.querySelector('small')) hud.querySelector('small').textContent = '✓ Localizado · ' + areaName;
+      try{ const gp=mapContainer&&mapContainer.querySelector('.tc-glass-panel'); if(gp&&gp.classList.contains('open')){ const ael=gp.querySelector('[data-k=addr]'); if(ael) tcTypeInto(ael, areaName); } }catch(_){}
     }, wait);
   }
 
@@ -416,7 +471,7 @@
       const pos = [lat, lng];
       hasLiveLocation = true;
       if (!window.__tcAutoHybrid) { window.__tcAutoHybrid = true; currentType = 'hybrid'; try { updateLayers(); } catch(_){} }
-      try { tcUpdateMovement(lat, lng); } catch(_) {}
+      try { tcUpdateMovement(lat, lng, accuracy); } catch(_) {}
       lastKnownLocation = {lat, lng, accuracy: Number(accuracy)||60};
       term('loc',2000,'LOCALIZAÇÃO', 'ATUALIZACAO_DISPOSITIVO', 'OK', {detail:`${(window.TC_DEVICE_NAME||'Child')} · ${lat.toFixed(6)}, ${lng.toFixed(6)}`, contact:(window.TC_DEVICE_NAME||'Child')});
       try { localStorage.setItem('tc:lastKnownLocation', JSON.stringify(lastKnownLocation)); } catch(e) {}
@@ -474,7 +529,7 @@
     },
     reset() {
       // Chamado no logout: nenhuma localização do Child fica guardada neste navegador.
-      lastKnownLocation = null; hasLiveLocation = false; areaName = ''; lastGeocodeKey = ''; tcAcquired = false; tcAcquiring = false;
+      lastKnownLocation = null; hasLiveLocation = false; areaName = ''; lastGeocodeKey = ''; tcAcquired = false; tcAcquiring = false; tcMoveRef = null; tcMovementStr = '';
       try { localStorage.removeItem('tc:lastKnownLocation'); } catch (e) {}
       try { if (marker) marker.setOpacity(0); } catch (e) {}
       try { if (accuracyCircle) accuracyCircle.setStyle({opacity:0, fillOpacity:0}); } catch (e) {}

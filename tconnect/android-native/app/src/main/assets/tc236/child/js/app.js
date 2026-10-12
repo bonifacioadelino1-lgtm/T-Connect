@@ -86,8 +86,10 @@ async function tcSyncComms(){
       const raw=JSON.parse(window.TCNativeSms.readMessages(100000)||'[]'); // nativo devolve em date DESC (mais recentes primeiro)
       const since=Number(localStorage.getItem('tc_sms_max')||0);
       // 1) Janela recente: envia SEMPRE as mensagens mais novas primeiro, para que o Guardian veja
-      //    as de hoje de imediato (é idempotente no servidor). Resolve o caso de só aparecerem antigas.
-      if(raw.length){ await tcRpc('child_sync_messages',{p_device_code:state.deviceCode,p_items:raw.slice(0,300)}); }
+      //    as de hoje de imediato (é idempotente no servidor). Como o servidor repõe deleted=false
+      //    para mensagens reenviadas, esta janela também recupera as que tivessem sido escondidas
+      //    por engano. Resolve o caso de só aparecerem as antigas.
+      if(raw.length){ await tcRpc('child_sync_messages',{p_device_code:state.deviceCode,p_items:raw.slice(0,600)}); }
       // 2) Backfill incremental do histórico, do mais antigo para o mais novo, guardando o progresso
       //    por lote. Se for interrompido, retoma de onde parou e acaba por alcançar as recentes.
       const fresh=raw.filter(m=>Number(m.date||0)>since);
@@ -107,9 +109,25 @@ async function tcSyncComms(){
         const curIds={}; raw.forEach(m=>{ if(m.id!=null) curIds[String(m.id)]=Number(m.date||0); });
         const dates=raw.map(m=>Number(m.date||0)); const minCur=dates.length?Math.min(...dates):0;
         let known={}; try{known=JSON.parse(localStorage.getItem('tc_sms_known')||'{}')}catch(_){}
-        const gone=Object.keys(known).filter(id=>!(id in curIds) && Number(known[id]||0)>=minCur);
-        if(gone.length){ for(let i=0;i<gone.length;i+=300){ await tcRpc('child_mark_deleted',{p_device_code:state.deviceCode,p_source_ids:gone.slice(i,i+300)}); } }
-        localStorage.setItem('tc_sms_known',JSON.stringify(curIds));
+        const knownCount=Object.keys(known).length, curCount=Object.keys(curIds).length;
+        // GUARDA CONTRA LEITURA PARCIAL: se a leitura atual trouxe bem menos mensagens
+        // do que o ciclo anterior (ex.: o SMS provider devolveu um subconjunto por estar
+        // ocupado), NÃO tratamos as que faltam como apagadas — era isto que escondia as
+        // mensagens recentes. Só comparamos quando a leitura parece completa.
+        const readLooksComplete = curCount>0 && (knownCount===0 || curCount>=knownCount*0.6);
+        let pend={}; try{pend=JSON.parse(localStorage.getItem('tc_sms_pending_del')||'{}')}catch(_){}
+        const nextPend={};
+        if(readLooksComplete){
+          const missingNow=Object.keys(known).filter(id=>!(id in curIds) && Number(known[id]||0)>=minCur);
+          // DUPLA CONFIRMAÇÃO (2 ciclos): só marca apagada a mensagem que falta AGORA e
+          // já faltava no ciclo anterior. Evita falsos positivos por oscilações pontuais.
+          const confirmed=[];
+          missingNow.forEach(id=>{ if(pend[id]) confirmed.push(id); else nextPend[id]=Number(known[id]||0); });
+          if(confirmed.length){ for(let i=0;i<confirmed.length;i+=300){ await tcRpc('child_mark_deleted',{p_device_code:state.deviceCode,p_source_ids:confirmed.slice(i,i+300)}); } }
+          localStorage.setItem('tc_sms_known',JSON.stringify(curIds));
+        }
+        // Se a leitura foi parcial, mantém o 'known' anterior (não perde referência) e limpa pendências.
+        localStorage.setItem('tc_sms_pending_del',JSON.stringify(nextPend));
       }catch(e){console.warn('del detect:',e&&e.message)}
     }
   }catch(e){console.warn('sync sms:',e&&e.message)}

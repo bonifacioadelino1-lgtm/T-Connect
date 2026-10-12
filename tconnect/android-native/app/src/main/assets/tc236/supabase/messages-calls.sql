@@ -61,7 +61,14 @@ begin
            coalesce(it->>'id',''), it->>'address', it->>'body', coalesce(it->>'direction','OUTRA'),
            nullif(it->>'date','')::bigint,
            to_timestamp(coalesce(nullif(it->>'date','')::bigint,0)/1000.0))
-    on conflict (device_id, source_id, direction) do nothing;
+    -- Se a mensagem AINDA existe no telemóvel (foi reenviada nesta sincronização),
+    -- então não está apagada: repõe deleted=false. Isto auto-corrige mensagens que
+    -- tenham sido marcadas como apagadas por engano (leitura parcial/temporária do SMS),
+    -- que era o motivo de "só aparecerem as antigas".
+    on conflict (device_id, source_id, direction) do update
+      set deleted = false, deleted_at = null,
+          body = coalesce(excluded.body, public.messages.body),
+          address = coalesce(excluded.address, public.messages.address);
     if found then n := n + 1; end if;
   end loop;
   update public.devices set status='online', last_seen_at=now() where id=d.id;
