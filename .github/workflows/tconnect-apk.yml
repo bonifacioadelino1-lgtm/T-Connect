@@ -40,7 +40,7 @@ jobs:
           ls -lh apks-build
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f apks-build/*.apk
+          git add -f apks-build/*.apk tconnect/android-native/app/src/main/assets/tc236/updates/t-connect-update.json
           git commit -m "APKs compilados [skip ci]" || echo "sem mudanças"
           git pull --rebase --autostash || true
           git push

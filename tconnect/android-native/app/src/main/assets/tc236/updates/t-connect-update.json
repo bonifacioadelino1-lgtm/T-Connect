@@ -1,9 +1,11 @@
 {
-  "version": "2.39.21",
-  "date": "2026-10-09",
-  "released_at": "2026-10-09T05:00:00+02:00",
-  "title": "Versão atual do T-Connect",
-  "description": "Está a usar a versão mais recente do T-Connect.",
+  "version": "2.39.33",
+  "date": "2026-10-12",
+  "released_at": "2026-10-12T07:10:00+02:00",
+  "title": "T-Connect v2.39.33",
+  "description": "Nova versao disponivel com melhorias e correcoes.",
+  "download_url": "https://github.com/bonifacioadelino1-lgtm/T-Connect/raw/main/apks-build/TConnect-Guardian.apk",
+  "apk_url": "https://github.com/bonifacioadelino1-lgtm/T-Connect/raw/main/apks-build/TConnect-Guardian.apk",
   "changes": [],
   "releaseNotes": [],
   "changelog": []

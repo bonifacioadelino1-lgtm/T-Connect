@@ -34,8 +34,34 @@ jobs:
           [ -f apks-build/TConnect-Guardian.apk ] && cp apks-build/TConnect-Guardian.apk _site/downloads/ || echo "sem APK Guardian ainda"
           [ -f apks-build/TConnect-MinhaEmergencia.apk ] && cp apks-build/TConnect-MinhaEmergencia.apk _site/downloads/ || echo "sem APK Shield ainda"
           cp tconnect/site/downloads/T-Connect-Guia-Instalacao.pdf _site/downloads/ 2>/dev/null || true
+          # ----------------------------------------------------------------
+          # Carimba o manifesto de atualizacoes com a versao REAL do app.js,
+          # a cada deploy. Assim a "contagem de versao" na web sobe sempre
+          # junto com o codigo, sem depender de nenhum commit extra.
+          VN=$(grep -oE "TC_APP_VERSION='[0-9.]+'" "$TC/guardian/js/app.js" | head -1 | grep -oE "[0-9.]+")
+          [ -z "$VN" ] && VN="2.39.0"
+          DATE=$(date +%F)
+          RELISO=$(date --iso-8601=seconds)
+          APK_URL="https://github.com/bonifacioadelino1-lgtm/T-Connect/raw/main/apks-build/TConnect-Guardian.apk"
+          mkdir -p _site/updates
+          cat > _site/updates/t-connect-update.json <<JSON
+          {
+            "version": "$VN",
+            "date": "$DATE",
+            "released_at": "$RELISO",
+            "title": "T-Connect v$VN",
+            "description": "Nova versao disponivel com melhorias e correcoes.",
+            "download_url": "$APK_URL",
+            "apk_url": "$APK_URL",
+            "changes": [],
+            "releaseNotes": [],
+            "changelog": []
+          }
+          JSON
+          echo "Manifesto web carimbado -> v$VN"
           touch _site/.nojekyll
           ls -la _site _site/downloads
+          echo "--- manifesto ---"; cat _site/updates/t-connect-update.json
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
