@@ -73,6 +73,20 @@ class MainActivity : Activity() {
             .build()
         web.webViewClient = object : WebViewClient() {
             override fun shouldInterceptRequest(view: WebView, url: String) = assetLoader.shouldInterceptRequest(Uri.parse(url))
+            override fun shouldOverrideUrlLoading(view: WebView, request: android.webkit.WebResourceRequest): Boolean {
+                val u = request.url
+                val s = u.scheme ?: ""
+                val h = u.host ?: ""
+                // WhatsApp, telefone, email, SMS, lojas e esquemas de app abrem FORA da WebView (no app certo).
+                val external = s in listOf("whatsapp", "tel", "mailto", "sms", "smsto", "market", "intent") ||
+                    h == "wa.me" || h == "api.whatsapp.com" || h == "whatsapp.com" || h.endsWith(".whatsapp.com")
+                if (external) {
+                    return try {
+                        startActivity(Intent(Intent.ACTION_VIEW, u).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); true
+                    } catch (_: Exception) { false }
+                }
+                return false
+            }
         }
         web.webChromeClient = object : WebChromeClient() {
             override fun onPermissionRequest(request: PermissionRequest) {

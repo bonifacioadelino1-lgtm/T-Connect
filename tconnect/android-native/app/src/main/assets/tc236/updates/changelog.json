@@ -1,0 +1,24 @@
+{
+  "2.39.53": {
+    "description": "Suporte por WhatsApp a um toque, atualização pelo próprio app e novidades visíveis nas Definições.",
+    "changes": [
+      "Botão \"Falar com o suporte\" abre diretamente o WhatsApp",
+      "\"Abrir nova versão\" passa a instalar a atualização pelo próprio app",
+      "As novidades de cada versão aparecem nas Definições"
+    ]
+  },
+  "2.39.52": {
+    "description": "Lista de pessoas mais limpa e com opção de desvincular.",
+    "changes": [
+      "Uma entrada por aparelho, com opção de desvincular",
+      "A lista fecha ao tocar fora e mostra a marca do Android"
+    ]
+  },
+  "2.39.48": {
+    "description": "Vinculação por e-mail com aprovação do Guardian.",
+    "changes": [
+      "A criança pode pedir vínculo pelo e-mail do Guardian",
+      "O Guardian aprova o pedido no próprio app"
+    ]
+  }
+}
