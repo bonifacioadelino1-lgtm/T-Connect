@@ -37,8 +37,8 @@ body{background:#060d1e}
 .cm-ring.r2{width:104px;height:104px;border-color:rgba(90,180,255,.2)}
 .cm-badge{width:80px;height:80px;display:grid;place-items:center;border-radius:26px;background:linear-gradient(160deg,rgba(22,54,98,.92),rgba(9,24,50,.92));border:1px solid rgba(110,190,255,.35);box-shadow:0 16px 36px rgba(0,30,80,.5),inset 0 1px 0 rgba(255,255,255,.14)}
 .cm-badge svg{width:46px;height:50px}
-.cm-title{font-size:30px;font-weight:800;color:#eaf2ff;letter-spacing:.3px;margin:0 0 13px}
-.cm-title b{font-weight:800;background:linear-gradient(90deg,#4cc3ff,#1f7bff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent}
+.cm-title{font-size:26px;font-weight:800;color:#eaf2ff;letter-spacing:.3px;margin:0 0 13px;line-height:1.12}
+.cm-title b{display:inline-block;margin-top:2px;font-size:30px;font-weight:900;letter-spacing:1px;background:linear-gradient(90deg,#4cc3ff,#1f7bff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent}
 .cm-status{display:inline-flex;align-items:center;gap:10px;border:1px solid rgba(90,150,210,.4);background:rgba(10,26,46,.6);backdrop-filter:blur(8px);border-radius:14px;padding:9px 15px;box-shadow:0 10px 30px rgba(0,0,0,.28)}
 .cm-dot{width:11px;height:11px;border-radius:50%;background:#2fe06a;box-shadow:0 0 10px #2fe06a;flex:none}
 .cm-status.off .cm-dot{background:#ff5c5c;box-shadow:0 0 10px #ff5c5c}
@@ -49,16 +49,20 @@ body{background:#060d1e}
 .cm-bars i{width:3px;background:#3aa0ff;border-radius:1px}.cm-bars i:nth-child(1){height:5px}.cm-bars i:nth-child(2){height:8px}.cm-bars i:nth-child(3){height:11px}.cm-bars i:nth-child(4){height:14px}
 .cm-status.off .cm-bars i{background:#5b7a99}
 /* ---- botão de emergência (herói) ---- */
-.cm-sos{position:relative;margin-top:auto;width:min(66vw,234px);height:min(66vw,234px);border-radius:50%;border:0;cursor:pointer;background:none;padding:0;display:grid;place-items:center}
+.cm-sos{position:relative;margin-top:auto;width:min(66vw,234px);height:min(66vw,234px);border-radius:50%;border:0;cursor:pointer;background:none;padding:0;display:grid;place-items:center;-webkit-tap-highlight-color:transparent;outline:none;-webkit-user-select:none;user-select:none;animation:cmFloat 3.6s ease-in-out infinite}
+.cm-sos:focus,.cm-sos:focus-visible{outline:none}.cm-sos::-moz-focus-inner{border:0;padding:0}
+.cm-home button{-webkit-tap-highlight-color:transparent}
+@keyframes cmFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
 .cm-sos::after{display:none!important}
 .cm-sos-core{position:relative;z-index:2;width:100%;height:100%;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#fff;background:radial-gradient(circle at 50% 32%,#ff6378 0%,#e2273f 46%,#a60f2a 100%);box-shadow:0 22px 52px rgba(200,20,50,.45),inset 0 6px 16px rgba(255,255,255,.34),inset 0 -16px 30px rgba(90,0,20,.5)}
-.cm-sos-ring{position:absolute;inset:-10px;border-radius:50%;border:2px solid rgba(255,90,120,.5);box-shadow:0 0 34px rgba(255,60,96,.42)}
+.cm-sos-ring{position:absolute;inset:-10px;border-radius:50%;border:2px solid rgba(255,90,120,.5);box-shadow:0 0 34px rgba(255,60,96,.42);animation:cmRingPulse 3.6s ease-in-out infinite}
+@keyframes cmRingPulse{0%,100%{opacity:.7;box-shadow:0 0 26px rgba(255,60,96,.32)}50%{opacity:1;box-shadow:0 0 42px rgba(255,60,96,.55)}}
 .cm-sos-wave{position:absolute;inset:0;border-radius:50%;border:3px solid rgba(255,120,150,.9);opacity:0;pointer-events:none;z-index:3}
 .cm-sos-ico svg{width:42px;height:42px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 2px 4px rgba(90,0,20,.5))}
 .cm-sos-label{font-size:25px;font-weight:900;letter-spacing:.5px;text-shadow:0 2px 6px rgba(80,0,20,.5)}
 .cm-sos-hint{font-size:11px;font-weight:600;opacity:.86}
 .cm-sos:active .cm-sos-core{transform:scale(.97)}
-.cm-sos.sos-before,.cm-sos.sos-after{animation:none!important;box-shadow:none!important}
+.cm-sos.sos-before,.cm-sos.sos-after{animation:cmFloat 3.6s ease-in-out infinite!important;box-shadow:none!important}
 .cm-sos.sos-before .cm-sos-core{animation:cmPress .5s ease}
 .cm-sos.sos-before .cm-sos-wave{animation:cmWave .66s ease-out}
 @keyframes cmPress{45%{transform:scale(.93)}100%{transform:scale(1)}}
