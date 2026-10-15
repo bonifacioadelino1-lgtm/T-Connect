@@ -18,12 +18,48 @@
 @keyframes sosAfter{0%{transform:scale(1)}35%{transform:scale(1.11);box-shadow:0 0 0 16px rgba(239,68,68,.18),0 0 70px rgba(239,68,68,.72)}100%{transform:scale(1);box-shadow:0 0 50px #0ea5e955}}
 @media (prefers-reduced-motion:reduce){.emergency-direct,.emergency-direct::after{animation:none!important}}
 
-/* ===== v2.39.39 · Painel da criança = imagem exata enviada ===== */
-.ch-exact{position:fixed;inset:0;z-index:5;background:#04101f;display:grid;place-items:center;overflow:hidden}
-.ch-exact-inner{position:relative;aspect-ratio:840/1747;width:100%;max-width:100vw;max-height:100dvh;margin:auto}
-.ch-exact-img{display:block;width:100%;height:100%;object-fit:fill;user-select:none;-webkit-user-drag:none;pointer-events:none}
-/* botão de menu (⋮) transparente, sobre o canto superior direito da imagem */
-.ch-exact-menu{position:absolute;top:0;right:0;width:20%;height:7%;background:transparent;border:0;cursor:pointer;padding:0}
-/* botão de EMERGÊNCIA transparente, sobre o círculo azul da imagem */
-.ch-exact-sos{position:absolute;left:50%;top:63%;transform:translate(-50%,-50%);width:62%;aspect-ratio:1;border-radius:50%;background:transparent;border:0;box-shadow:none;cursor:pointer;padding:0}
-.ch-exact-sos:active{transform:translate(-50%,-50%) scale(.97)}
+/* ===== v2.39.40 · Painel da criança (design novo, funcional) ===== */
+body{background:radial-gradient(circle at 50% -5%,#0c2f5e 0,#071a33 48%,#04101f 100%)}
+.child{display:flex;flex-direction:column}
+.child-home2{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;flex:1;min-height:calc(100dvh - 120px);padding-top:6px}
+.child-home2::before{content:"";position:absolute;top:-10px;left:50%;transform:translateX(-50%);width:140%;height:300px;background-image:radial-gradient(rgba(120,180,255,.16) 1.3px,transparent 1.4px);background-size:16px 16px;-webkit-mask-image:radial-gradient(ellipse 60% 70% at 50% 35%,#000 0,transparent 72%);mask-image:radial-gradient(ellipse 60% 70% at 50% 35%,#000 0,transparent 72%);opacity:.6;pointer-events:none}
+/* emblema (estático, sem animação) */
+.ch-emblem{position:relative;width:200px;height:200px;margin:4px auto 2px;display:grid;place-items:center}
+.ch-ring{position:absolute;left:50%;top:50%;border-radius:50%;transform:translate(-50%,-50%);border:1px solid rgba(70,160,255,.35)}
+.ch-ring.r1{width:120px;height:120px;box-shadow:0 0 30px rgba(40,140,255,.35) inset,0 0 24px rgba(40,140,255,.25)}
+.ch-ring.r2{width:164px;height:164px;border-color:rgba(60,140,240,.22)}
+.ch-ring.r3{width:198px;height:198px;border-color:rgba(60,140,240,.12)}
+.ch-shield{position:relative;z-index:2;width:104px;height:122px;filter:drop-shadow(0 10px 22px rgba(0,0,0,.55))}
+.ch-title{font-size:42px;font-weight:900;color:#eaf3ff;letter-spacing:.5px;margin:6px 0 16px;line-height:1}
+.ch-title .ch-t2{color:#2f9bff}
+/* pílula de estado (ao vivo) */
+.ch-statuspill{display:inline-flex;align-items:center;gap:11px;max-width:94%;border:1px solid rgba(70,130,185,.45);background:rgba(10,28,46,.72);border-radius:16px;padding:12px 16px;backdrop-filter:blur(6px);box-shadow:0 8px 26px rgba(0,0,0,.3)}
+.ch-sdot{width:13px;height:13px;border-radius:50%;background:#2fe06a;box-shadow:0 0 10px #2fe06a;flex:none}
+.ch-stxt{font-size:16px;font-weight:700;color:#eef5fb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ch-ssep{width:1px;height:20px;background:rgba(120,160,195,.5);flex:none}
+.ch-stime{font-size:16px;font-weight:800;color:#cfe0ee;flex:none;font-variant-numeric:tabular-nums}
+.ch-sbars{display:inline-flex;align-items:flex-end;gap:2.5px;height:16px;flex:none}
+.ch-sbars i{width:3.5px;background:#3aa0ff;border-radius:1px}.ch-sbars i:nth-child(1){height:6px}.ch-sbars i:nth-child(2){height:9px}.ch-sbars i:nth-child(3){height:12px}.ch-sbars i:nth-child(4){height:16px}
+/* botão grande 3D — só anima ao clicar (classes sos-before/sos-after) */
+.ch-sos{margin:38px auto 0;width:min(70vw,250px);height:min(70vw,250px);border-radius:50%;border:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:pointer;color:#fff;background:radial-gradient(circle at 50% 34%,#3bb0ff 0,#1577e6 46%,#0a4ba6 100%);box-shadow:0 0 0 10px rgba(8,26,48,.92),0 0 0 12px rgba(60,150,255,.35),0 0 60px rgba(30,130,240,.55),inset 0 6px 18px rgba(255,255,255,.35),inset 0 -14px 26px rgba(0,30,70,.55)}
+.ch-sos:active{transform:scale(.96)}
+.ch-siren{font-size:52px;line-height:1;filter:drop-shadow(0 0 12px rgba(255,60,60,.8))}
+.ch-sos-label{font-size:30px;font-weight:900;letter-spacing:1px;line-height:1.05;text-shadow:0 2px 6px rgba(0,20,50,.6)}
+/* rodapé: só as horas, ao centro */
+.ch-footer{margin-top:auto;padding:16px 0 12px;width:100%;display:flex;justify-content:center}
+.ch-foot-time{font-size:22px;font-weight:800;color:#eaf3ff;font-variant-numeric:tabular-nums;letter-spacing:1.5px;text-shadow:0 2px 8px rgba(0,0,0,.4)}
+@media(max-width:360px){.ch-stxt,.ch-stime{font-size:14px}.ch-title{font-size:36px}.ch-sos-label{font-size:26px}}
+/* ---- Menu (⋮) no mesmo padrão do novo design ---- */
+.child-menu-backdrop{position:fixed;inset:0;z-index:40;background:rgba(2,10,22,.6);backdrop-filter:blur(3px);display:flex;justify-content:flex-end}
+.child-menu{width:min(380px,92vw);height:100%;overflow:auto;background:linear-gradient(180deg,#0b2a50,#061427);border-left:1px solid rgba(70,140,220,.3);padding:20px;box-shadow:-22px 0 60px rgba(0,0,0,.55)}
+.child-menu .menu-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.child-menu .menu-head b{font-size:18px;color:#eaf3ff}
+.child-menu .menu-head small{display:block;color:#7fb0d6;font-size:11px;letter-spacing:.1em;text-transform:uppercase;margin-top:2px}
+.child-menu .menu-close{width:40px;height:40px;border-radius:12px;border:1px solid rgba(70,140,220,.35);background:rgba(10,28,46,.8);color:#cfe3f5;font-size:22px;cursor:pointer}
+.child-menu .menu-item{display:flex;align-items:flex-start;gap:12px;width:100%;text-align:left;border:1px solid rgba(70,140,220,.22);background:rgba(10,30,52,.6);border-radius:14px;padding:13px 14px;margin-bottom:10px;color:#eaf3ff;font-size:15px;cursor:pointer}
+.child-menu .menu-item:active{background:rgba(20,60,100,.6)}
+.child-menu .menu-item span{display:flex;flex-direction:column}
+.child-menu .menu-item small{color:#8fb0cb;font-size:12px;margin-top:2px;font-weight:400}
+.child-menu .perm-mini{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:4px 0 12px}
+.child-menu .perm-mini div{background:rgba(8,24,42,.6);border:1px solid rgba(60,120,190,.18);border-radius:10px;padding:8px 9px;font-size:12px;color:#b9cfe0}
+.child-menu .perm-mini b{color:#49a7ff}

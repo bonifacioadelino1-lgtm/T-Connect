@@ -390,17 +390,31 @@ function render(){
   }
 }
 function pairView(){return `<section class="childbox" id="pairing-area"><div class="shield">⌁</div><h1>Vincular dispositivo</h1>${state.deviceCode?`<div class="notice" role="status">Já vinculado como <b>${esc(state.deviceName||'Child')}</b>. Pode revincular aqui ou <button class="text-btn" style="color:#38bdf8;background:none;border:0;cursor:pointer;text-decoration:underline" onclick="state.forcePair=false;render()">voltar ao painel</button>.</div>`:''}<p>Comece diretamente pelo QR Code, código ou link criado pelo Guardian. Não é necessário fazer login neste aplicativo.</p>${state.pairMessage?`<div class="notice" role="status">${esc(state.pairMessage)}</div>`:''}<div class="pair-tabs"><button class="btn primary" onclick="document.getElementById('qr-section').hidden=false;document.getElementById('code-section').hidden=true;document.getElementById('link-section').hidden=true;startQr()">▣ Ler QR Code</button><button class="btn" onclick="stopQr();document.getElementById('qr-section').hidden=true;document.getElementById('code-section').hidden=false;document.getElementById('link-section').hidden=true"># Código</button><button class="btn" onclick="stopQr();document.getElementById('qr-section').hidden=true;document.getElementById('code-section').hidden=true;document.getElementById('link-section').hidden=false">↗ Link</button></div><div id="qr-section" class="qr-child-section"><div id="qr-reader"></div><small>O QR é lido diretamente no aplicativo Minha Segurança.</small></div><div id="code-section" hidden><form onsubmit="pair(event)" class="pair-form"><label>Código de vinculação<input name="invite" required inputmode="text" autocomplete="one-time-code" maxlength="32" pattern="[A-Za-z0-9][A-Za-z0-9 -]{5,31}" placeholder="Ex.: A1B2C3D4"></label><button class="btn primary wide">Vincular código</button></form></div><div id="link-section" hidden><form onsubmit="useInviteLink(event)" class="pair-form"><label>Link do convite<input name="inviteLink" required placeholder="Cole o link do Guardian"></label><button class="btn primary wide">Abrir convite</button></form></div></section>`}
-// Painel da criança EXATAMENTE como o design enviado: usa a própria imagem como ecrã,
-// com botões transparentes por cima (emergência e menu) para continuar a funcionar.
-function linkedView(){
-  return `<div class="ch-exact">
-    <div class="ch-exact-inner">
-      <img class="ch-exact-img" src="../assets/ui/child-home.png" alt="Minha Segurança" draggable="false">
-      <button class="ch-exact-menu" type="button" aria-label="Abrir configurações" onclick="toggleMenu()"></button>
-      <button class="send emergency-direct ch-exact-sos" type="button" aria-label="Enviar alerta de emergência" onclick="triggerSOS()"></button>
-    </div>
-  </div>`;
+// Estado ao vivo (sem a hora) e hora atual — como funcionava no design anterior.
+function tcChildStatusText(){ return String(state.status||'A proteger').replace(/\s*·?\s*\d{1,2}:\d{2}:\d{2}.*$/,'').trim()||'A proteger'; }
+function tcChildTime(){ return new Date().toLocaleTimeString('pt-PT'); }
+function tcChildShieldSvg(){
+  return `<svg viewBox="0 0 120 140" width="100%" height="100%" aria-hidden="true"><defs>
+    <linearGradient id="chSilver" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eef3f7"/><stop offset=".5" stop-color="#9fb2c2"/><stop offset="1" stop-color="#5b6c7d"/></linearGradient>
+    <linearGradient id="chRed" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff4555"/><stop offset="1" stop-color="#b3101d"/></linearGradient>
+    <linearGradient id="chWhite" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#c3d0da"/></linearGradient>
+    <clipPath id="chClip"><path d="M60 14 Q92 6 99 20 L99 74 Q99 106 60 126 Q21 106 21 74 L21 20 Q28 6 60 14 Z"/></clipPath></defs>
+    <path d="M60 9 Q94 0 103 18 L103 75 Q103 110 60 132 Q17 110 17 75 L17 18 Q26 0 60 9 Z" fill="url(#chSilver)" stroke="#2a3744" stroke-width="2"/>
+    <g clip-path="url(#chClip)"><path d="M60 10 L21 10 L21 128 L60 128 Z" fill="url(#chRed)"/><path d="M60 10 L99 10 L99 128 L60 128 Z" fill="url(#chWhite)"/><path d="M60 10 l-8 14 l8 14 l-8 14 l8 14 l-8 14 l8 14 l-8 14 l8 12" fill="none" stroke="#2a3744" stroke-width="2.4" stroke-linejoin="round"/></g>
+    <path d="M60 14 Q92 6 99 20 L99 74 Q99 106 60 126 Q21 106 21 74 L21 20 Q28 6 60 14 Z" fill="none" stroke="#ffffff" stroke-opacity=".45" stroke-width="1.4"/></svg>`;
 }
+function linkedView(){
+  const st=esc(tcChildStatusText()); const time=esc(tcChildTime());
+  return `<section class="childbox child-home2">
+    <div class="ch-emblem"><span class="ch-ring r1"></span><span class="ch-ring r2"></span><span class="ch-ring r3"></span><div class="ch-shield">${tcChildShieldSvg()}</div></div>
+    <h1 class="ch-title">Minha <span class="ch-t2">SECURITY</span></h1>
+    <div class="ch-statuspill"><span class="ch-sdot"></span><span class="ch-stxt">${st}</span><span class="ch-ssep"></span><span class="ch-stime" data-clock>${time}</span><span class="ch-sbars"><i></i><i></i><i></i><i></i></span></div>
+    <button class="send emergency-direct ch-sos" onclick="triggerSOS()" aria-label="Enviar alerta de emergência"><span class="ch-siren">🚨</span><span class="ch-sos-label">EMERGÊNCIA</span></button>
+    <div class="ch-footer"><b class="ch-foot-time" data-clock>${time}</b></div>
+  </section>`;
+}
+// Relógio ao vivo: atualiza as horas a cada segundo (sem re-render completo).
+try{ if(!window.__tcChildClock) window.__tcChildClock=setInterval(function(){ try{ const t=new Date().toLocaleTimeString('pt-PT'); document.querySelectorAll('[data-clock]').forEach(function(el){el.textContent=t;}); }catch(_){} }, 1000); }catch(_){}
 
 
 let tcChildCaptureChannel=null,tcChildCapturePeer=null,tcChildCaptureRequestId=null,tcChildCaptureStream=null;
