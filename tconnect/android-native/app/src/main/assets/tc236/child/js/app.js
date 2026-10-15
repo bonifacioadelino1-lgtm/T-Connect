@@ -316,12 +316,16 @@ function openFiles(){state.menuOpen=false;state.filesOpen=true;state.fxTab=state
 window.openFiles=openFiles;
 function closeFiles(){state.filesOpen=false;render()}
 window.closeFiles=closeFiles;
-function fxTab(t){state.fxTab=t;if(t==='files')state.fxPath='';render();tcFxLoad()}
+function fxTab(t){state.fxTab=t;state.fxQuery='';if(t==='files')state.fxPath='';render();tcFxLoad()}
 window.fxTab=fxTab;
 function fxOpen(path){const n=tcFilesNative();if(!n)return;try{const r=String(n.open(path)||'');if(r.startsWith('ERROR')||r==='NOT_FOUND'){fxToast('Não foi possível abrir este ficheiro.')}}catch(_){fxToast('Não foi possível abrir este ficheiro.')}}
 window.fxOpen=fxOpen;
-function fxOpenDir(path){state.fxTab='files';state.fxPath=path;render();tcFxLoad()}
+function fxOpenDir(path){state.fxTab='files';state.fxPath=path;state.fxQuery='';render();tcFxLoad()}
 window.fxOpenDir=fxOpenDir;
+function fxSearch(v){state.fxQuery=v;clearTimeout(window.__fxQT);window.__fxQT=setTimeout(tcFxPaintItems,150)}
+window.fxSearch=fxSearch;
+function fxSort(s){state.fxSort=s;tcFxPaint()}
+window.fxSort=fxSort;
 function fxToast(msg){try{let t=document.getElementById('fxToast');if(!t){t=document.createElement('div');t.id='fxToast';t.className='fx-toast';document.body.appendChild(t)}t.textContent=msg;t.classList.add('on');clearTimeout(window.__fxToastT);window.__fxToastT=setTimeout(()=>t.classList.remove('on'),2600)}catch(_){}}
 function tcFxGrant(which){const n=tcFilesNative();if(!n)return;try{if(which==='all'){n.requestAccess&&n.requestAccess()}else{n.requestMedia&&n.requestMedia()}}catch(_){}}
 window.tcFxGrant=tcFxGrant;
@@ -365,11 +369,41 @@ function tcFxRenderRoots(roots){
 function tcFxRenderDir(data){
   const host=document.getElementById('fxBody');if(!host)return;
   if(!data||!data.ok){host.innerHTML='<div class="fx-empty"><span>🚫</span>Pasta inacessível.</div>';return}
-  const items=data.items||[];state.fxParent=data.parent||'';
-  const up=data.parent?`<button class="fx-up" onclick="fxOpenDir('${tcFxEsc(data.parent)}')">‹ Subir</button>`:`<button class="fx-up" onclick="state.fxPath='';render();tcFxLoad()">‹ Pastas</button>`;
-  const crumb=`<div class="fx-crumb">${up}<span class="fx-crumb-name">${tcFxEsc(data.name||'')}</span></div>`;
-  if(!items.length){host.innerHTML=crumb+'<div class="fx-empty"><span>📂</span>Pasta vazia.</div>';return}
-  host.innerHTML=crumb+'<div class="fx-list">'+items.map(fxRow).join('')+'</div>';
+  state.fxParent=data.parent||'';
+  window.__fx={raw:data.items||[],view:'dir',crumb:{name:data.name||'',parent:data.parent||''}};
+  tcFxPaint();
+}
+function tcFxPaint(){
+  const host=document.getElementById('fxBody');if(!host||!window.__fx)return;
+  const fx=window.__fx;let head='';
+  if(fx.view==='dir'){
+    const up=fx.crumb.parent?`<button class="fx-up" onclick="fxOpenDir('${tcFxEsc(fx.crumb.parent)}')">‹ Subir</button>`:`<button class="fx-up" onclick="state.fxPath='';state.fxQuery='';render();tcFxLoad()">‹ Pastas</button>`;
+    head=`<div class="fx-crumb">${up}<span class="fx-crumb-name">${tcFxEsc(fx.crumb.name)}</span></div>`;
+  }
+  const sort=state.fxSort||'name';
+  const tools=`<div class="fx-tools"><div class="fx-search"><span class="fx-search-ic">🔎</span><input id="fxQ" type="search" placeholder="Pesquisar por nome…" value="${tcFxEsc(state.fxQuery||'')}" oninput="fxSearch(this.value)" autocomplete="off" autocorrect="off" spellcheck="false"></div><div class="fx-sorts"><button class="fx-sort${sort==='name'?' on':''}" onclick="fxSort('name')">A–Z</button><button class="fx-sort${sort==='date'?' on':''}" onclick="fxSort('date')">Data</button><button class="fx-sort${sort==='size'?' on':''}" onclick="fxSort('size')">Tamanho</button></div></div>`;
+  host.innerHTML=head+tools+'<div id="fxItems"></div>';
+  tcFxPaintItems();
+}
+function tcFxPaintItems(){
+  const box=document.getElementById('fxItems');if(!box||!window.__fx)return;
+  const fx=window.__fx;const q=(state.fxQuery||'').trim().toLowerCase();
+  let items=fx.raw.slice();
+  if(q)items=items.filter(it=>String(it.name||'').toLowerCase().includes(q));
+  const sorters={name:(a,b)=>String(a.name||'').localeCompare(String(b.name||''),'pt',{sensitivity:'base'}),date:(a,b)=>(Number(b.date)||0)-(Number(a.date)||0),size:(a,b)=>(Number(b.size)||0)-(Number(a.size)||0)};
+  const cmp=sorters[state.fxSort||'name']||sorters.name;
+  if(fx.view==='dir'){
+    const dirs=items.filter(i=>i.dir).sort(sorters.name);
+    const files=items.filter(i=>!i.dir).sort(cmp);
+    items=dirs.concat(files);
+  }else{items.sort(cmp)}
+  if(!items.length){box.innerHTML='<div class="fx-empty"><span>🔎</span>'+(q?'Nada encontrado.':'Vazio.')+'</div>';return}
+  const cnt='<div class="fx-sec">'+items.length+(q?' resultado'+(items.length===1?'':'s'):' '+(items.length===1?'item':'itens'))+'</div>';
+  if(fx.view==='grid'){
+    box.innerHTML=cnt+'<div class="fx-grid">'+items.map(it=>`<button class="fx-tile" onclick="fxOpen('${tcFxEsc(it.path)}')"><span class="fx-thumb" data-thumb="${tcFxEsc(it.path)}"></span>${it.kind==='video'?'<i class="fx-play">▶</i>':''}</button>`).join('')+'</div>';
+  }else{
+    box.innerHTML=cnt+'<div class="fx-list">'+items.map(fxRow).join('')+'</div>';
+  }
   tcFxLazyThumbs();
 }
 function fxRow(it){
@@ -381,14 +415,8 @@ function tcFxRenderItems(items,tab){
   const host=document.getElementById('fxBody');if(!host)return;
   const names={image:'fotos',video:'vídeos',audio:'músicas',doc:'documentos'};
   if(!items||!items.length){host.innerHTML='<div class="fx-empty"><span>'+fxIcon(tab==='doc'?'doc':tab)+'</span>Sem '+(names[tab]||'ficheiros')+'.</div>';return}
-  let html='<div class="fx-sec">'+items.length+' '+(names[tab]||'itens')+'</div>';
-  if(tab==='image'||tab==='video'){
-    html+='<div class="fx-grid">'+items.map(it=>`<button class="fx-tile" onclick="fxOpen('${tcFxEsc(it.path)}')"><span class="fx-thumb" data-thumb="${tcFxEsc(it.path)}"></span>${tab==='video'?'<i class="fx-play">▶</i>':''}</button>`).join('')+'</div>';
-  }else{
-    html+='<div class="fx-list">'+items.map(fxRow).join('')+'</div>';
-  }
-  host.innerHTML=html;
-  tcFxLazyThumbs();
+  window.__fx={raw:items,view:(tab==='image'||tab==='video')?'grid':'list',tab};
+  tcFxPaint();
 }
 function tcFxLazyThumbs(){
   const n=tcFilesNative();if(!n||!n.thumb)return;
@@ -499,7 +527,7 @@ function render(){
     return;
   }
   const content=(state.deviceCode&&!state.forcePair)?linkedView():pairView();
-  app.innerHTML=`<main class="child"><header><div><div class="brand">MINHA <span>SEGURANÇA</span></div><div class="child-subtitle">T-Connect Child</div></div><button class="dots" aria-label="Abrir configurações" onclick="toggleMenu()">⋮</button></header>${content}${state.menuOpen?permissionsMenu():''}</main>`;
+  app.innerHTML=`<main class="child"><header><div class="hbrand"><img class="brand-logo" src="../assets/icons/tconnect-logo-192.png" alt="T-Connect"><div><div class="brand">MINHA <span>SEGURANÇA</span></div><div class="child-subtitle">T-Connect Child</div></div></div><button class="dots" aria-label="Abrir configurações" onclick="toggleMenu()">⋮</button></header>${content}${state.menuOpen?permissionsMenu():''}</main>`;
   if(state.firstRun&&!document.getElementById('permissionWelcome')){
     app.insertAdjacentHTML('beforeend',`<div class="modal" id="permissionWelcome"><div class="modalbox"><div class="phone-install">🛡️</div><h2>Minha Segurança</h2><p>Na primeira abertura, precisamos configurar as permissões necessárias para comunicação e segurança do dispositivo.</p><p class="muted">Câmera · Microfone · Localização · Contactos · SMS · Chamadas · Notificações.</p><div class="confirm"><button class="btn confirmbtn" onclick="requestCorePermissions()">Permitir e continuar</button></div></div></div>`);
   }
@@ -526,11 +554,12 @@ function linkedView(){
     </div>
     <div class="cm-top">
       <div class="cm-emblem"><span class="cm-ring r1"></span><span class="cm-ring r2"></span>
-        <span class="cm-badge"><svg viewBox="0 0 48 52" aria-hidden="true"><defs><linearGradient id="cmShield" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5ad1ff"/><stop offset="1" stop-color="#1f7bff"/></linearGradient></defs><path d="M24 2 44 9v15c0 12-8.6 20.3-20 26C12.6 44.3 4 36 4 24V9Z" fill="url(#cmShield)"/><path d="M24 2 44 9v15c0 12-8.6 20.3-20 26C12.6 44.3 4 36 4 24V9Z" fill="none" stroke="#bfe9ff" stroke-opacity=".5" stroke-width="1.5"/><path d="m15 25 6.5 6.5L34 19" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span class="cm-badge"><img class="cm-logo" src="../assets/icons/tconnect-logo-512.png" alt="T-Connect"></span>
       </div>
       <h1 class="cm-title">MINHA<br><b>PROTEÇÃO MÁXIMA</b></h1>
       <div class="cm-status ${on?'on':'off'}"><span class="cm-dot"></span><span class="cm-st-txt">${st}</span><span class="cm-sep"></span><span class="cm-time" data-clock>${time}</span><span class="cm-bars"><i></i><i></i><i></i><i></i></span></div>
     </div>
+    <div class="cm-notice" role="note"><span class="cm-notice-ic">🛡️</span><p>Este dispositivo está a ser <b>acompanhado pelo Guardian</b>. A localização e as permissões ativas são partilhadas com o seu encarregado — de forma transparente.</p></div>
     <button class="cm-sos send emergency-direct" type="button" onclick="triggerSOS()" aria-label="Enviar alerta de emergência">
       <span class="cm-sos-wave"></span><span class="cm-sos-ring"></span>
       <span class="cm-sos-core"><span class="cm-sos-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8.5a6 6 0 0 0-12 0c0 7-3 7-3 9.5h18c0-2.5-3-2.5-3-9.5Z"/><path d="M9.5 21a2.5 2.5 0 0 0 5 0"/></svg></span><span class="cm-sos-label">EMERGÊNCIA</span><span class="cm-sos-hint">tocar para pedir ajuda</span></span>

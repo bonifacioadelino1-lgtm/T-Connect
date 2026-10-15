@@ -76,8 +76,8 @@ class KeepAliveService : Service() {
         val tap = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), tapFlags)
         val builder = if (Build.VERSION.SDK_INT >= 26)
             Notification.Builder(this, channelId) else @Suppress("DEPRECATION") Notification.Builder(this)
-        val n = builder.setContentTitle("T-Connect ativo")
-            .setContentText("Proteção em segundo plano ligada.")
+        val n = builder.setContentTitle("T-Connect — acompanhamento ativo")
+            .setContentText("Este dispositivo está a ser acompanhado pelo Guardian (localização e permissões).")
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setOngoing(true).setContentIntent(tap).build()
         try {
