@@ -1,4 +1,10 @@
 {
+  "2.39.54": {
+    "description": "O mapa deixou de saltar: centra uma vez e segue em tempo real.",
+    "changes": [
+      "O mapa centra uma vez e o marcador segue em tempo real, sem recentrar a cada atualização"
+    ]
+  },
   "2.39.53": {
     "description": "Suporte por WhatsApp a um toque, atualização pelo próprio app e novidades visíveis nas Definições.",
     "changes": [

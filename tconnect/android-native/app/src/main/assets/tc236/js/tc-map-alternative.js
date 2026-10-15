@@ -543,24 +543,20 @@
       // localização da criança (não "salta" para fora ao atualizar).
       const userBusy = (Date.now() - tcUserMovedAt) < 25000;
       if (follow && !tcAcquired && !tcAcquiring) {
-        tcAcquire(lat, lng); // 1.ª aquisição: ponto vermelho + rotação + zoom de ~10s + linha
+        tcAcquire(lat, lng); // 1.ª aquisição (UMA vez): ponto vermelho + rotação + zoom de ~10s
       } else if (!tcAcquiring) {
-        // Mantém a localização da criança centrada a cada atualização. Só recentra quando o
-        // centro se afastou mais do que um pequeno limiar (evita micro-saltos) e o utilizador
-        // não está a mexer no mapa.
+        // Já adquirido uma vez: o marcador move-se em TEMPO REAL, mas o mapa NÃO volta a
+        // recentrar nem a dar zoom a cada atualização (era isso que estava a "saltar" e a
+        // atrapalhar). Só traz o alvo de volta — suavemente e SEM mudar o zoom — se ele sair
+        // da área visível, e nunca enquanto o utilizador está a mexer no mapa.
         if (!userBusy) {
           try {
-            const c = map.getCenter();
-            const drift = tcHaversine({ lat: c.lat, lng: c.lng }, { lat: Number(lat), lng: Number(lng) });
-            if (drift > 10) map.setView(pos, Math.max(map.getZoom() || 0, 16), { animate: true, duration: 0.5 });
+            const b = map.getBounds && map.getBounds();
+            if (b && !b.pad(-0.18).contains(pos)) { map.panTo(pos, { animate: true, duration: 0.6 }); }
           } catch(_) {}
         }
-        const scifi = mapContainer && mapContainer.querySelector('.tc-scifi-hud');
-        const lostHud = scifi && (!scifi.classList.contains('tc-locked') || !mapContainer.querySelector('.tc-glass-panel'));
-        try {
-          if (lostHud && !userBusy) { positionReticle(); scifiLock(); }
-          else { positionReticle(); updateGrid(); updateGlassPanel(); }
-        } catch (_) {}
+        // Atualiza apenas o HUD/retículo a acompanhar o marcador, sem repetir a animação cinemática.
+        try { positionReticle(); updateGrid(); updateGlassPanel(); } catch (_) {}
       }
       if (follow) {
         if (marker && typeof marker.bringToFront === "function") setTimeout(() => marker.bringToFront(), 1200);
