@@ -557,11 +557,11 @@ class MainActivity : Activity() {
                 if (!f.exists() || f.isDirectory) return ""
                 val size = px.coerceIn(48, 512)
                 val mime = guessMime(path)
-                val bmp: Bitmap? = when {
+                val bmp = (when {
                     mime.startsWith("image") -> decodeSampled(path, size)
                     mime.startsWith("video") -> videoThumb(f, path, size)
                     else -> null
-                } ?: return ""
+                }) ?: return ""
                 val baos = ByteArrayOutputStream()
                 bmp.compress(Bitmap.CompressFormat.JPEG, 72, baos)
                 bmp.recycle()
