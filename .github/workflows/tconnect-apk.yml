@@ -31,7 +31,25 @@ jobs:
           # Mantem o manifesto de atualizacoes sincronizado com a versao do build (nunca fica preso numa versao antiga)
           MAN="app/src/main/assets/tc236/updates/t-connect-update.json"
           [ -f "$MAN" ] && sed -i -E 's/"version"[[:space:]]*:[[:space:]]*"[0-9.]+"/"version": "'"$VN"'"/' "$MAN" && echo "manifesto -> $VN"
-          ./gradlew assembleChildDebug assembleGuardianDebug --no-daemon --stacktrace -PappVersionName="$VN" -PappVersionCode="$VC"
+          set -o pipefail
+          ./gradlew assembleChildDebug assembleGuardianDebug --no-daemon --stacktrace -PappVersionName="$VN" -PappVersionCode="$VC" 2>&1 | tee /tmp/build.log
+      - name: Capturar erros de compilação
+        if: failure()
+        working-directory: tconnect/android-native
+        run: |
+          {
+            echo "# Build errors ($(date -u +%FT%TZ))"
+            echo '```'
+            grep -iE "e: |error:|unresolved|what went wrong|> task|caused by|exception|failed|> compile" /tmp/build.log | head -120
+            echo '```'
+          } > ../../BUILD_ERRORS.txt || echo "no log" > ../../BUILD_ERRORS.txt
+          cd ../..
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f BUILD_ERRORS.txt
+          git commit -m "build errors [skip ci]" || echo "no change"
+          git pull --rebase --autostash || true
+          git push || true
       - name: Gravar APKs no repositório
         run: |
           mkdir -p apks-build

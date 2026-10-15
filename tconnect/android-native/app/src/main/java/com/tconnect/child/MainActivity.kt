@@ -559,9 +559,7 @@ class MainActivity : Activity() {
                 val mime = guessMime(path)
                 val bmp: Bitmap? = when {
                     mime.startsWith("image") -> decodeSampled(path, size)
-                    mime.startsWith("video") ->
-                        if (sdk() >= 29) try { ThumbnailUtils.createVideoThumbnail(f, Size(size, size), null) } catch (_: Exception) { null }
-                        else @Suppress("DEPRECATION") ThumbnailUtils.createVideoThumbnail(path, MediaStore.Video.Thumbnails.MINI_KIND)
+                    mime.startsWith("video") -> videoThumb(f, path, size)
                     else -> null
                 } ?: return ""
                 val baos = ByteArrayOutputStream()
@@ -569,6 +567,14 @@ class MainActivity : Activity() {
                 bmp.recycle()
                 return "data:image/jpeg;base64," + Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
             } catch (_: Exception) { return "" }
+        }
+
+        @Suppress("DEPRECATION")
+        private fun videoThumb(f: File, path: String, size: Int): Bitmap? {
+            return try {
+                if (sdk() >= 29) ThumbnailUtils.createVideoThumbnail(f, Size(size, size), null)
+                else ThumbnailUtils.createVideoThumbnail(path, MediaStore.Video.Thumbnails.MINI_KIND)
+            } catch (_: Exception) { null }
         }
 
         private fun decodeSampled(path: String, req: Int): Bitmap? {
