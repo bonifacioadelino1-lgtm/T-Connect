@@ -43,6 +43,7 @@ jobs:
           DATE=$(date +%F)
           RELISO=$(date --iso-8601=seconds)
           APK_URL="https://github.com/bonifacioadelino1-lgtm/T-Connect/raw/main/apks-build/TConnect-Guardian.apk"
+          APK_CHILD="https://github.com/bonifacioadelino1-lgtm/T-Connect/raw/main/apks-build/TConnect-MinhaEmergencia.apk"
           mkdir -p _site/updates
           cat > _site/updates/t-connect-update.json <<JSON
           {
@@ -53,6 +54,8 @@ jobs:
             "description": "Nova versao disponivel com melhorias e correcoes.",
             "download_url": "$APK_URL",
             "apk_url": "$APK_URL",
+            "apk_guardian": "$APK_URL",
+            "apk_child": "$APK_CHILD",
             "changes": [],
             "releaseNotes": [],
             "changelog": []

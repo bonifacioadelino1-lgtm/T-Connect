@@ -208,7 +208,7 @@ async function tcCheckRing(){
   }catch(_){}
 }
 try{ if(!window.__tcRingTimer) window.__tcRingTimer=setInterval(()=>{try{tcCheckRing()}catch(_){}} ,8000); }catch(_){}
-async function heartbeat(){if(!state.deviceCode||!window.TC_DB.enabled)return;try{tcBgConfigure()}catch(_){}try{tcCheckRing()}catch(_){}let lat=null,lng=null,accuracy=null;if(state.consent.location&&navigator.geolocation){try{const p=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:7000,maximumAge:30000}));lat=p.coords.latitude;lng=p.coords.longitude;accuracy=p.coords.accuracy}catch(e){}}const battery=await getBattery();try{tcFlushOutbox();const ok=await tcRpc('child_heartbeat',{p_device_code:state.deviceCode,p_battery:battery,p_lat:lat,p_lng:lng,p_accuracy:accuracy});tcSyncComms();tcSyncContacts();tcSyncApps();tcPushLocation(lat,lng,accuracy);const on=(typeof navigator!=='undefined')?navigator.onLine!==false:true;state.status=(ok?'Heartbeat enviado · ':(on?'A tentar enviar · ':'Offline — dados guardados · '))+new Date().toLocaleTimeString('pt-PT')}catch(e){state.status='Offline — dados guardados';console.warn(e.message)}render()}
+async function heartbeat(){if(!state.deviceCode||!window.TC_DB.enabled)return;try{tcBgConfigure()}catch(_){}try{tcCheckRing()}catch(_){}let lat=null,lng=null,accuracy=null;if(state.consent.location&&navigator.geolocation){try{const p=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:7000,maximumAge:30000}));lat=p.coords.latitude;lng=p.coords.longitude;accuracy=p.coords.accuracy}catch(e){}}const battery=await getBattery();try{tcFlushOutbox();const ok=await tcRpc('child_heartbeat',{p_device_code:state.deviceCode,p_battery:battery,p_lat:lat,p_lng:lng,p_accuracy:accuracy});tcSyncComms();tcSyncContacts();tcSyncApps();tcPushLocation(lat,lng,accuracy);try{tcChildAutoUpdate()}catch(_){}const on=(typeof navigator!=='undefined')?navigator.onLine!==false:true;state.status=(ok?'Heartbeat enviado · ':(on?'A tentar enviar · ':'Offline — dados guardados · '))+new Date().toLocaleTimeString('pt-PT')}catch(e){state.status='Offline — dados guardados';console.warn(e.message)}render()}
 window.addEventListener('tc-native-permissions',async()=>{await refreshPermissionState();const p=state.permissionState||{};state.consent.camera=!!p.camera;state.consent.microphone=!!p.microphone;state.consent.location=!!p.location;state.consent.notifications=!!p.notifications;state.consent.sms=!!p.sms;state.consent.calls=!!p.calls;state.consent.contacts=!!p.contacts;state.consent.screen=!!p.screen;save();render()});
 window.addEventListener('tc-native-battery',async()=>{if(state.authenticated&&state.deviceCode){await heartbeat()}});
 async function getBattery(){try{if(window.TCNativeBattery){if(typeof window.TCNativeBattery.getInfo==='function'){try{const info=JSON.parse(window.TCNativeBattery.getInfo()||'{}');const n=Number(info.percent);if(Number.isFinite(n)&&n>=0&&n<=100){state.battery=n;state.batteryCharging=!!info.charging;return Math.round(n)}}catch(e){} }if(typeof window.TCNativeBattery.getPercent==='function'){const n=Number(window.TCNativeBattery.getPercent());if(Number.isFinite(n)&&n>=0&&n<=100){state.battery=Math.round(n);return Math.round(n)}}}if(navigator.getBattery){const b=await navigator.getBattery();const n=Math.round(b.level*100);state.battery=n;state.batteryCharging=!!b.charging;return n}return null}catch(e){return null}}
@@ -334,6 +334,50 @@ async function installChildApp(){
   }catch(e){state.status='Falha ao iniciar a instalação: '+(e.message||'tente novamente');}
   document.getElementById('installModal')?.remove();render();
 }
+// ---- Atualização AUTOMÁTICA do Shield/Minha Emergência ----
+// A criança não precisa (nem deve) atualizar manualmente: o app verifica sozinho o
+// manifesto de versões e, quando há uma nova, baixa o APK e abre a instalação sozinho.
+// (No Android, um app instalado por fora exige um toque final em "Instalar" — não há
+//  instalação 100% silenciosa sem privilégios de sistema — mas todo o resto é automático.)
+async function tcChildFetchManifest(){
+  const cfg=window.TC_SUPABASE||{};const remote=String(cfg.updateManifestUrl||'').trim();
+  const urls=[]; if(remote)urls.push(remote); urls.push('../updates/t-connect-update.json','/updates/t-connect-update.json');
+  for(const u of urls){ try{const r=await fetch(u,{cache:'no-store'});if(r.ok)return await r.json();}catch(_){} }
+  return null;
+}
+function tcCmpVer(a,b){const pa=String(a||'0').replace(/^v/i,'').split('.').map(n=>parseInt(n,10)||0);const pb=String(b||'0').replace(/^v/i,'').split('.').map(n=>parseInt(n,10)||0);for(let i=0;i<Math.max(pa.length,pb.length);i++){const d=(pa[i]||0)-(pb[i]||0);if(d)return d>0?1:-1}return 0}
+let tcChildUpdBusy=false;
+async function tcChildAutoUpdate(force){
+  if(tcChildUpdBusy||!navigator.onLine)return;
+  const last=Number(localStorage.getItem('tc_child_upd_check')||0);
+  if(!force && Date.now()-last < 3*3600*1000) return; // verifica no máximo a cada 3h
+  localStorage.setItem('tc_child_upd_check',String(Date.now()));
+  tcChildUpdBusy=true;
+  try{
+    const m=await tcChildFetchManifest();
+    if(!m||!m.version)return;
+    const current=(window.TCNativeUpdater&&window.TCNativeUpdater.getCurrentVersion&&window.TCNativeUpdater.getCurrentVersion())||'';
+    if(!current)return;                         // sem versão nativa não há comparação fiável
+    if(tcCmpVer(m.version,current)<=0)return;   // já está na versão mais recente
+    const apk=m.apk_child||m.apk_url||m.download_url;
+    if(!apk||!window.TCNativeUpdater||!window.TCNativeUpdater.installFromUrl)return;
+    // Não reinicia o download da MESMA versão em menos de 6h (evita insistência).
+    const startedKey='tc_child_upd_started_'+m.version;
+    const startedAt=Number(localStorage.getItem(startedKey)||0);
+    if(!force && Date.now()-startedAt < 6*3600*1000) return;
+    localStorage.setItem(startedKey,String(Date.now()));
+    const url=new URL(apk,location.href).href;
+    window.TCNativeUpdater.installFromUrl(url);  // baixa e o Android abre a instalação sozinho
+    state.status='A atualizar para a v'+m.version+'… (confirme "Instalar" quando aparecer)';
+    try{render()}catch(_){}
+  }catch(_){}
+  finally{tcChildUpdBusy=false;}
+}
+window.tcChildAutoUpdate=tcChildAutoUpdate;
+// Verifica ao voltar para primeiro plano e de tempos a tempos.
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') tcChildAutoUpdate(); });
+window.addEventListener('online',()=>tcChildAutoUpdate());
+try{ if(!window.__tcChildUpdTimer) window.__tcChildUpdTimer=setInterval(()=>{try{tcChildAutoUpdate()}catch(_){}} , 30*60*1000); }catch(_){}
 function scrollToPairing(){setTimeout(()=>document.getElementById('pairing-area')?.scrollIntoView({behavior:'smooth',block:'start'}),60)}
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();window.__tcDeferredInstallPrompt=e});
 window.addEventListener('appinstalled',()=>{state.status='Minha Emergência instalada';render()});

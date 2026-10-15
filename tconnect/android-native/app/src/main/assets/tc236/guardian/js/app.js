@@ -1,4 +1,4 @@
-window.TC_APP_VERSION='2.39.36';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
+window.TC_APP_VERSION='2.39.37';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
 const tcTimeout=(p,ms=10000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado')),ms))]);
 const POS=[-25.9692,32.5732];
 const state={page:'overview',mapType:'roadmap',menuOpen:false,pairingBusy:false,pairingMessage:'',update:{auto:localStorage.getItem('tc_auto_updates')!=='0',checking:false,latest:null,error:''},events:JSON.parse(localStorage.getItem('tc_events')||'[]'),notifications:JSON.parse(localStorage.getItem('tc_notifications')||'[]'),search:'',authenticated:false,authMode:'login',loading:false,recoverySent:false,profile:null,devices:[],messages:[],calls:[],contactsList:[],appsList:[],contactStats:[],trailOn:false,commsSub:false,pairCode:'',pairLink:'',realtime:false,authError:'',lastLocation:null,mapTerminalEvents:JSON.parse(localStorage.getItem('tc_map_terminal_events')||'[]')};
@@ -377,6 +377,32 @@ async function google(){
     render();
   }
 }
+// Notificação visível de nova versão DENTRO do Guardian (sem ir a fontes externas).
+// Mostra uma faixa no topo com "Atualizar agora" que baixa e instala o APK pelo próprio app.
+function tcShowUpdateBanner(release){
+  if(!release||!release.version) return;
+  const ver=String(release.version);
+  // Não repetir a mesma faixa se o utilizador a dispensou para esta versão.
+  if(localStorage.getItem('tc_update_banner_dismissed')===ver) return;
+  if(!document.getElementById('tc-update-banner-style')){
+    const st=document.createElement('style');st.id='tc-update-banner-style';
+    st.textContent='.tc-update-banner{position:fixed;left:0;right:0;top:0;z-index:9700;display:flex;align-items:center;gap:12px;padding:12px 14px calc(12px + env(safe-area-inset-top,0px));background:linear-gradient(135deg,#0ea5e9,#1677ff);color:#fff;box-shadow:0 8px 26px rgba(14,120,230,.45);font-family:system-ui,-apple-system,sans-serif;animation:tcUBin .35s ease}@keyframes tcUBin{from{transform:translateY(-100%)}to{transform:translateY(0)}}.tc-update-banner .ub-ico{font-size:22px;flex:none}.tc-update-banner .ub-main{flex:1;min-width:0}.tc-update-banner .ub-main b{display:block;font-size:14px;line-height:1.2}.tc-update-banner .ub-main small{display:block;font-size:11.5px;opacity:.92;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tc-update-banner button{flex:none;border:0;border-radius:10px;font-weight:800;cursor:pointer}.tc-update-banner .ub-go{background:#fff;color:#1366d6;padding:9px 14px;font-size:13px}.tc-update-banner .ub-x{background:rgba(255,255,255,.18);color:#fff;width:34px;height:34px;font-size:16px}';
+    document.head.appendChild(st);
+  }
+  const old=document.getElementById('tc-update-banner'); if(old) old.remove();
+  const el=document.createElement('div'); el.id='tc-update-banner'; el.className='tc-update-banner';
+  el.innerHTML='<span class="ub-ico">⬆️</span><div class="ub-main"><b>Nova versão v'+esc(ver)+' disponível</b><small>'+esc(release.description||'Toque em Atualizar para instalar pelo próprio app.')+'</small></div><button class="ub-go" id="tc-ub-go">Atualizar agora</button><button class="ub-x" id="tc-ub-x" aria-label="Depois">×</button>';
+  document.body.appendChild(el);
+  const go=document.getElementById('tc-ub-go'); if(go) go.onclick=()=>{ go.textContent='A preparar…'; go.disabled=true; try{updateAppNow();}catch(_){} };
+  const x=document.getElementById('tc-ub-x'); if(x) x.onclick=()=>{ try{localStorage.setItem('tc_update_banner_dismissed',ver);}catch(_){} el.remove(); };
+  // Regista também na lista de notificações (sino), para ficar o registo.
+  try{
+    if(!state.notifications.some(n=>n.id==='upd-'+ver)){
+      state.notifications.unshift({id:'upd-'+ver,title:'Atualização disponível',icon:'⬆️',name:'T-Connect',detail:'Nova versão v'+ver+' disponível. Toque em Atualizar no topo para instalar pelo próprio app.',at:new Date().toLocaleString('pt-PT'),read:false});
+      state.notifications=state.notifications.slice(0,100);save();
+    }
+  }catch(_){}
+}
 async function fetchReleaseManifest(){
   const cfg=window.TC_SUPABASE||{};
   const remote=String(cfg.updateManifestUrl||'').trim();
@@ -400,6 +426,7 @@ async function checkForUpdates(silent=false){
     const current=window.TC_APP_VERSION||'2.39.5';
     if(release && cmpVersion(release.version, current)>0){
       state.update.latest=release;
+      try{ tcShowUpdateBanner(release); }catch(_){}
     }else{
       state.update.latest=null;
       if(!silent && release) state.update.error='';
@@ -417,7 +444,7 @@ async function updateAppNow(){
       if(reg){ await tcTimeout(reg.update(),8000); if(reg.waiting){ reg.waiting.postMessage({type:'SKIP_WAITING'}); } }
     }
     if(release) state.update.latest=release;
-    const apkUrl=state.update.latest?.apk_url;
+    const apkUrl=state.update.latest?.apk_guardian||state.update.latest?.apk_url;
     if(window.TCNativeUpdater && apkUrl){
       const url=new URL(apkUrl,location.origin).href;
       const result=window.TCNativeUpdater.installFromUrl(url);
@@ -1212,7 +1239,8 @@ window.addEventListener('tc-pwa-install-ready',()=>{const e=document.getElementB
     const newer=String(release.version).localeCompare(String(current),undefined,{numeric:true,sensitivity:'base'})>0;
     if(newer){
       localStorage.setItem('tc_auto_update_target',String(release.version));
-      if(window.TCNativeUpdater && release.apk_url){
+      try{ tcShowUpdateBanner(release); }catch(_){}
+      if(window.TCNativeUpdater && (release.apk_guardian||release.apk_url)){
         state.update.error='Nova versão encontrada. A preparar a atualização…';
         render();
         await updateAppNow();
