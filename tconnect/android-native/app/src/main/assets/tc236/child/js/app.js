@@ -405,12 +405,24 @@ function tcChildOnline(){ return !/offline/i.test(String(state.status||'')); }
 function linkedView(){
   const st=esc(tcChildStatusText()); const time=esc(tcChildTime()); const on=tcChildOnline();
   return `<section class="cm-home">
-    <div class="cm-bg" aria-hidden="true"><span class="cm-aura"></span><span class="cm-aura cm-aura2"></span><span class="cm-grid"></span><span class="cm-glow"></span></div>
+    <div class="cm-bg" aria-hidden="true">
+      <div class="cm-globe"><span class="g-halo"></span>
+        <div class="g-sphere"><span class="g-dots"></span>
+          <svg class="g-grid" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+            <circle cx="100" cy="100" r="99"/>
+            <ellipse cx="100" cy="100" rx="22" ry="99"/><ellipse cx="100" cy="100" rx="50" ry="99"/><ellipse cx="100" cy="100" rx="78" ry="99"/><line x1="100" y1="1" x2="100" y2="199"/>
+            <ellipse cx="100" cy="55" rx="88" ry="8"/><ellipse cx="100" cy="78" rx="96" ry="10"/><ellipse cx="100" cy="100" rx="99" ry="12"/><ellipse cx="100" cy="122" rx="96" ry="10"/><ellipse cx="100" cy="145" rx="88" ry="8"/>
+          </svg>
+          <span class="g-sheen"></span>
+        </div>
+      </div>
+      <span class="cm-aura cm-aura2"></span><span class="cm-glow"></span><span class="cm-vign"></span>
+    </div>
     <div class="cm-top">
       <div class="cm-emblem"><span class="cm-ring r1"></span><span class="cm-ring r2"></span>
         <span class="cm-badge"><svg viewBox="0 0 48 52" aria-hidden="true"><defs><linearGradient id="cmShield" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5ad1ff"/><stop offset="1" stop-color="#1f7bff"/></linearGradient></defs><path d="M24 2 44 9v15c0 12-8.6 20.3-20 26C12.6 44.3 4 36 4 24V9Z" fill="url(#cmShield)"/><path d="M24 2 44 9v15c0 12-8.6 20.3-20 26C12.6 44.3 4 36 4 24V9Z" fill="none" stroke="#bfe9ff" stroke-opacity=".5" stroke-width="1.5"/><path d="m15 25 6.5 6.5L34 19" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
       </div>
-      <h1 class="cm-title">Minha<br><b>PROTEÇÃO MÁXIMA</b></h1>
+      <h1 class="cm-title">MINHA<br><b>PROTEÇÃO MÁXIMA</b></h1>
       <div class="cm-status ${on?'on':'off'}"><span class="cm-dot"></span><span class="cm-st-txt">${st}</span><span class="cm-sep"></span><span class="cm-time" data-clock>${time}</span><span class="cm-bars"><i></i><i></i><i></i><i></i></span></div>
     </div>
     <button class="cm-sos send emergency-direct" type="button" onclick="triggerSOS()" aria-label="Enviar alerta de emergência">
