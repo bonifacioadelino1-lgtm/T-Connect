@@ -393,25 +393,18 @@ function pairView(){return `<section class="childbox" id="pairing-area"><div cla
 // Estado ao vivo (sem a hora) e hora atual — como funcionava no design anterior.
 function tcChildStatusText(){ return String(state.status||'A proteger').replace(/\s*·?\s*\d{1,2}:\d{2}:\d{2}.*$/,'').trim()||'A proteger'; }
 function tcChildTime(){ return new Date().toLocaleTimeString('pt-PT'); }
-function tcChildShieldSvg(){
-  return `<svg viewBox="0 0 120 140" width="100%" height="100%" aria-hidden="true"><defs>
-    <linearGradient id="chSilver" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eef3f7"/><stop offset=".5" stop-color="#9fb2c2"/><stop offset="1" stop-color="#5b6c7d"/></linearGradient>
-    <linearGradient id="chRed" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff4555"/><stop offset="1" stop-color="#b3101d"/></linearGradient>
-    <linearGradient id="chWhite" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#c3d0da"/></linearGradient>
-    <clipPath id="chClip"><path d="M60 14 Q92 6 99 20 L99 74 Q99 106 60 126 Q21 106 21 74 L21 20 Q28 6 60 14 Z"/></clipPath></defs>
-    <path d="M60 9 Q94 0 103 18 L103 75 Q103 110 60 132 Q17 110 17 75 L17 18 Q26 0 60 9 Z" fill="url(#chSilver)" stroke="#2a3744" stroke-width="2"/>
-    <g clip-path="url(#chClip)"><path d="M60 10 L21 10 L21 128 L60 128 Z" fill="url(#chRed)"/><path d="M60 10 L99 10 L99 128 L60 128 Z" fill="url(#chWhite)"/><path d="M60 10 l-8 14 l8 14 l-8 14 l8 14 l-8 14 l8 14 l-8 14 l8 12" fill="none" stroke="#2a3744" stroke-width="2.4" stroke-linejoin="round"/></g>
-    <path d="M60 14 Q92 6 99 20 L99 74 Q99 106 60 126 Q21 106 21 74 L21 20 Q28 6 60 14 Z" fill="none" stroke="#ffffff" stroke-opacity=".45" stroke-width="1.4"/></svg>`;
-}
+// Painel = imagem EXATA do design, com texto ao vivo (estado + horas) e botões
+// funcionais por cima (emergência animado ao clicar, e menu).
 function linkedView(){
   const st=esc(tcChildStatusText()); const time=esc(tcChildTime());
-  return `<section class="childbox child-home2">
-    <div class="ch-emblem"><span class="ch-ring r1"></span><span class="ch-ring r2"></span><span class="ch-ring r3"></span><div class="ch-shield">${tcChildShieldSvg()}</div></div>
-    <h1 class="ch-title">Minha <span class="ch-t2">SECURITY</span></h1>
-    <div class="ch-statuspill"><span class="ch-sdot"></span><span class="ch-stxt">${st}</span><span class="ch-ssep"></span><span class="ch-stime" data-clock>${time}</span><span class="ch-sbars"><i></i><i></i><i></i><i></i></span></div>
-    <button class="send emergency-direct ch-sos" onclick="triggerSOS()" aria-label="Enviar alerta de emergência"><span class="ch-siren">🚨</span><span class="ch-sos-label">EMERGÊNCIA</span></button>
-    <div class="ch-footer"><b class="ch-foot-time" data-clock>${time}</b></div>
-  </section>`;
+  return `<div class="ch-exact"><div class="ch-exact-inner">
+    <img class="ch-exact-img" src="../assets/ui/child-home.png" alt="Minha Segurança" draggable="false">
+    <span class="ch-ov ch-ov-status">${st}</span>
+    <span class="ch-ov ch-ov-ptime" data-clock>${time}</span>
+    <span class="ch-ov ch-ov-btime" data-clock>${time}</span>
+    <button class="ch-exact-menu" type="button" aria-label="Abrir configurações" onclick="toggleMenu()"></button>
+    <button class="send emergency-direct ch-exact-sos" type="button" aria-label="Enviar alerta de emergência" onclick="triggerSOS()"></button>
+  </div></div>`;
 }
 // Relógio ao vivo: atualiza as horas a cada segundo (sem re-render completo).
 try{ if(!window.__tcChildClock) window.__tcChildClock=setInterval(function(){ try{ const t=new Date().toLocaleTimeString('pt-PT'); document.querySelectorAll('[data-clock]').forEach(function(el){el.textContent=t;}); }catch(_){} }, 1000); }catch(_){}
