@@ -26,7 +26,8 @@ body{background:#04101f}
 .ch-exact-img{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;z-index:1;user-select:none;-webkit-user-drag:none;pointer-events:none}
 /* textos ao vivo (por cima das zonas apagadas da imagem) */
 .ch-ov{position:absolute;z-index:3;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-weight:800;white-space:nowrap;line-height:1;pointer-events:none;text-shadow:0 1px 3px rgba(0,8,20,.55)}
-.ch-ov-status{left:15.5%;top:45.9%;transform:translateY(-50%);color:#eef5fb;font-size:4.2cqw;letter-spacing:0}
+.ch-ov-title{left:50%;top:37.3%;transform:translate(-50%,-50%);font-weight:900;font-size:11cqw;letter-spacing:.5px;background:linear-gradient(180deg,#eef8ff 0%,#9fd4ff 48%,#1f86ff 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;filter:drop-shadow(0 0 16px rgba(45,150,255,.55)) drop-shadow(0 2px 4px rgba(0,16,50,.6));text-shadow:none}
+.ch-ov-status{left:15.5%;top:45.9%;transform:translateY(-50%);color:#eef5fb;font-size:3.9cqw;letter-spacing:0;max-width:35.5cqw;overflow:hidden;text-overflow:ellipsis}
 .ch-ov-ptime{left:66%;top:45.9%;transform:translate(-50%,-50%);color:#eef5fb;font-size:4.4cqw;font-variant-numeric:tabular-nums;letter-spacing:.3px}
 .ch-ov-btime{left:50%;top:94.2%;transform:translate(-50%,-50%);color:#1ec8ff;font-size:5.4cqw;font-variant-numeric:tabular-nums;letter-spacing:1px}
 /* botão de menu (⋮) transparente sobre o canto superior direito */

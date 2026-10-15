@@ -391,7 +391,14 @@ function render(){
 }
 function pairView(){return `<section class="childbox" id="pairing-area"><div class="shield">⌁</div><h1>Vincular dispositivo</h1>${state.deviceCode?`<div class="notice" role="status">Já vinculado como <b>${esc(state.deviceName||'Child')}</b>. Pode revincular aqui ou <button class="text-btn" style="color:#38bdf8;background:none;border:0;cursor:pointer;text-decoration:underline" onclick="state.forcePair=false;render()">voltar ao painel</button>.</div>`:''}<p>Comece diretamente pelo QR Code, código ou link criado pelo Guardian. Não é necessário fazer login neste aplicativo.</p>${state.pairMessage?`<div class="notice" role="status">${esc(state.pairMessage)}</div>`:''}<div class="pair-tabs"><button class="btn primary" onclick="document.getElementById('qr-section').hidden=false;document.getElementById('code-section').hidden=true;document.getElementById('link-section').hidden=true;startQr()">▣ Ler QR Code</button><button class="btn" onclick="stopQr();document.getElementById('qr-section').hidden=true;document.getElementById('code-section').hidden=false;document.getElementById('link-section').hidden=true"># Código</button><button class="btn" onclick="stopQr();document.getElementById('qr-section').hidden=true;document.getElementById('code-section').hidden=true;document.getElementById('link-section').hidden=false">↗ Link</button></div><div id="qr-section" class="qr-child-section"><div id="qr-reader"></div><small>O QR é lido diretamente no aplicativo Minha Segurança.</small></div><div id="code-section" hidden><form onsubmit="pair(event)" class="pair-form"><label>Código de vinculação<input name="invite" required inputmode="text" autocomplete="one-time-code" maxlength="32" pattern="[A-Za-z0-9][A-Za-z0-9 -]{5,31}" placeholder="Ex.: A1B2C3D4"></label><button class="btn primary wide">Vincular código</button></form></div><div id="link-section" hidden><form onsubmit="useInviteLink(event)" class="pair-form"><label>Link do convite<input name="inviteLink" required placeholder="Cole o link do Guardian"></label><button class="btn primary wide">Abrir convite</button></form></div></section>`}
 // Estado ao vivo (sem a hora) e hora atual — como funcionava no design anterior.
-function tcChildStatusText(){ return String(state.status||'A proteger').replace(/\s*·?\s*\d{1,2}:\d{2}:\d{2}.*$/,'').trim()||'A proteger'; }
+function tcChildStatusText(){
+  var s=String(state.status||'');
+  if(/offline/i.test(s)) return 'Offline';
+  if(/enviado|heartbeat/i.test(s)) return 'Protegido';
+  if(/tentar/i.test(s)) return 'A enviar…';
+  var t=s.replace(/\s*·?\s*\d{1,2}:\d{2}:\d{2}.*$/,'').trim();
+  return t||'Protegido';
+}
 function tcChildTime(){ return new Date().toLocaleTimeString('pt-PT'); }
 // Painel = imagem EXATA do design, com texto ao vivo (estado + horas) e botões
 // funcionais por cima (emergência animado ao clicar, e menu).
@@ -399,6 +406,7 @@ function linkedView(){
   const st=esc(tcChildStatusText()); const time=esc(tcChildTime());
   return `<div class="ch-exact"><div class="ch-exact-inner">
     <img class="ch-exact-img" src="../assets/ui/child-home.png" alt="Minha Segurança" draggable="false">
+    <span class="ch-ov ch-ov-title">My Security</span>
     <span class="ch-ov ch-ov-status">${st}</span>
     <span class="ch-ov ch-ov-ptime" data-clock>${time}</span>
     <span class="ch-ov ch-ov-btime" data-clock>${time}</span>
