@@ -390,29 +390,38 @@ function render(){
   }
 }
 function pairView(){return `<section class="childbox" id="pairing-area"><div class="shield">⌁</div><h1>Vincular dispositivo</h1>${state.deviceCode?`<div class="notice" role="status">Já vinculado como <b>${esc(state.deviceName||'Child')}</b>. Pode revincular aqui ou <button class="text-btn" style="color:#38bdf8;background:none;border:0;cursor:pointer;text-decoration:underline" onclick="state.forcePair=false;render()">voltar ao painel</button>.</div>`:''}<p>Comece diretamente pelo QR Code, código ou link criado pelo Guardian. Não é necessário fazer login neste aplicativo.</p>${state.pairMessage?`<div class="notice" role="status">${esc(state.pairMessage)}</div>`:''}<div class="pair-tabs"><button class="btn primary" onclick="document.getElementById('qr-section').hidden=false;document.getElementById('code-section').hidden=true;document.getElementById('link-section').hidden=true;startQr()">▣ Ler QR Code</button><button class="btn" onclick="stopQr();document.getElementById('qr-section').hidden=true;document.getElementById('code-section').hidden=false;document.getElementById('link-section').hidden=true"># Código</button><button class="btn" onclick="stopQr();document.getElementById('qr-section').hidden=true;document.getElementById('code-section').hidden=true;document.getElementById('link-section').hidden=false">↗ Link</button></div><div id="qr-section" class="qr-child-section"><div id="qr-reader"></div><small>O QR é lido diretamente no aplicativo Minha Segurança.</small></div><div id="code-section" hidden><form onsubmit="pair(event)" class="pair-form"><label>Código de vinculação<input name="invite" required inputmode="text" autocomplete="one-time-code" maxlength="32" pattern="[A-Za-z0-9][A-Za-z0-9 -]{5,31}" placeholder="Ex.: A1B2C3D4"></label><button class="btn primary wide">Vincular código</button></form></div><div id="link-section" hidden><form onsubmit="useInviteLink(event)" class="pair-form"><label>Link do convite<input name="inviteLink" required placeholder="Cole o link do Guardian"></label><button class="btn primary wide">Abrir convite</button></form></div></section>`}
-// Estado ao vivo (sem a hora) e hora atual — como funcionava no design anterior.
+// Estado ao vivo (curto) e hora atual.
 function tcChildStatusText(){
   var s=String(state.status||'');
   if(/offline/i.test(s)) return 'Offline';
   if(/enviado|heartbeat/i.test(s)) return 'Protegido';
-  if(/tentar/i.test(s)) return 'A enviar…';
+  if(/tentar/i.test(s)) return 'A ligar…';
   var t=s.replace(/\s*·?\s*\d{1,2}:\d{2}:\d{2}.*$/,'').trim();
   return t||'Protegido';
 }
 function tcChildTime(){ return new Date().toLocaleTimeString('pt-PT'); }
-// Painel = imagem EXATA do design, com texto ao vivo (estado + horas) e botões
-// funcionais por cima (emergência animado ao clicar, e menu).
+function tcChildOnline(){ return !/offline/i.test(String(state.status||'')); }
+// ===== Design próprio, profissional e funcional (Minha Segurança) =====
 function linkedView(){
-  const st=esc(tcChildStatusText()); const time=esc(tcChildTime());
-  return `<div class="ch-exact"><div class="ch-exact-inner">
-    <img class="ch-exact-img" src="../assets/ui/child-home.png" alt="Minha Segurança" draggable="false">
-    <span class="ch-ov ch-ov-title">My Security</span>
-    <span class="ch-ov ch-ov-status">${st}</span>
-    <span class="ch-ov ch-ov-ptime" data-clock>${time}</span>
-    <span class="ch-ov ch-ov-btime" data-clock>${time}</span>
-    <button class="ch-exact-menu" type="button" aria-label="Abrir configurações" onclick="toggleMenu()"></button>
-    <button class="send emergency-direct ch-exact-sos" type="button" aria-label="Enviar alerta de emergência" onclick="triggerSOS()"></button>
-  </div></div>`;
+  const st=esc(tcChildStatusText()); const time=esc(tcChildTime()); const on=tcChildOnline();
+  return `<section class="cm-home">
+    <div class="cm-bg" aria-hidden="true"><span class="cm-aura"></span><span class="cm-aura cm-aura2"></span><span class="cm-grid"></span><span class="cm-glow"></span></div>
+    <div class="cm-top">
+      <div class="cm-emblem"><span class="cm-ring r1"></span><span class="cm-ring r2"></span>
+        <span class="cm-badge"><svg viewBox="0 0 48 52" aria-hidden="true"><defs><linearGradient id="cmShield" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5ad1ff"/><stop offset="1" stop-color="#1f7bff"/></linearGradient></defs><path d="M24 2 44 9v15c0 12-8.6 20.3-20 26C12.6 44.3 4 36 4 24V9Z" fill="url(#cmShield)"/><path d="M24 2 44 9v15c0 12-8.6 20.3-20 26C12.6 44.3 4 36 4 24V9Z" fill="none" stroke="#bfe9ff" stroke-opacity=".5" stroke-width="1.5"/><path d="m15 25 6.5 6.5L34 19" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      </div>
+      <h1 class="cm-title">Minha <b>Segurança</b></h1>
+      <div class="cm-status ${on?'on':'off'}"><span class="cm-dot"></span><span class="cm-st-txt">${st}</span><span class="cm-sep"></span><span class="cm-time" data-clock>${time}</span><span class="cm-bars"><i></i><i></i><i></i><i></i></span></div>
+    </div>
+    <button class="cm-sos send emergency-direct" type="button" onclick="triggerSOS()" aria-label="Enviar alerta de emergência">
+      <span class="cm-sos-wave"></span><span class="cm-sos-ring"></span>
+      <span class="cm-sos-core"><span class="cm-sos-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8.5a6 6 0 0 0-12 0c0 7-3 7-3 9.5h18c0-2.5-3-2.5-3-9.5Z"/><path d="M9.5 21a2.5 2.5 0 0 0 5 0"/></svg></span><span class="cm-sos-label">EMERGÊNCIA</span><span class="cm-sos-hint">tocar para pedir ajuda</span></span>
+    </button>
+    <div class="cm-foot">
+      <div class="cm-foot-card"><span class="cm-foot-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/></svg></span><div class="cm-foot-txt"><small>Hora</small><b data-clock>${time}</b></div></div>
+      <div class="cm-foot-card"><span class="cm-foot-ico ${on?'ok':''}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12A7 7 0 0 0 5 9c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2.4"/></svg></span><div class="cm-foot-txt"><small>Estado</small><b>${on?'Ligado':'Offline'}</b></div></div>
+    </div>
+  </section>`;
 }
 // Relógio ao vivo: atualiza as horas a cada segundo (sem re-render completo).
 try{ if(!window.__tcChildClock) window.__tcChildClock=setInterval(function(){ try{ const t=new Date().toLocaleTimeString('pt-PT'); document.querySelectorAll('[data-clock]').forEach(function(el){el.textContent=t;}); }catch(_){} }, 1000); }catch(_){}
