@@ -77,6 +77,16 @@ android {
     }
 
     signingConfigs {
+        // Chave de assinatura FIXA do T-Connect, versionada no repositório.
+        // Garante que TODAS as compilações (debug e release, no CI ou local) são
+        // assinadas sempre com a MESMA chave — assim é possível atualizar o app por
+        // cima do anterior sem desinstalar (sem o erro de "conflito de pacote").
+        create("tconnect") {
+            storeFile = file("tconnect-signing.jks")
+            storePassword = "tconnect2026"
+            keyAlias = "tconnect"
+            keyPassword = "tconnect2026"
+        }
         create("release") {
             if (storeFilePath != null) {
                 storeFile = file(storeFilePath)
@@ -110,11 +120,19 @@ android {
     }
 
     buildTypes {
+        // O CI compila as variantes "debug"; assinamo-las com a chave FIXA do T-Connect
+        // (em vez da debug.keystore gerada ao acaso em cada runner, que mudava a assinatura
+        // a cada build e causava o "conflito de pacote" ao atualizar).
+        getByName("debug") {
+            signingConfig = signingConfigs.getByName("tconnect")
+        }
         getByName("release") {
             isMinifyEnabled = false
-            if (storeFilePath != null) {
-                signingConfig = signingConfigs.getByName("release")
-            }
+            // Usa a chave personalizada (keystore.properties/env) se existir; senão, a chave FIXA.
+            signingConfig = if (storeFilePath != null)
+                signingConfigs.getByName("release")
+            else
+                signingConfigs.getByName("tconnect")
         }
     }
 }
