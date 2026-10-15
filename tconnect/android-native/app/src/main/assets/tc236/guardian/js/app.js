@@ -1,4 +1,4 @@
-window.TC_APP_VERSION='2.39.50';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
+window.TC_APP_VERSION='2.39.51';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
 const tcTimeout=(p,ms=10000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado')),ms))]);
 const POS=[-25.9692,32.5732];
 const state={page:'overview',mapType:'roadmap',menuOpen:false,pairingBusy:false,pairingMessage:'',update:{auto:localStorage.getItem('tc_auto_updates')!=='0',checking:false,latest:null,error:''},events:JSON.parse(localStorage.getItem('tc_events')||'[]'),notifications:JSON.parse(localStorage.getItem('tc_notifications')||'[]'),search:'',authenticated:false,authMode:'login',loading:false,recoverySent:false,profile:null,devices:[],messages:[],calls:[],contactsList:[],appsList:[],contactStats:[],trailOn:false,commsSub:false,pairCode:'',pairLink:'',realtime:false,authError:'',lastLocation:null,mapTerminalEvents:JSON.parse(localStorage.getItem('tc_map_terminal_events')||'[]')};
@@ -289,15 +289,31 @@ function selectDevice(id){
 window.selectDevice=selectDevice;
 function toggleDeviceSwitcher(){state.deviceSwitcherOpen=!state.deviceSwitcherOpen;render()}
 window.toggleDeviceSwitcher=toggleDeviceSwitcher;
+// Uma pessoa = uma entrada. Agrupa por child_id (a mesma pessoa/ligação não cria várias listas);
+// só pessoas diferentes geram entradas diferentes.
+function tcSwitchPeople(){
+  const ds=state.devices||[];const seen=new Map();
+  for(const d of ds){
+    const key=d.child_id||d.device_code||d.id;
+    const prev=seen.get(key);
+    if(!prev){seen.set(key,d);continue}
+    const better=(isDeviceOnline(d)&&!isDeviceOnline(prev))||(String(d.last_seen_at||'')>String(prev.last_seen_at||''));
+    if(better)seen.set(key,d);
+  }
+  return [...seen.values()];
+}
+function tcAndroidMark(){return `<svg class="andbot" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10.6h10V17a1 1 0 0 1-1 1h-1v2.3a1.05 1.05 0 0 1-2.1 0V18h-1.8v2.3a1.05 1.05 0 0 1-2.1 0V18H8a1 1 0 0 1-1-1v-6.4Z"/><rect x="4.2" y="10.5" width="2" height="6" rx="1"/><rect x="17.8" y="10.5" width="2" height="6" rx="1"/><path d="M7 9.6a5 5 0 0 1 10 0Z"/><path d="m8.4 6.4-1-1.5M15.6 6.4l1-1.5"/><circle class="andeye" cx="9.8" cy="7.7" r=".62"/><circle class="andeye" cx="14.2" cy="7.7" r=".62"/></svg>`}
 function deviceSwitcher(){
-  const ds=state.devices||[];const active=ds[0];
+  const people=tcSwitchPeople();const active=(state.devices||[])[0];
+  const activeKey=active?(active.child_id||active.device_code||active.id):null;
+  const curName=active?esc(active.device_name||'Child'):'Sem pessoa';
   return `<div class="dev-switch">
     <button class="dev-switch-btn" onclick="toggleDeviceSwitcher()" aria-label="Trocar de pessoa" aria-expanded="${state.deviceSwitcherOpen?'true':'false'}">
       <span class="dev-switch-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"/></svg></span>
-      <span class="dev-switch-name">${active?esc(active.device_name||'Child'):'Sem pessoa'}</span>
-      <span class="dev-switch-count">${ds.length}</span>
+      <span class="dev-switch-name">${curName}</span>
+      <span class="dev-switch-count">${people.length}</span>
     </button>
-    ${state.deviceSwitcherOpen?`<div class="dev-switch-backdrop" onclick="toggleDeviceSwitcher()"></div><div class="dev-switch-pop"><div class="dev-switch-head">Pessoas conectadas <b>${ds.length}</b></div>${ds.length?ds.map(d=>`<button class="dev-switch-item${d.id===(active&&active.id)?' on':''}" onclick="selectDevice('${esc(d.id)}')"><span class="dev-switch-av">${esc(String(d.device_name||'C').slice(0,1).toUpperCase())}</span><div class="dev-switch-meta"><b>${esc(d.device_name||'Child')}</b><small>${isDeviceOnline(d)?'● Online':'○ Offline'}</small></div>${d.id===(active&&active.id)?'<span class="dev-switch-chk">✓</span>':''}</button>`).join(''):'<div class="dev-switch-none">Nenhuma pessoa vinculada ainda.</div>'}</div>`:''}
+    ${state.deviceSwitcherOpen?`<div class="dev-switch-backdrop" onclick="toggleDeviceSwitcher()"></div><div class="dev-switch-pop"><div class="dev-switch-head">Pessoas conectadas <b>${people.length}</b></div><div class="dev-switch-list">${people.length?people.map(d=>{const key=d.child_id||d.device_code||d.id;const on=isDeviceOnline(d);const act=key===activeKey;return `<button class="dev-switch-item${act?' on':''}" onclick="selectDevice('${esc(d.id)}')"><span class="dev-switch-av">${tcAndroidMark()}</span><div class="dev-switch-meta"><b>${esc(d.device_name||'Child')}</b><small><i class="dev-dot${on?' on':''}"></i>Android</small></div>${act?'<span class="dev-switch-chk">✓</span>':''}</button>`}).join(''):'<div class="dev-switch-none">Nenhuma pessoa vinculada ainda.</div>'}</div></div>`:''}
   </div>`;
 }
 async function addEvent(type,detail,meta={}){const ev=normalizeEvent({type,detail,at:new Date().toLocaleString('pt-PT'),status:meta.status||'CONCLUÍDO',contact:meta.contact||'',source:meta.source||'Guardian',severity:meta.severity||'info',child_name:meta.child_name});state.events.unshift(ev);state.events=state.events.slice(0,200);addNotification(ev);save();render();maybeAlertSound(ev);try{await tcInsertEvent(ev)}catch(e){console.warn('Evento não sincronizado:',e.message)}}
