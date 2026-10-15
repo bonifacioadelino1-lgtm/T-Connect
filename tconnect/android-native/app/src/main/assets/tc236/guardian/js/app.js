@@ -1,4 +1,4 @@
-window.TC_APP_VERSION='2.39.37';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
+window.TC_APP_VERSION='2.39.38';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
 const tcTimeout=(p,ms=10000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado')),ms))]);
 const POS=[-25.9692,32.5732];
 const state={page:'overview',mapType:'roadmap',menuOpen:false,pairingBusy:false,pairingMessage:'',update:{auto:localStorage.getItem('tc_auto_updates')!=='0',checking:false,latest:null,error:''},events:JSON.parse(localStorage.getItem('tc_events')||'[]'),notifications:JSON.parse(localStorage.getItem('tc_notifications')||'[]'),search:'',authenticated:false,authMode:'login',loading:false,recoverySent:false,profile:null,devices:[],messages:[],calls:[],contactsList:[],appsList:[],contactStats:[],trailOn:false,commsSub:false,pairCode:'',pairLink:'',realtime:false,authError:'',lastLocation:null,mapTerminalEvents:JSON.parse(localStorage.getItem('tc_map_terminal_events')||'[]')};
@@ -476,7 +476,7 @@ function buildPreparationOverlay(){
 const TC_PAYMENT={mpesa:'844219918',emola:'861667843',name:'BONIFACIO DICKSON'};
 function runPreparation(){
   const el=buildPreparationOverlay();
-  const after=()=>{ if(el&&el.isConnected)el.remove(); if(!isSuperAdmin()&&!userHasPlan())showPlanChooser(); };
+  const after=()=>{ if(el&&el.isConnected)el.remove(); if(needsPlanChoice())showPlanChooser(); };
   if(!el){ after(); return; }
   setTimeout(after,2200);
 }
@@ -484,6 +484,14 @@ function runPreparation(){
 function userPlanKey(){const uid=window.TC_DB?.user?.id||'local';return 'tc_user_plan_'+uid}
 // O Super Admin (dono) tem acesso total e nunca precisa de plano/pagamento.
 function userHasPlan(){if(isSuperAdmin())return true;try{return !!localStorage.getItem(userPlanKey())}catch(_){return false}}
+// Regra única de exibição dos planos: mostrar o seletor de planos SÓ quando a pessoa
+// ainda não escolheu nenhum plano (1.ª vez) OU quando o plano escolhido expirou.
+// Com um plano ativo (não expirado), NUNCA mostra. O Super Admin nunca vê planos.
+function needsPlanChoice(){
+  if(isSuperAdmin())return false;
+  if(isPlanExpired())return true;   // plano expirado → mostra no login
+  return !userHasPlan();            // nunca escolheu → mostra; plano ativo → não mostra
+}
 function getUserPlan(){if(isSuperAdmin())return{plan:'owner',days:99999,paidAt:null};try{return JSON.parse(localStorage.getItem(userPlanKey())||'null')}catch(_){return null}}
 function userPlanId(){const p=getUserPlan();return p?p.plan:''}
 // Verifica se o plano pago expirou (ex.: 30 dias após o pagamento). O Super Admin e o
@@ -722,7 +730,7 @@ function showWelcomeIfNeeded(){
   const el=document.createElement('div'); el.id='tc-welcome-overlay'; el.style.cssText='position:fixed;inset:0;z-index:99999;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 50% 12%,rgba(19,83,130,.72),rgba(3,10,18,.98) 62%);backdrop-filter:blur(12px);color:#fff;font-family:system-ui,-apple-system,Segoe UI,sans-serif;';
   el.innerHTML=`<div style="width:min(430px,94vw);text-align:center;padding:32px 24px 28px;border:1px solid rgba(56,189,248,.32);border-radius:28px;background:linear-gradient(180deg,rgba(10,28,45,.97),rgba(4,13,23,.98));box-shadow:0 30px 100px rgba(0,0,0,.55)"><img src="../assets/icons/tconnect-logo-192.png" alt="T-Connect" style="width:112px;height:112px;object-fit:cover;border-radius:26px;box-shadow:0 12px 45px rgba(0,174,255,.22);margin-bottom:18px"><div style="font-size:29px;font-weight:900;letter-spacing:.04em">T<span style="color:#38bdf8">-CONNECT</span></div><div style="margin-top:7px;color:#55d9ff;font-size:12px;font-weight:800;letter-spacing:.16em">SEGURANÇA EM TEMPO REAL</div><h2 style="font-size:28px;line-height:1.08;margin:30px 0 12px">Está preparado para fazer o <span style="color:#38bdf8">monitoramento?</span></h2><p style="color:#a9bfd1;line-height:1.55;margin:0 auto 24px;max-width:340px">Tudo pronto para acompanhar os seus dispositivos com segurança, rapidez e informação em tempo real.</p><button id="tc-welcome-start" style="width:100%;border:0;border-radius:15px;padding:15px 18px;background:linear-gradient(135deg,#0ea5e9,#1677ff);color:#fff;font-weight:800;font-size:16px">Começar monitoramento</button><small style="display:block;margin-top:18px;color:#6f879b">T-Connect · Sempre com você.</small></div>`;
   document.body.appendChild(el);
-  el.querySelector('#tc-welcome-start').onclick=()=>{el.remove();markWelcomeSeen();if(!isSuperAdmin()&&!userHasPlan())showPlanChooser();};
+  el.querySelector('#tc-welcome-start').onclick=()=>{el.remove();markWelcomeSeen();if(needsPlanChoice())showPlanChooser();};
 }
 function showPreparationThenContinue(){
   if(!state.authenticated) return;
