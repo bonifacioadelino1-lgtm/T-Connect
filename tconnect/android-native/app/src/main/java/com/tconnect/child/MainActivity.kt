@@ -27,6 +27,18 @@ import android.os.Build
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.os.VibrationEffect
+import android.os.Environment
+import android.provider.MediaStore
+import android.provider.Settings
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.media.ThumbnailUtils
+import android.util.Base64
+import android.util.Size
+import android.webkit.MimeTypeMap
+import androidx.core.content.FileProvider
+import java.io.File
+import java.io.ByteArrayOutputStream
 
 class MainActivity : Activity() {
     private lateinit var web: WebView
@@ -104,6 +116,7 @@ class MainActivity : Activity() {
         web.addJavascriptInterface(NativeVoice(), "TCNativeVoice")
         web.addJavascriptInterface(NativeContacts(), "TCNativeContacts")
         web.addJavascriptInterface(NativeApps(), "TCNativeApps")
+        web.addJavascriptInterface(NativeFiles(), "TCNativeFiles")
         web.addJavascriptInterface(NativeBg(), "TCNativeBg")
         // For a production APK, bundle the tc236 web root into app/src/main/assets/tc236.
         web.loadUrl(BuildConfig.START_URL)
@@ -154,6 +167,10 @@ class MainActivity : Activity() {
                 }, 300)
             }
         }
+        // 4500 = permissões do Explorador de ficheiros (média/armazenamento).
+        if (requestCode == 4500) {
+            web.evaluateJavascript("window.dispatchEvent(new Event('tc-native-files-updated'));void 0", null)
+        }
         // Em qualquer pedido de permissão (4300 ou os pedidos diretos 4101/4102/4200/4201/4202),
         // atualiza a interface web com o estado atual das permissões.
         web.evaluateJavascript("window.dispatchEvent(new Event('tc-native-permissions-updated'));void 0", null)
@@ -161,6 +178,14 @@ class MainActivity : Activity() {
             val status = NativePermissions().getStatus()
             web.evaluateJavascript("window.dispatchEvent(new CustomEvent('tc-native-permissions',{detail:$status}));void 0", null)
         }, 250)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Ao regressar das definições (ex.: "Acesso a todos os ficheiros"), avisa o explorador.
+        if (::web.isInitialized) {
+            try { web.evaluateJavascript("window.dispatchEvent(new Event('tc-native-files-updated'));void 0", null) } catch (_: Exception) {}
+        }
     }
 
     override fun onDestroy() {
@@ -357,6 +382,258 @@ class MainActivity : Activity() {
                 return JSONArray().toString()
             }
             return out.toString()
+        }
+    }
+
+    inner class NativeFiles {
+        private fun sdk() = Build.VERSION.SDK_INT
+
+        // Acesso total ao sistema de ficheiros (necessário para documentos/pastas em 11+).
+        @JavascriptInterface
+        fun hasAccess(): Boolean =
+            if (sdk() >= 30) Environment.isExternalStorageManager()
+            else checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+
+        // Acesso só a média (fotos/vídeos/músicas) — suficiente nessas categorias em 13+.
+        @JavascriptInterface
+        fun hasMedia(): Boolean =
+            if (sdk() >= 33)
+                checkSelfPermission(Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED ||
+                checkSelfPermission(Manifest.permission.READ_MEDIA_VIDEO) == PackageManager.PERMISSION_GRANTED ||
+                checkSelfPermission(Manifest.permission.READ_MEDIA_AUDIO) == PackageManager.PERMISSION_GRANTED
+            else checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+
+        @JavascriptInterface
+        fun requestAccess(): String {
+            if (sdk() >= 30) {
+                if (Environment.isExternalStorageManager()) return "GRANTED"
+                try {
+                    startActivity(Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                        Uri.parse("package:$packageName")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                } catch (_: Exception) {
+                    try { startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) {}
+                }
+                return "REQUESTED"
+            }
+            if (hasAccess()) return "GRANTED"
+            requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), 4500)
+            return "REQUESTED"
+        }
+
+        @JavascriptInterface
+        fun requestMedia(): String {
+            if (hasMedia()) return "GRANTED"
+            val req = if (sdk() >= 33)
+                arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.READ_MEDIA_AUDIO)
+            else arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+            requestPermissions(req, 4500)
+            return "REQUESTED"
+        }
+
+        // Pastas comuns, para o ecrã inicial do explorador.
+        @JavascriptInterface
+        fun roots(): String {
+            val arr = JSONArray()
+            val base = Environment.getExternalStorageDirectory()
+            fun add(label: String, icon: String, dir: File?) {
+                if (dir != null && dir.exists() && dir.isDirectory) {
+                    val o = JSONObject(); o.put("name", label); o.put("icon", icon); o.put("path", dir.absolutePath); arr.put(o)
+                }
+            }
+            add("Armazenamento interno", "storage", base)
+            add("Transferências", "download", File(base, "Download"))
+            add("Documentos", "doc", File(base, "Documents"))
+            add("Imagens", "image", File(base, "Pictures"))
+            add("Câmara", "image", File(base, "DCIM"))
+            add("Música", "audio", File(base, "Music"))
+            add("Vídeos", "video", File(base, "Movies"))
+            add("WhatsApp", "chat", File(base, "Android/media/com.whatsapp/WhatsApp/Media"))
+            return arr.toString()
+        }
+
+        // Lista o conteúdo de uma pasta (pastas primeiro, depois ficheiros).
+        @JavascriptInterface
+        fun listDir(path: String): String {
+            val out = JSONObject()
+            try {
+                val dir = if (path.isBlank()) Environment.getExternalStorageDirectory() else File(path)
+                out.put("path", dir.absolutePath)
+                out.put("name", if (dir.name.isBlank()) "Armazenamento" else dir.name)
+                val rootPath = Environment.getExternalStorageDirectory().absolutePath
+                out.put("parent", if (dir.absolutePath == rootPath) "" else (dir.parentFile?.absolutePath ?: ""))
+                val arr = JSONArray()
+                val files = dir.listFiles()
+                if (files != null) {
+                    val sorted = files.filter { !it.isHidden }
+                        .sortedWith(compareByDescending<File> { it.isDirectory }.thenBy { it.name.lowercase(Locale.getDefault()) })
+                    for (f in sorted) {
+                        val o = JSONObject()
+                        o.put("name", f.name)
+                        o.put("path", f.absolutePath)
+                        o.put("dir", f.isDirectory)
+                        o.put("size", if (f.isDirectory) 0L else f.length())
+                        o.put("date", f.lastModified())
+                        if (f.isDirectory) {
+                            o.put("kind", "folder")
+                            o.put("count", (f.list()?.size ?: 0))
+                        } else {
+                            val mime = guessMime(f.name)
+                            o.put("mime", mime); o.put("kind", kindOf(mime, f.name))
+                        }
+                        arr.put(o)
+                    }
+                }
+                out.put("items", arr); out.put("ok", true)
+            } catch (e: Exception) { out.put("ok", false); out.put("error", e.message ?: "erro") }
+            return out.toString()
+        }
+
+        // Lista por categoria via MediaStore (rápido; funciona só com permissão de média).
+        @JavascriptInterface
+        fun listCategory(cat: String, limit: Int): String {
+            val out = JSONArray()
+            val max = limit.coerceIn(1, 100000)
+            try {
+                val uri = when (cat) {
+                    "image" -> MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                    "video" -> MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+                    "audio" -> MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+                    else -> MediaStore.Files.getContentUri("external")
+                }
+                val proj = arrayOf(
+                    MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME,
+                    MediaStore.MediaColumns.SIZE, MediaStore.MediaColumns.DATE_MODIFIED,
+                    MediaStore.MediaColumns.MIME_TYPE, MediaStore.MediaColumns.DATA
+                )
+                var sel: String? = null; var args: Array<String>? = null
+                if (cat == "doc") {
+                    val mimes = listOf(
+                        "application/pdf", "application/msword",
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        "application/vnd.ms-excel",
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        "application/vnd.ms-powerpoint",
+                        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                        "text/plain", "application/rtf", "application/epub+zip"
+                    )
+                    sel = mimes.joinToString(" OR ") { MediaStore.MediaColumns.MIME_TYPE + "=?" }
+                    args = mimes.toTypedArray()
+                }
+                val sort = MediaStore.MediaColumns.DATE_MODIFIED + " DESC"
+                contentResolver.query(uri, proj, sel, args, sort)?.use { c ->
+                    val idI = c.getColumnIndex(MediaStore.MediaColumns._ID)
+                    val nI = c.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME)
+                    val sI = c.getColumnIndex(MediaStore.MediaColumns.SIZE)
+                    val dI = c.getColumnIndex(MediaStore.MediaColumns.DATE_MODIFIED)
+                    val mI = c.getColumnIndex(MediaStore.MediaColumns.MIME_TYPE)
+                    val pI = c.getColumnIndex(MediaStore.MediaColumns.DATA)
+                    var n = 0
+                    while (c.moveToNext() && n < max) {
+                        val name = if (nI >= 0) c.getString(nI) ?: "" else ""
+                        val data = if (pI >= 0) c.getString(pI) ?: "" else ""
+                        if (name.isBlank() && data.isBlank()) continue
+                        val o = JSONObject()
+                        o.put("name", if (name.isNotBlank()) name else File(data).name)
+                        o.put("path", data)
+                        o.put("id", if (idI >= 0) c.getLong(idI) else 0L)
+                        o.put("size", if (sI >= 0) c.getLong(sI) else 0L)
+                        o.put("date", (if (dI >= 0) c.getLong(dI) else 0L) * 1000L)
+                        val mime = if (mI >= 0) c.getString(mI) ?: "" else ""
+                        o.put("mime", mime)
+                        o.put("kind", if (cat == "doc") kindOf(mime, name) else cat)
+                        o.put("dir", false)
+                        out.put(o); n++
+                    }
+                }
+            } catch (_: Exception) {}
+            return out.toString()
+        }
+
+        // Miniatura (base64) para imagens/vídeos.
+        @JavascriptInterface
+        fun thumb(path: String, px: Int): String {
+            try {
+                val f = File(path)
+                if (!f.exists() || f.isDirectory) return ""
+                val size = px.coerceIn(48, 512)
+                val mime = guessMime(path)
+                val bmp: Bitmap? = when {
+                    mime.startsWith("image") -> decodeSampled(path, size)
+                    mime.startsWith("video") ->
+                        if (sdk() >= 29) try { ThumbnailUtils.createVideoThumbnail(f, Size(size, size), null) } catch (_: Exception) { null }
+                        else @Suppress("DEPRECATION") ThumbnailUtils.createVideoThumbnail(path, MediaStore.Video.Thumbnails.MINI_KIND)
+                    else -> null
+                } ?: return ""
+                val baos = ByteArrayOutputStream()
+                bmp.compress(Bitmap.CompressFormat.JPEG, 72, baos)
+                bmp.recycle()
+                return "data:image/jpeg;base64," + Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
+            } catch (_: Exception) { return "" }
+        }
+
+        private fun decodeSampled(path: String, req: Int): Bitmap? {
+            val o = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(path, o)
+            var s = 1; val w = o.outWidth; val h = o.outHeight
+            if (w <= 0 || h <= 0) return null
+            while (w / (s * 2) >= req && h / (s * 2) >= req) s *= 2
+            val o2 = BitmapFactory.Options().apply { inSampleSize = s }
+            return BitmapFactory.decodeFile(path, o2)
+        }
+
+        // Abre o ficheiro com o app apropriado.
+        @JavascriptInterface
+        fun open(path: String): String {
+            try {
+                val f = File(path)
+                if (!f.exists()) return "NOT_FOUND"
+                val mime = guessMime(path)
+                val uri = FileProvider.getUriForFile(this@MainActivity, "$packageName.fileprovider", f)
+                val view = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, if (mime.isNotBlank()) mime else "*/*")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                startActivity(Intent.createChooser(view, "Abrir com").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                return "OPENED"
+            } catch (e: Exception) { return "ERROR:" + (e.message ?: "open") }
+        }
+
+        private fun guessMime(name: String): String {
+            val ext = name.substringAfterLast('.', "").lowercase(Locale.getDefault())
+            return when (ext) {
+                "jpg", "jpeg" -> "image/jpeg"; "png" -> "image/png"; "gif" -> "image/gif"
+                "webp" -> "image/webp"; "bmp" -> "image/bmp"; "heic", "heif" -> "image/heic"
+                "mp4" -> "video/mp4"; "mkv" -> "video/x-matroska"; "3gp" -> "video/3gpp"
+                "avi" -> "video/x-msvideo"; "mov" -> "video/quicktime"; "webm" -> "video/webm"
+                "mp3" -> "audio/mpeg"; "wav" -> "audio/wav"; "ogg" -> "audio/ogg"; "m4a" -> "audio/mp4"
+                "aac" -> "audio/aac"; "opus" -> "audio/opus"; "flac" -> "audio/flac"; "amr" -> "audio/amr"
+                "pdf" -> "application/pdf"; "txt" -> "text/plain"; "rtf" -> "application/rtf"
+                "doc" -> "application/msword"
+                "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                "xls" -> "application/vnd.ms-excel"
+                "xlsx" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                "ppt" -> "application/vnd.ms-powerpoint"
+                "pptx" -> "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                "zip" -> "application/zip"; "rar" -> "application/x-rar-compressed"
+                "apk" -> "application/vnd.android.package-archive"
+                else -> MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext) ?: ""
+            }
+        }
+
+        private fun kindOf(mime: String, name: String): String {
+            val m = if (mime.isNotBlank()) mime else guessMime(name)
+            return when {
+                m.startsWith("image") -> "image"
+                m.startsWith("video") -> "video"
+                m.startsWith("audio") -> "audio"
+                m == "application/pdf" -> "pdf"
+                m.contains("word") || m.endsWith("wordprocessingml.document") -> "doc"
+                m.contains("sheet") || m.contains("excel") -> "sheet"
+                m.contains("presentation") || m.contains("powerpoint") -> "slide"
+                m.startsWith("text") -> "text"
+                m.contains("zip") || m.contains("rar") || m.contains("compressed") -> "zip"
+                else -> "file"
+            }
         }
     }
 

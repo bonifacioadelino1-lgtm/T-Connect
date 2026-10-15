@@ -300,10 +300,121 @@ function permissionsMenu(){
     <div class="menu-head"><div><b>Configurações</b><small>Minha Segurança</small></div><button class="menu-close" onclick="closeMenu()">×</button></div>
     <button class="menu-item" onclick="requestCorePermissions()">🔐 <span><b>Permissões</b><small>Câmera, microfone, localização, contactos, SMS e chamadas</small></span></button>
     <div class="perm-mini"><div>📷 Câmera <b>${permissionLabel(p.camera)}</b></div><div>🎙️ Microfone <b>${permissionLabel(p.microphone)}</b></div><div>📍 Localização <b>${permissionLabel(p.location)}</b></div><div>🔔 Notificações <b>${permissionLabel(p.notifications)}</b></div><div>💬 Mensagens/SMS <b>${permissionLabel(p.sms)}</b></div><div>📞 Chamadas <b>${permissionLabel(p.calls)}</b></div><div>🖥️ Captura de tela <b>${permissionLabel(p.screen)}</b></div></div>
+    <button class="menu-item" onclick="openFiles()">🗂️ <span><b>Explorador de ficheiros</b><small>Fotos, vídeos, músicas, documentos e pastas</small></span></button>
     <button class="menu-item" onclick="state.menuOpen=false;state.forcePair=true;render();scrollToPairing()">🔗 <span><b>Vinculação</b><small>Abrir a página de vínculo (QR, código ou link)</small></span></button>
     <button class="menu-item" onclick="childLogout()">↪ <span><b>Sair da plataforma</b><small>Terminar sessão e refazer o vínculo</small></span></button>
   </aside></div>`;
 }
+// ================= Explorador de ficheiros =================
+function tcFilesNative(){return window.TCNativeFiles||null}
+function tcFxEsc(s){return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function fxFmtSize(n){n=Number(n)||0;if(n<1024)return n+' B';if(n<1048576)return (n/1024).toFixed(0)+' KB';if(n<1073741824)return (n/1048576).toFixed(1)+' MB';return (n/1073741824).toFixed(2)+' GB'}
+function fxFmtDate(ms){try{if(!ms)return '';return new Date(Number(ms)).toLocaleDateString('pt-PT')}catch(_){return ''}}
+function fxIcon(kind){const m={folder:'📁',image:'🖼️',video:'🎬',audio:'🎵',pdf:'📕',doc:'📘',sheet:'📗',slide:'📙',text:'📄',zip:'🗜️',file:'📄'};return m[kind]||'📄'}
+function fxRootIcon(ic){const m={storage:'📁',download:'📥',doc:'📄',image:'🖼️',audio:'🎵',video:'🎬',chat:'💬'};return m[ic]||'📁'}
+function openFiles(){state.menuOpen=false;state.filesOpen=true;state.fxTab=state.fxTab||'image';state.fxPath=state.fxPath||'';render();tcFxLoad()}
+window.openFiles=openFiles;
+function closeFiles(){state.filesOpen=false;render()}
+window.closeFiles=closeFiles;
+function fxTab(t){state.fxTab=t;if(t==='files')state.fxPath='';render();tcFxLoad()}
+window.fxTab=fxTab;
+function fxOpen(path){const n=tcFilesNative();if(!n)return;try{const r=String(n.open(path)||'');if(r.startsWith('ERROR')||r==='NOT_FOUND'){fxToast('Não foi possível abrir este ficheiro.')}}catch(_){fxToast('Não foi possível abrir este ficheiro.')}}
+window.fxOpen=fxOpen;
+function fxOpenDir(path){state.fxTab='files';state.fxPath=path;render();tcFxLoad()}
+window.fxOpenDir=fxOpenDir;
+function fxToast(msg){try{let t=document.getElementById('fxToast');if(!t){t=document.createElement('div');t.id='fxToast';t.className='fx-toast';document.body.appendChild(t)}t.textContent=msg;t.classList.add('on');clearTimeout(window.__fxToastT);window.__fxToastT=setTimeout(()=>t.classList.remove('on'),2600)}catch(_){}}
+function tcFxGrant(which){const n=tcFilesNative();if(!n)return;try{if(which==='all'){n.requestAccess&&n.requestAccess()}else{n.requestMedia&&n.requestMedia()}}catch(_){}}
+window.tcFxGrant=tcFxGrant;
+window.addEventListener('tc-native-files-updated',()=>{if(state.filesOpen)tcFxLoad()});
+function filesView(){
+  const tabs=[['image','Fotos','🖼️'],['video','Vídeos','🎬'],['audio','Músicas','🎵'],['doc','Documentos','📄'],['files','Ficheiros','📁']];
+  const cur=state.fxTab||'image';
+  return `<section class="fx"><div class="fx-top"><button class="fx-back" onclick="closeFiles()" aria-label="Voltar">‹</button><div class="fx-title"><b>Explorador de ficheiros</b><small>Acesso aos ficheiros do dispositivo</small></div></div>
+  <div class="fx-tabs">${tabs.map(t=>`<button class="fx-tab${cur===t[0]?' on':''}" onclick="fxTab('${t[0]}')"><span class="fx-tab-ic">${t[2]}</span>${t[1]}</button>`).join('')}</div>
+  <div class="fx-body" id="fxBody"><div class="fx-loading"><span class="fx-spin"></span> A carregar…</div></div></section>`;
+}
+function tcFxLoad(){
+  const n=tcFilesNative();
+  const host=document.getElementById('fxBody');if(!host)return;
+  if(!n){host.innerHTML='<div class="fx-empty"><span>📱</span>O explorador de ficheiros só funciona no aplicativo instalado.</div>';return}
+  const tab=state.fxTab;
+  const needAll=(tab==='files'||tab==='doc');
+  let ok=false;try{ok=needAll?(n.hasAccess&&n.hasAccess()):(n.hasMedia&&n.hasMedia())}catch(_){ok=false}
+  if(!ok){
+    host.innerHTML=`<div class="fx-perm"><div class="fx-perm-ic">🔒</div><h3>Permitir acesso</h3><p>${needAll?'Para abrir documentos e navegar nas pastas, ative o <b>acesso a todos os ficheiros</b> nas definições.':'Para ver fotos, vídeos e músicas, permita o acesso à média do dispositivo.'}</p><button class="fx-perm-btn" onclick="tcFxGrant('${needAll?'all':'media'}')">Permitir acesso</button><small>Depois de permitir, volte a esta tela.</small></div>`;
+    return;
+  }
+  host.innerHTML='<div class="fx-loading"><span class="fx-spin"></span> A carregar…</div>';
+  setTimeout(()=>{
+    try{
+      if(tab==='files'){
+        if(!state.fxPath){tcFxRenderRoots(JSON.parse(n.roots()||'[]'))}
+        else{tcFxRenderDir(JSON.parse(n.listDir(state.fxPath)||'{}'))}
+      }else{
+        tcFxRenderItems(JSON.parse(n.listCategory(tab,tab==='doc'?6000:5000)||'[]'),tab);
+      }
+    }catch(e){const h=document.getElementById('fxBody');if(h)h.innerHTML='<div class="fx-empty"><span>⚠️</span>Não foi possível carregar.</div>'}
+  },30);
+}
+window.tcFxLoad=tcFxLoad;
+function tcFxRenderRoots(roots){
+  const host=document.getElementById('fxBody');if(!host)return;
+  if(!roots||!roots.length){host.innerHTML='<div class="fx-empty"><span>📁</span>Sem pastas disponíveis.</div>';return}
+  host.innerHTML='<div class="fx-sec">Atalhos</div><div class="fx-roots">'+roots.map(r=>`<button class="fx-root" onclick="fxOpenDir('${tcFxEsc(r.path)}')"><span class="fx-root-ic">${fxRootIcon(r.icon)}</span><b>${tcFxEsc(r.name)}</b></button>`).join('')+'</div>';
+}
+function tcFxRenderDir(data){
+  const host=document.getElementById('fxBody');if(!host)return;
+  if(!data||!data.ok){host.innerHTML='<div class="fx-empty"><span>🚫</span>Pasta inacessível.</div>';return}
+  const items=data.items||[];state.fxParent=data.parent||'';
+  const up=data.parent?`<button class="fx-up" onclick="fxOpenDir('${tcFxEsc(data.parent)}')">‹ Subir</button>`:`<button class="fx-up" onclick="state.fxPath='';render();tcFxLoad()">‹ Pastas</button>`;
+  const crumb=`<div class="fx-crumb">${up}<span class="fx-crumb-name">${tcFxEsc(data.name||'')}</span></div>`;
+  if(!items.length){host.innerHTML=crumb+'<div class="fx-empty"><span>📂</span>Pasta vazia.</div>';return}
+  host.innerHTML=crumb+'<div class="fx-list">'+items.map(fxRow).join('')+'</div>';
+  tcFxLazyThumbs();
+}
+function fxRow(it){
+  if(it.dir){return `<button class="fx-item fx-dir" onclick="fxOpenDir('${tcFxEsc(it.path)}')"><span class="fx-ic">📁</span><span class="fx-meta"><b>${tcFxEsc(it.name)}</b><small>${it.count?it.count+' itens':'pasta'}</small></span><span class="fx-chev">›</span></button>`}
+  const thumbable=(it.kind==='image'||it.kind==='video');
+  return `<button class="fx-item" onclick="fxOpen('${tcFxEsc(it.path)}')"><span class="fx-ic${thumbable?' fx-thumb':''}"${thumbable?` data-thumb="${tcFxEsc(it.path)}"`:''}>${thumbable?'':fxIcon(it.kind)}${it.kind==='video'?'<i class="fx-play">▶</i>':''}</span><span class="fx-meta"><b>${tcFxEsc(it.name)}</b><small>${fxFmtSize(it.size)} · ${fxFmtDate(it.date)}</small></span></button>`;
+}
+function tcFxRenderItems(items,tab){
+  const host=document.getElementById('fxBody');if(!host)return;
+  const names={image:'fotos',video:'vídeos',audio:'músicas',doc:'documentos'};
+  if(!items||!items.length){host.innerHTML='<div class="fx-empty"><span>'+fxIcon(tab==='doc'?'doc':tab)+'</span>Sem '+(names[tab]||'ficheiros')+'.</div>';return}
+  let html='<div class="fx-sec">'+items.length+' '+(names[tab]||'itens')+'</div>';
+  if(tab==='image'||tab==='video'){
+    html+='<div class="fx-grid">'+items.map(it=>`<button class="fx-tile" onclick="fxOpen('${tcFxEsc(it.path)}')"><span class="fx-thumb" data-thumb="${tcFxEsc(it.path)}"></span>${tab==='video'?'<i class="fx-play">▶</i>':''}</button>`).join('')+'</div>';
+  }else{
+    html+='<div class="fx-list">'+items.map(fxRow).join('')+'</div>';
+  }
+  host.innerHTML=html;
+  tcFxLazyThumbs();
+}
+function tcFxLazyThumbs(){
+  const n=tcFilesNative();if(!n||!n.thumb)return;
+  window.__fxThumbs=window.__fxThumbs||{};
+  const els=[].slice.call(document.querySelectorAll('.fx-thumb[data-thumb]'));
+  if(!els.length)return;
+  const load=(el)=>{
+    const p=el.getAttribute('data-thumb');if(!p)return;el.removeAttribute('data-thumb');
+    const cached=window.__fxThumbs[p];
+    if(cached){if(cached!=='x'){el.style.backgroundImage='url('+cached+')';el.classList.add('fx-has')}else{el.classList.add('fx-noimg')}return}
+    requestAnimationFrame(()=>{try{const d=n.thumb(p,220);if(d){window.__fxThumbs[p]=d;el.style.backgroundImage='url('+d+')';el.classList.add('fx-has')}else{window.__fxThumbs[p]='x';el.classList.add('fx-noimg')}}catch(_){el.classList.add('fx-noimg')}});
+  };
+  if('IntersectionObserver' in window){
+    const io=new IntersectionObserver((ents)=>{ents.forEach(e=>{if(e.isIntersecting){load(e.target);io.unobserve(e.target)}})},{rootMargin:'400px'});
+    els.forEach(el=>io.observe(el));
+  }else{els.forEach(load)}
+}
+window.tcOnBackPressed=function(){
+  if(state.filesOpen){
+    if(state.fxTab==='files'&&state.fxPath){const parent=state.fxParent||'';if(parent){fxOpenDir(parent)}else{state.fxPath='';render();tcFxLoad()}return true}
+    closeFiles();return true;
+  }
+  if(state.menuOpen){closeMenu();return true}
+  return false;
+};
+// ===========================================================
 async function childLogout(){try{if(confirm('Sair da plataforma e apagar o vínculo deste dispositivo?')===false)return;}catch(_){}
   try{await tcSignOut()}catch(_){}
   try{['tc_child_device_code','tc_child_device_name','tc_child_consent','tc_outbox','tc_sms_max','tc_call_max','tc_contacts_sync','tc_apps_sync','tc_child_last_loc','tc_pending_invite','tc_contacts_asked'].forEach(k=>localStorage.removeItem(k))}catch(_){}
@@ -383,6 +494,10 @@ window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();window.__tc
 window.addEventListener('appinstalled',()=>{state.status='Minha Emergência instalada';render()});
 function render(){
   const app=document.getElementById('app'); if(!app)return;
+  if(state.filesOpen){
+    app.innerHTML=`<main class="child child-files">${filesView()}${state.menuOpen?permissionsMenu():''}</main>`;
+    return;
+  }
   const content=(state.deviceCode&&!state.forcePair)?linkedView():pairView();
   app.innerHTML=`<main class="child"><header><div><div class="brand">MINHA <span>SEGURANÇA</span></div><div class="child-subtitle">T-Connect Child</div></div><button class="dots" aria-label="Abrir configurações" onclick="toggleMenu()">⋮</button></header>${content}${state.menuOpen?permissionsMenu():''}</main>`;
   if(state.firstRun&&!document.getElementById('permissionWelcome')){
@@ -406,17 +521,8 @@ function linkedView(){
   const st=esc(tcChildStatusText()); const time=esc(tcChildTime()); const on=tcChildOnline();
   return `<section class="cm-home">
     <div class="cm-bg" aria-hidden="true">
-      <div class="cm-globe"><span class="g-halo"></span>
-        <div class="g-sphere"><span class="g-dots"></span>
-          <svg class="g-grid" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-            <circle cx="100" cy="100" r="99"/>
-            <ellipse cx="100" cy="100" rx="22" ry="99"/><ellipse cx="100" cy="100" rx="50" ry="99"/><ellipse cx="100" cy="100" rx="78" ry="99"/><line x1="100" y1="1" x2="100" y2="199"/>
-            <ellipse cx="100" cy="55" rx="88" ry="8"/><ellipse cx="100" cy="78" rx="96" ry="10"/><ellipse cx="100" cy="100" rx="99" ry="12"/><ellipse cx="100" cy="122" rx="96" ry="10"/><ellipse cx="100" cy="145" rx="88" ry="8"/>
-          </svg>
-          <span class="g-sheen"></span>
-        </div>
-      </div>
-      <span class="cm-aura cm-aura2"></span><span class="cm-glow"></span><span class="cm-vign"></span>
+      <span class="cm-a cm-a1"></span><span class="cm-a cm-a2"></span><span class="cm-a cm-a3"></span>
+      <span class="cm-stars"></span><span class="cm-grid2"></span><span class="cm-glow"></span><span class="cm-vign"></span>
     </div>
     <div class="cm-top">
       <div class="cm-emblem"><span class="cm-ring r1"></span><span class="cm-ring r2"></span>
