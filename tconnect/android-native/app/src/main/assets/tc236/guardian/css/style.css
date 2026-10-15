@@ -1255,3 +1255,15 @@ body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Ari
 .main.map-mode .dashboard-map-card .section-head{flex:0 0 auto;display:flex!important;align-items:center;gap:8px;margin:0 0 6px!important;flex-wrap:wrap}
 .main.map-mode .dashboard-map-card .section-head>div:first-child{margin:0!important}
 .main.map-mode .location-map-only{flex:1 1 auto;height:auto!important;min-height:0!important}
+
+/* Pedidos de vínculo por e-mail (aprovação pelo Guardian) */
+.pair-requests{margin-top:16px;padding:16px;border-radius:16px;border:1px solid rgba(255,209,102,.3);background:linear-gradient(160deg,rgba(40,36,18,.5),rgba(22,26,40,.5))}
+.pair-req-badge{background:#ffd166;color:#1a1600;border-radius:999px;font-size:12px;padding:2px 9px;margin-left:6px;font-weight:800}
+.pair-req-list{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+.pair-req{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 14px;border-radius:13px;border:1px solid rgba(140,170,210,.18);background:rgba(16,24,44,.6)}
+.pair-req-info{display:flex;align-items:center;gap:11px;min-width:0}
+.pair-req-ic{width:38px;height:38px;flex:0 0 auto;border-radius:10px;display:flex;align-items:center;justify-content:center;background:rgba(255,209,102,.16);font-size:18px}
+.pair-req-info b{display:block;font-size:14.5px}
+.pair-req-info small{display:block;font-size:12.5px;color:#90a4c4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60vw}
+.pair-req-actions{display:flex;gap:8px;flex:0 0 auto}
+.pair-req-actions .btn{padding:9px 16px}

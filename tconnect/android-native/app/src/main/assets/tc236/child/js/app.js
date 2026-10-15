@@ -13,6 +13,58 @@ async function waitForNativePermission(kind,timeout=15000){if(!window.TCNativePe
 async function startQr(){try{const ok=await waitForNativePermission('camera',15000);if(!ok){state.pairMessage='A câmera não foi autorizada. Autorize a câmera no Android e tente novamente.';render();return}}catch(e){} const box=document.getElementById('qr-reader');if(!box||typeof Html5Qrcode==='undefined'){state.pairMessage='Leitor QR indisponível. Verifique a ligação à internet e tente novamente.';render();return}if(!window.isSecureContext&&!['localhost','127.0.0.1'].includes(location.hostname)){state.pairMessage='A câmara exige HTTPS (ou localhost). Abra o Child por uma ligação segura.';render();return}if(qrScanner)return;qrScanner=new Html5Qrcode('qr-reader');try{await qrScanner.start({facingMode:'environment'},{fps:10,qrbox:{width:250,height:250}},async text=>{await stopQr();await claimPairFromAnySource(text)},()=>{})}catch(e){qrScanner=null;state.pairMessage='Não foi possível abrir a câmara. Autorize a câmara nas definições do dispositivo e tente novamente.';render()}}
 async function stopQr(){if(!qrScanner)return;try{await qrScanner.stop();await qrScanner.clear()}catch(e){}qrScanner=null}
 function useInviteLink(e){e.preventDefault();const value=new FormData(e.target).get('inviteLink');claimPairFromAnySource(value)}
+// ---- Vinculação por e-mail (aprovação pelo Guardian) ----
+function pairTab(n){['qr','code','link','email'].forEach(s=>{const el=document.getElementById(s+'-section');if(el)el.hidden=(s!==n)});try{if(n==='qr')startQr();else stopQr()}catch(_){}}
+window.pairTab=pairTab;
+async function requestPairingByEmail(e){
+  e.preventDefault();
+  const email=String(new FormData(e.target).get('gemail')||'').trim();
+  if(!email)return;
+  try{
+    await ensureChildSession();
+    if(!window.TC_DB?.client)throw new Error('Serviço de vinculação indisponível. Verifique a configuração do Supabase.');
+    const device=state.deviceCode||('TC-CHILD-'+Math.random().toString(36).slice(2,8).toUpperCase());
+    const {data,error}=await window.TC_DB.client.rpc('request_pairing_by_email',{p_email:email,p_device_code:device,p_device_name:state.deviceName});
+    if(error)throw error;
+    if(data&&data.ok){
+      state.emailPairing=true;
+      state.pairMessage='Pedido enviado a '+email+'. Aguarde a aprovação do Guardian no aplicativo dele…';
+      render();
+      tcChildPollPairing(device);
+    }else{
+      state.pairMessage='Não encontrámos um Guardian com esse e-mail. Confirme o e-mail da conta do Guardian.';
+      render();
+    }
+  }catch(err){state.pairMessage=err.message||'Falha ao enviar o pedido de vínculo';render()}
+}
+window.requestPairingByEmail=requestPairingByEmail;
+function tcChildPollPairing(device){
+  if(window.__tcPairPoll)clearInterval(window.__tcPairPoll);
+  let tries=0;
+  window.__tcPairPoll=setInterval(async()=>{
+    tries++;
+    if(tries>150||!state.emailPairing){clearInterval(window.__tcPairPoll);return}
+    try{
+      const {data,error}=await window.TC_DB.client.rpc('child_pairing_state',{p_device_code:device});
+      if(error)return;
+      if(data&&data.linked){
+        clearInterval(window.__tcPairPoll);
+        state.emailPairing=false;state.deviceCode=device;state.forcePair=false;
+        try{save()}catch(_){}
+        state.status='Dispositivo vinculado';state.pairMessage='Vinculação concluída com sucesso.';
+        try{heartbeat()}catch(_){}
+        if(!window.__tcBatteryHeartbeatTimer)window.__tcBatteryHeartbeatTimer=setInterval(heartbeat,30000);
+        try{if(!window.__tcChildCaptureReady){window.__tcChildCaptureReady=1;setupChildCaptureRealtime()}}catch(_){}
+        try{await childLog('PAIRING','Vinculação concluída por e-mail (aprovada pelo Guardian)','AUTORIZADO')}catch(_){}
+        render();
+      }else if(data&&data.status==='REJECTED'){
+        clearInterval(window.__tcPairPoll);state.emailPairing=false;
+        state.pairMessage='O Guardian rejeitou o pedido de vínculo.';render();
+      }
+    }catch(_){}
+  },4000);
+}
+window.tcChildPollPairing=tcChildPollPairing;
 /* ===== Fila offline: guarda dados quando não há internet e envia ao reconectar ===== */
 function tcEnqueue(rpc,params){try{const q=JSON.parse(localStorage.getItem('tc_outbox')||'[]');q.push({rpc:rpc,params:params,ts:Date.now()});localStorage.setItem('tc_outbox',JSON.stringify(q.slice(-300)))}catch(_){}}
 async function tcRpc(rpc,params){if(!window.TC_DB?.enabled||!window.TC_DB.client||(typeof navigator!=='undefined'&&navigator.onLine===false)){tcEnqueue(rpc,params);return false}try{const {error}=await window.TC_DB.client.rpc(rpc,params);if(error)throw error;return true}catch(e){tcEnqueue(rpc,params);return false}}
@@ -532,7 +584,7 @@ function render(){
     app.insertAdjacentHTML('beforeend',`<div class="modal" id="permissionWelcome"><div class="modalbox"><div class="phone-install">🛡️</div><h2>Minha Segurança</h2><p>Na primeira abertura, precisamos configurar as permissões necessárias para comunicação e segurança do dispositivo.</p><p class="muted">Câmera · Microfone · Localização · Contactos · SMS · Chamadas · Notificações.</p><div class="confirm"><button class="btn confirmbtn" onclick="requestCorePermissions()">Permitir e continuar</button></div></div></div>`);
   }
 }
-function pairView(){return `<section class="childbox" id="pairing-area"><div class="shield">⌁</div><h1>Vincular dispositivo</h1>${state.deviceCode?`<div class="notice" role="status">Já vinculado como <b>${esc(state.deviceName||'Child')}</b>. Pode revincular aqui ou <button class="text-btn" style="color:#38bdf8;background:none;border:0;cursor:pointer;text-decoration:underline" onclick="state.forcePair=false;render()">voltar ao painel</button>.</div>`:''}<p>Comece diretamente pelo QR Code, código ou link criado pelo Guardian. Não é necessário fazer login neste aplicativo.</p>${state.pairMessage?`<div class="notice" role="status">${esc(state.pairMessage)}</div>`:''}<div class="pair-tabs"><button class="btn primary" onclick="document.getElementById('qr-section').hidden=false;document.getElementById('code-section').hidden=true;document.getElementById('link-section').hidden=true;startQr()">▣ Ler QR Code</button><button class="btn" onclick="stopQr();document.getElementById('qr-section').hidden=true;document.getElementById('code-section').hidden=false;document.getElementById('link-section').hidden=true"># Código</button><button class="btn" onclick="stopQr();document.getElementById('qr-section').hidden=true;document.getElementById('code-section').hidden=true;document.getElementById('link-section').hidden=false">↗ Link</button></div><div id="qr-section" class="qr-child-section"><div id="qr-reader"></div><small>O QR é lido diretamente no aplicativo Minha Segurança.</small></div><div id="code-section" hidden><form onsubmit="pair(event)" class="pair-form"><label>Código de vinculação<input name="invite" required inputmode="text" autocomplete="one-time-code" maxlength="32" pattern="[A-Za-z0-9][A-Za-z0-9 -]{5,31}" placeholder="Ex.: A1B2C3D4"></label><button class="btn primary wide">Vincular código</button></form></div><div id="link-section" hidden><form onsubmit="useInviteLink(event)" class="pair-form"><label>Link do convite<input name="inviteLink" required placeholder="Cole o link do Guardian"></label><button class="btn primary wide">Abrir convite</button></form></div></section>`}
+function pairView(){return `<section class="childbox" id="pairing-area"><div class="shield">⌁</div><h1>Vincular dispositivo</h1>${state.deviceCode?`<div class="notice" role="status">Já vinculado como <b>${esc(state.deviceName||'Child')}</b>. Pode revincular aqui ou <button class="text-btn" style="color:#38bdf8;background:none;border:0;cursor:pointer;text-decoration:underline" onclick="state.forcePair=false;render()">voltar ao painel</button>.</div>`:''}<p>Comece diretamente pelo QR Code, código ou link criado pelo Guardian. Não é necessário fazer login neste aplicativo.</p>${state.pairMessage?`<div class="notice" role="status">${esc(state.pairMessage)}</div>`:''}<div class="pair-tabs"><button class="btn primary" onclick="pairTab('qr')">▣ Ler QR Code</button><button class="btn" onclick="pairTab('code')"># Código</button><button class="btn" onclick="pairTab('link')">↗ Link</button><button class="btn" onclick="pairTab('email')">✉ E-mail</button></div><div id="qr-section" class="qr-child-section"><div id="qr-reader"></div><small>O QR é lido diretamente no aplicativo Minha Segurança.</small></div><div id="code-section" hidden><form onsubmit="pair(event)" class="pair-form"><label>Código de vinculação<input name="invite" required inputmode="text" autocomplete="one-time-code" maxlength="32" pattern="[A-Za-z0-9][A-Za-z0-9 -]{5,31}" placeholder="Ex.: A1B2C3D4"></label><button class="btn primary wide">Vincular código</button></form></div><div id="link-section" hidden><form onsubmit="useInviteLink(event)" class="pair-form"><label>Link do convite<input name="inviteLink" required placeholder="Cole o link do Guardian"></label><button class="btn primary wide">Abrir convite</button></form></div><div id="email-section" hidden><form onsubmit="requestPairingByEmail(event)" class="pair-form"><label>E-mail da conta do Guardian<input name="gemail" type="email" required inputmode="email" autocomplete="email" placeholder="email@exemplo.com"></label><button class="btn primary wide">Enviar pedido de vínculo</button></form><small>O Guardian recebe um pedido e precisa de <b>aprovar</b> no aplicativo dele. Nada é partilhado antes dessa aprovação.</small></div></section>`}
 // Estado ao vivo (curto) e hora atual.
 function tcChildStatusText(){
   var s=String(state.status||'');
