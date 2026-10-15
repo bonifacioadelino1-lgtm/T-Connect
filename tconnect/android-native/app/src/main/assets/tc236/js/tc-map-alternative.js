@@ -69,9 +69,9 @@
   }
   let mapContainer = null;
   let hasLiveLocation = false;
-  let roadLayer, satelliteLayer, hybridLabels, fallbackRoadLayer, labelsLayer, transportLayer;
+  let roadLayer, satelliteLayer, hybridLabels, fallbackRoadLayer, labelsLayer, transportLayer, esriSatLayer;
   let initToken = 0;
-  let useFallbackRoad = false;
+  let useFallbackRoad = false, useFallbackSat = false;
   const _termLast = {};
   function term(key, minMs, ...args) {
     const now = Date.now();
@@ -179,7 +179,7 @@
     try { if (pulseMarker) map.removeLayer(pulseMarker); } catch (e) {}
     try { if (selfMarker) map.removeLayer(selfMarker); } catch (e) {}
     map = null; marker = null; accuracyCircle = null; pulseMarker = null; selfMarker = null; roadLayer = null;
-    satelliteLayer = null; hybridLabels = null; fallbackRoadLayer = null; labelsLayer = null; transportLayer = null; mapContainer = null;
+    satelliteLayer = null; hybridLabels = null; fallbackRoadLayer = null; labelsLayer = null; transportLayer = null; esriSatLayer = null; mapContainer = null;
     initToken++;
   }
 
@@ -311,14 +311,20 @@
 
     mapContainer = el;
     const token = ++initToken;
-    // maxZoom limitado a 19: é o zoom máximo real dos tiles OSM/Esri. Acima disso o
-    // Leaflet mostrava "Map data not yet available" porque não existem tiles. zoomSnap 1
-    // evita níveis fracionários que agravavam o problema.
-    map = window.L.map(el, { zoomControl: true, attributionControl: false, preferCanvas: true, minZoom: 3, maxZoom: 19, zoomSnap: 1, zoomDelta: 1, wheelDebounceTime: 40, wheelPxPerZoomLevel: 120 }).setView(DEFAULT, 13);
+    // Abre já centrado na ÚLTIMA localização conhecida da criança (se houver), para o
+    // mapa não começar noutro sítio e depois "saltar" para o ponto.
+    try {
+      const _sv = lastKnownLocation || JSON.parse(localStorage.getItem('tc:lastKnownLocation') || 'null');
+      if (_sv && Number.isFinite(Number(_sv.lat)) && Number.isFinite(Number(_sv.lng))) lastKnownLocation = { lat:Number(_sv.lat), lng:Number(_sv.lng), accuracy:Number(_sv.accuracy)||60 };
+    } catch(_){}
+    const _startCenter = lastKnownLocation ? [lastKnownLocation.lat, lastKnownLocation.lng] : DEFAULT;
+    const _startZoom = lastKnownLocation ? 17 : 13;
+    // maxZoom 21: com tiles Google o satélite tem a MESMA qualidade/aproximação do Google Maps.
+    map = window.L.map(el, { zoomControl: true, attributionControl: false, preferCanvas: true, minZoom: 3, maxZoom: 21, zoomSnap: 1, zoomDelta: 1, wheelDebounceTime: 40, wheelPxPerZoomLevel: 120 }).setView(_startCenter, _startZoom);
     const BLANK_TILE0 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
     roadLayer = window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxNativeZoom: 19,
-      maxZoom: 19,
+      maxZoom: 21,
       noWrap: true,
       updateWhenZooming: false,
       updateWhenIdle: true,
@@ -329,32 +335,41 @@
     // Tile transparente (1x1 PNG) usado quando um tile de satélite não existe: em vez
     // do texto "Map data not yet available", fica apenas o fundo escuro do mapa.
     const BLANK_TILE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
-    satelliteLayer = window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      // maxNativeZoom 17: a cobertura de satélite da Esri é fiável até 17 mesmo em zonas
-      // rurais (ex.: Moçambique). Com maxZoom 19, o Leaflet amplia o tile de 17 em vez de
-      // mostrar "Map data not yet available".
-      maxNativeZoom: 17,
-      maxZoom: 19,
+    // Satélite com qualidade/aproximação do Google Maps (tiles Google, até zoom ~20).
+    // Mantemos o Esri como alternativa automática caso o Google falhe.
+    satelliteLayer = window.L.tileLayer('https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+      subdomains: ['0','1','2','3'],
+      maxNativeZoom: 20,
+      maxZoom: 21,
       updateWhenZooming: false,
       updateWhenIdle: true,
       keepBuffer: 4,
       errorTileUrl: BLANK_TILE,
-      attribution: '&copy; Esri'
+      attribution: '&copy; Google'
     });
-    hybridLabels = window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxNativeZoom: 19, maxZoom: 19, errorTileUrl: BLANK_TILE0, updateWhenZooming: false, updateWhenIdle: true, keepBuffer: 3, opacity: .34, attribution: '&copy; OpenStreetMap contributors'
+    // Modo híbrido Google (satélite + ruas + nomes), igual ao híbrido do Google Maps.
+    hybridLabels = window.L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+      subdomains: ['0','1','2','3'], maxNativeZoom: 20, maxZoom: 21, errorTileUrl: BLANK_TILE, updateWhenZooming: false, updateWhenIdle: true, keepBuffer: 4, attribution: '&copy; Google'
     });
-    // Rótulos reais (nomes de locais/cidades/bairros) e nomes de ruas, transparentes,
-    // por cima do satélite — como o modo híbrido do Google Maps.
+    // Alternativa Esri (usada só se os tiles do Google falharem repetidamente).
+    esriSatLayer = window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxNativeZoom: 17, maxZoom: 21, updateWhenZooming: false, updateWhenIdle: true, keepBuffer: 4, errorTileUrl: BLANK_TILE, attribution: '&copy; Esri'
+    });
+    // Rótulos Esri (só usados sobre o satélite Esri de alternativa).
     labelsLayer = window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
-      maxNativeZoom: 17, maxZoom: 19, errorTileUrl: BLANK_TILE, updateWhenZooming: false, updateWhenIdle: true, keepBuffer: 3, pane: 'overlayPane', attribution: '&copy; Esri'
+      maxNativeZoom: 17, maxZoom: 21, errorTileUrl: BLANK_TILE, updateWhenZooming: false, updateWhenIdle: true, keepBuffer: 3, pane: 'overlayPane', attribution: '&copy; Esri'
     });
     transportLayer = window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
-      maxNativeZoom: 17, maxZoom: 19, errorTileUrl: BLANK_TILE, updateWhenZooming: false, updateWhenIdle: true, keepBuffer: 3, pane: 'overlayPane', attribution: '&copy; Esri'
+      maxNativeZoom: 17, maxZoom: 21, errorTileUrl: BLANK_TILE, updateWhenZooming: false, updateWhenIdle: true, keepBuffer: 3, pane: 'overlayPane', attribution: '&copy; Esri'
     });
     fallbackRoadLayer = window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-      maxNativeZoom: 17, maxZoom: 19, errorTileUrl: BLANK_TILE0, updateWhenZooming: false, updateWhenIdle: true, keepBuffer: 3, attribution: '&copy; Esri'
+      maxNativeZoom: 19, maxZoom: 21, errorTileUrl: BLANK_TILE0, updateWhenZooming: false, updateWhenIdle: true, keepBuffer: 3, attribution: '&copy; Esri'
     });
+    // Se os tiles de satélite do Google falharem muitas vezes, passa a usar o Esri.
+    let satErrors = 0;
+    const onSatErr = () => { satErrors++; if (satErrors >= 6 && !useFallbackSat) { useFallbackSat = true; if (map && (currentType === 'satellite' || currentType === 'hybrid')) { try { updateLayers(); } catch (_) {} } } };
+    satelliteLayer.on('tileerror', onSatErr);
+    hybridLabels.on('tileerror', onSatErr);
     // If OSM tiles fail repeatedly, switch only the road base to Esri instead of
     // destroying the Leaflet instance. This keeps the map usable during provider hiccups.
     let roadErrors = 0;
@@ -453,9 +468,15 @@
 
   function updateLayers() {
     if (!map || !roadLayer || !satelliteLayer || !hybridLabels) return;
-    [roadLayer, fallbackRoadLayer, satelliteLayer, hybridLabels, labelsLayer, transportLayer].forEach(layer => { if (layer && map.hasLayer(layer)) map.removeLayer(layer); });
-    if (currentType === 'satellite') { satelliteLayer.addTo(map); if(transportLayer) transportLayer.addTo(map); if(labelsLayer) labelsLayer.addTo(map); }
-    else if (currentType === 'hybrid') { satelliteLayer.addTo(map); if(transportLayer) transportLayer.addTo(map); if(labelsLayer) labelsLayer.addTo(map); }
+    [roadLayer, fallbackRoadLayer, satelliteLayer, hybridLabels, esriSatLayer, labelsLayer, transportLayer].forEach(layer => { if (layer && map.hasLayer(layer)) map.removeLayer(layer); });
+    if (currentType === 'satellite') {
+      if (useFallbackSat && esriSatLayer) { esriSatLayer.addTo(map); if(transportLayer) transportLayer.addTo(map); if(labelsLayer) labelsLayer.addTo(map); }
+      else { satelliteLayer.addTo(map); } // Google satélite já é de alta resolução
+    }
+    else if (currentType === 'hybrid') {
+      if (useFallbackSat && esriSatLayer) { esriSatLayer.addTo(map); if(transportLayer) transportLayer.addTo(map); if(labelsLayer) labelsLayer.addTo(map); }
+      else { hybridLabels.addTo(map); } // Google híbrido (satélite + ruas + nomes)
+    }
     else { (useFallbackRoad && fallbackRoadLayer ? fallbackRoadLayer : roadLayer).addTo(map); }
     restoreLastKnownLocation();
     updateGrid();
@@ -517,30 +538,31 @@
       else { accuracyCircle.setLatLng(pos).setRadius(Number(accuracy) || 60).setStyle({opacity:.8, fillOpacity:.08}); }
       // Do not draw a route/trail over the map. Keep only the live/last-known marker.
       if (window.refreshLocationTerminalUI) window.refreshLocationTerminalUI();
-      if (follow) {
-        if (!tcAcquired && !tcAcquiring) {
-          tcAcquire(lat, lng); // sequência: ponto vermelho + rotação + zoom de ~10s + linha + espelho
-        } else if (!tcAcquiring) {
-          // Já adquirido: segue o alvo sem repetir o show de ~10s. Mas se a página
-          // do Guardian foi re-renderizada, o HUD é novo e perdeu o ponto/painéis —
-          // nesse caso repinta (trava) de imediato, sem a cinemática.
-          // Mapa estável: só recentra quando o alvo sai da área visível (evita o mapa
-          // a "descontrolar" a cada pequena oscilação do GPS). O ponto exato segue sozinho.
-          // Se o utilizador mexeu no mapa há pouco (arrastar/zoom com os dedos), NÃO recentramos
-          // por cima — deixamos o mapa onde ele o pôs. O ponto continua a atualizar na coordenada.
-          const userBusy = (Date.now() - tcUserMovedAt) < 25000;
+      // Se o utilizador mexeu no mapa há pouco (arrastar/zoom com os dedos), respeitamos a
+      // vista dele por uns segundos; caso contrário, o mapa fica SEMPRE travado na última
+      // localização da criança (não "salta" para fora ao atualizar).
+      const userBusy = (Date.now() - tcUserMovedAt) < 25000;
+      if (follow && !tcAcquired && !tcAcquiring) {
+        tcAcquire(lat, lng); // 1.ª aquisição: ponto vermelho + rotação + zoom de ~10s + linha
+      } else if (!tcAcquiring) {
+        // Mantém a localização da criança centrada a cada atualização. Só recentra quando o
+        // centro se afastou mais do que um pequeno limiar (evita micro-saltos) e o utilizador
+        // não está a mexer no mapa.
+        if (!userBusy) {
           try {
-            const ll = window.L.latLng(pos);
-            const inside = map.getBounds && map.getBounds().pad(-0.28).contains(ll);
-            if (!inside && !userBusy) map.panTo(pos, { animate: true, duration: 0.6 });
+            const c = map.getCenter();
+            const drift = tcHaversine({ lat: c.lat, lng: c.lng }, { lat: Number(lat), lng: Number(lng) });
+            if (drift > 10) map.setView(pos, Math.max(map.getZoom() || 0, 16), { animate: true, duration: 0.5 });
           } catch(_) {}
-          const scifi = mapContainer && mapContainer.querySelector('.tc-scifi-hud');
-          const lostHud = scifi && (!scifi.classList.contains('tc-locked') || !mapContainer.querySelector('.tc-glass-panel'));
-          try {
-            if (lostHud && !userBusy) { try { map.setView(pos, Math.max(map.getZoom()||0, 16), { animate:false }); } catch(_){} positionReticle(); scifiLock(); }
-            else { positionReticle(); updateGrid(); updateGlassPanel(); }
-          } catch (_) {}
         }
+        const scifi = mapContainer && mapContainer.querySelector('.tc-scifi-hud');
+        const lostHud = scifi && (!scifi.classList.contains('tc-locked') || !mapContainer.querySelector('.tc-glass-panel'));
+        try {
+          if (lostHud && !userBusy) { positionReticle(); scifiLock(); }
+          else { positionReticle(); updateGrid(); updateGlassPanel(); }
+        } catch (_) {}
+      }
+      if (follow) {
         if (marker && typeof marker.bringToFront === "function") setTimeout(() => marker.bringToFront(), 1200);
         setTimeout(() => { if (map) map.invalidateSize(false); }, 120);
       }
