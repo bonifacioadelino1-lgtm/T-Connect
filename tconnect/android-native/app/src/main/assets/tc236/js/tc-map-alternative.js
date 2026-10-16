@@ -512,6 +512,34 @@
     clearTrail() {
       if (this._trail && map) { try { map.removeLayer(this._trail); } catch (_) {} this._trail = null; }
     },
+    // Marca no mapa onde a CRIANÇA estava nos momentos de contacto (chamadas/SMS)
+    // com um número. Usa apenas o histórico de localização do próprio dispositivo.
+    showContactPoints(points, label) {
+      if (!map) init();
+      if (!map || !window.L || !Array.isArray(points) || !points.length) { this.clearContactPoints(); return; }
+      this.clearContactPoints();
+      const grp = window.L.layerGroup();
+      const latlngs = [];
+      points.forEach((p) => {
+        if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) return;
+        latlngs.push([p.lat, p.lng]);
+        let when = ''; try { when = new Date(p.time).toLocaleString('pt-PT'); } catch (_) {}
+        const cm = window.L.circleMarker([p.lat, p.lng], { radius: 8, color: '#ffffff', weight: 2, fillColor: '#ffb020', fillOpacity: .9, zIndexOffset: 5000 });
+        const ttl = (label ? ('<b>' + label + '</b><br>') : '') + (p.kind || 'Contacto') + (p.dir ? (' · ' + p.dir) : '') + '<br>' + when;
+        cm.bindPopup(ttl);
+        cm.addTo(grp);
+      });
+      grp.addTo(map);
+      this._contactLayer = grp;
+      try {
+        if (latlngs.length === 1) { map.setView(latlngs[0], Math.max(map.getZoom() || 0, 15), { animate: true, duration: .6 }); }
+        else { map.fitBounds(window.L.latLngBounds(latlngs), { padding: [50, 50], maxZoom: 17, animate: true, duration: .6 }); }
+      } catch (_) {}
+    },
+    clearContactPoints() {
+      if (this._contactLayer && map) { try { map.removeLayer(this._contactLayer); } catch (_) {} }
+      this._contactLayer = null;
+    },
     setLocation(lat, lng, accuracy = 60, follow = true) {
       if (!map) init();
       if (!map || !Number.isFinite(lat) || !Number.isFinite(lng)) return;

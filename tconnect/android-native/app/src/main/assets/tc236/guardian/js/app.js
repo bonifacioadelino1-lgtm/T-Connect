@@ -1,4 +1,4 @@
-window.TC_APP_VERSION='2.39.54';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
+window.TC_APP_VERSION='2.39.55';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
 const tcTimeout=(p,ms=10000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado')),ms))]);
 const POS=[-25.9692,32.5732];
 const state={page:'overview',mapType:'roadmap',menuOpen:false,pairingBusy:false,pairingMessage:'',update:{auto:localStorage.getItem('tc_auto_updates')!=='0',checking:false,latest:null,error:''},events:JSON.parse(localStorage.getItem('tc_events')||'[]'),notifications:JSON.parse(localStorage.getItem('tc_notifications')||'[]'),search:'',authenticated:false,authMode:'login',loading:false,recoverySent:false,profile:null,devices:[],messages:[],calls:[],contactsList:[],appsList:[],contactStats:[],trailOn:false,commsSub:false,pairCode:'',pairLink:'',realtime:false,authError:'',lastLocation:null,mapTerminalEvents:JSON.parse(localStorage.getItem('tc_map_terminal_events')||'[]')};
@@ -80,11 +80,45 @@ function showContactCard(info){
       <div class="tc-contact-row"><span>País</span><b>Moçambique</b></div>
       <div class="tc-contact-row"><span>Registo</span><b>${info.name==='Não identificado nos registos'?'Sem correspondência':'Identificado'}</b></div>
     </div>
-    <p class="tc-contact-note">O nome do titular registado na operadora só é fornecido por consulta oficial autorizada. Aqui é mostrado o nome conhecido nos registos do dispositivo.</p>
+    <button class="btn primary tc-contact-track" onclick="trackContact('${esc(String(info.number||'').replace(/'/g,''))}')"><span style="margin-right:6px">📍</span>Localização nos contactos</button>
+    <p class="tc-contact-note">Mostra no mapa onde a <b>criança</b> estava nos momentos de chamada/SMS com este contacto (histórico do próprio dispositivo). Não localiza a outra pessoa.</p>
   </div>`;
   el.onclick=()=>el.remove();
   document.body.appendChild(el);
 }
+// Rastreio por contacto: mostra no mapa onde a CRIANÇA estava nos momentos de
+// chamadas/SMS com este número (usa só o histórico de localização do dispositivo).
+async function trackContact(number){
+  try{document.getElementById('tc-contact-overlay')?.remove();}catch(_){}
+  const d=state.devices[0];
+  if(!d||!d.id||!window.TC_DB?.enabled||!window.TC_DB.client){alert('É preciso um dispositivo vinculado e ligação ativa.');return}
+  const norm=x=>String(x||'').replace(/[^0-9+]/g,'').slice(-9);
+  const key=norm(number); if(!key)return;
+  if(!(state.calls&&state.calls.length)){try{await loadCalls()}catch(_){}}
+  if(!(state.messages&&state.messages.length)){try{await loadMessages()}catch(_){}}
+  const inter=[];
+  (state.calls||[]).forEach(c=>{if(norm(c.number)===key){const t=tcCallTime(c);if(t)inter.push({t,kind:'Chamada',dir:c.direction||''})}});
+  (state.messages||[]).forEach(m=>{if(norm(m.address)===key){const t=tcMsgTime(m);if(t)inter.push({t,kind:'Mensagem',dir:m.direction||''})}});
+  const nm=knownContactName(key)||number;
+  if(!inter.length){alert('Sem chamadas ou mensagens com '+nm+' para localizar.');return}
+  inter.sort((a,b)=>a.t-b.t);
+  const minT=inter[0].t-3600000,maxT=inter[inter.length-1].t+3600000;
+  let locs=[];
+  try{const {data}=await window.TC_DB.client.from('location_history').select('lat,lng,epoch_ms').eq('device_id',d.id).gte('epoch_ms',minT).lte('epoch_ms',maxT).order('epoch_ms',{ascending:true}).limit(8000);locs=data||[]}catch(e){console.warn('loc hist',e&&e.message)}
+  const WIN=20*60*1000;const points=[];
+  for(const it of inter){
+    let best=null,bestd=Infinity;
+    for(const p of locs){const dd=Math.abs(Number(p.epoch_ms)-it.t);if(dd<bestd){bestd=dd;best=p}}
+    if(best&&bestd<=WIN&&Number.isFinite(Number(best.lat))&&Number.isFinite(Number(best.lng))){
+      points.push({lat:Number(best.lat),lng:Number(best.lng),time:it.t,kind:it.kind,dir:it.dir});
+    }
+  }
+  if(!points.length){alert('Não há localização registada da criança nos horários dos contactos com '+nm+'.\n(O histórico de localização só existe a partir do momento em que o dispositivo começou a enviar posições.)');return}
+  state.page='map';state.menuOpen=false;render();
+  addEvent('RASTREIO','Localização da criança nos contactos com '+nm+': '+points.length+' ponto(s).',{status:'CONSULTADO',source:'Guardian',contact:nm});
+  setTimeout(()=>{try{if(window.TC_MAP){if(TC_MAP.refresh)TC_MAP.refresh();if(TC_MAP.showContactPoints)TC_MAP.showContactPoints(points,nm);}}catch(e){console.warn(e)}},500);
+}
+window.trackContact=trackContact;
 window.showContactCard=showContactCard;
 // Som profissional (sintetizado, sem ficheiros) para os ícones animados.
 let tcSfxCtx=null;
@@ -283,6 +317,7 @@ function selectDevice(id){
   const d=state.devices[0];
   try{window.TC_DEVICE_INFO={name:(d&&d.device_name)||'Child',battery:d&&d.battery,status:d&&d.status,lastSeen:d&&d.last_seen_at};if(d&&d.device_name)window.TC_DEVICE_NAME=d.device_name}catch(_){}
   render();
+  try{if(window.TC_MAP&&TC_MAP.clearContactPoints)TC_MAP.clearContactPoints()}catch(_){}
   try{loadMessages();loadCalls();loadContacts();loadApps()}catch(_){}
   try{if(d&&d.last_lat!=null&&window.TC_MAP&&TC_MAP.setLocation)TC_MAP.setLocation(d.last_lat,d.last_lng,Number(d.accuracy_m)||60,true)}catch(_){}
 }
@@ -534,6 +569,9 @@ async function tcCheckAndUpdate(){if(state.update.checking)return;await checkFor
 function openRelease(release){const u=release?.apk_url||release?.download_url;if(u)openExternal(u)}
 // Notas de versão (novidades) mostradas nas Definições → Atualizações.
 const TC_CHANGELOG={
+  '2.39.55':{changes:[
+    'Rastreio por contacto: mostra no mapa onde a criança estava nos momentos de chamada/SMS com um contacto'
+  ]},
   '2.39.54':{changes:[
     'Mapa deixa de "saltar": centra uma vez e o marcador segue em tempo real, sem recentrar a cada atualização'
   ]},
@@ -860,7 +898,7 @@ function tcStatCard(label,value,sub){return `<div class="tcst-card"><span class=
 function tcBarRow(name,val,max,fmt){const pct=max>0?Math.max(4,Math.round(val/max*100)):0;return `<div class="tcst-row"><span class="tcst-name">${esc(name)}</span><div class="tcst-track"><i style="width:${pct}%"></i></div><span class="tcst-val">${esc(fmt?fmt(val):String(val))}</span></div>`}
 function renderAppsStats(){const apps=(state.appsList||[]);const total=apps.reduce((s,a)=>s+Number(a.usage_minutes||0),0);const top=[...apps].sort((a,b)=>(b.usage_minutes||0)-(a.usage_minutes||0));const most=top[0];const max=most?Number(most.usage_minutes||0):0;const cards=`<div class="tcst-grid">${tcStatCard('App mais usado',most&&most.usage_minutes?most.label:'—',most&&most.usage_minutes?tcUsageFmt(most.usage_minutes)+' nas últimas 24h':'sem dados de uso')}${tcStatCard('Tempo total (24h)',tcUsageFmt(total))}${tcStatCard('Apps instaladas',String(apps.length))}</div>`;const used=top.filter(a=>a.usage_minutes>0).slice(0,8);const bars=max>0?`<div class="tcst-bars"><div class="tcst-bars-title">Mais usados (24h)</div>${used.map(a=>tcBarRow(a.label||a.package,Number(a.usage_minutes||0),max,tcUsageFmt)).join('')}</div>`:`<div class="tc-stats-note">Sem dados de uso. No telemóvel do Child, ative "Acesso ao uso" nas Definições do Android para ver o tempo por app.</div>`;return cards+bars}
 function renderContactsStats(){const st=state.contactStats||[];const total=(state.contactsList||[]).length;const inter=st.reduce((s,x)=>s+x.n,0);const most=st[0];const max=most?most.n:0;const cards=`<div class="tcst-grid">${tcStatCard('Contacto mais frequente',most?(most.name||most.number):'—',most?most.n+' interações':'sem interações ainda')}${tcStatCard('Total de contactos',String(total))}${tcStatCard('Interações (chamadas+SMS)',String(inter))}</div>`;const bars=max>0?`<div class="tcst-bars"><div class="tcst-bars-title">Mais contactados</div>${st.slice(0,8).map(x=>tcBarRow(x.name||x.number,x.n,max,v=>v+'×')).join('')}</div>`:`<div class="tc-stats-note">Ainda sem interações registadas. As estatísticas aparecem quando houver chamadas/SMS sincronizadas.</div>`;return cards+bars}
-function renderContactsList(){if(!state.contactsList||!state.contactsList.length)return '<div class="terminal-empty">[TC::WAIT] 0x0000 :: SEM CONTATOS SINCRONIZADOS</div>';return '<table class="table"><tr><th>Nome</th><th>Número</th></tr>'+state.contactsList.map(c=>`<tr><td>${esc(c.name||'—')}</td><td>${esc(c.number||'—')}</td></tr>`).join('')+'</table>'}
+function renderContactsList(){if(!state.contactsList||!state.contactsList.length)return '<div class="terminal-empty">[TC::WAIT] 0x0000 :: SEM CONTATOS SINCRONIZADOS</div>';return '<table class="table"><tr><th>Nome</th><th>Número</th><th></th></tr>'+state.contactsList.map(c=>`<tr><td>${esc(c.name||'—')}</td><td>${esc(c.number||'—')}</td><td style="text-align:right;white-space:nowrap"><button class="btn small" onclick="trackContact('${esc(String(c.number||'').replace(/'/g,''))}')">📍 Localizar</button></td></tr>`).join('')+'</table>'}
 function tcUsageFmt(m){m=Number(m||0);if(m<60)return m+' min';const h=Math.floor(m/60),mm=m%60;return h+'h '+mm+'m'}
 function renderAppsList(){if(!state.appsList||!state.appsList.length)return '<div class="terminal-empty">[TC::WAIT] 0x0000 :: SEM APPS SINCRONIZADAS</div>';return '<table class="table"><tr><th>Aplicativo</th><th>Pacote</th><th>Uso (24h)</th></tr>'+state.appsList.map(a=>`<tr><td>${esc(a.label||'—')}</td><td style="color:#7891a5;font-size:11px">${esc(a.package||'')}</td><td>${a.usage_minutes?tcUsageFmt(a.usage_minutes):'—'}</td></tr>`).join('')+'</table>'}
 function tcFmtWhen(ms){try{return new Date(Number(ms||0)).toLocaleString('pt-PT')}catch(_){return ''}}

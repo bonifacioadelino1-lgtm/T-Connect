@@ -1,4 +1,10 @@
 {
+  "2.39.55": {
+    "description": "Rastreio por contacto: onde a criança estava nos momentos de contacto.",
+    "changes": [
+      "Ao abrir um contacto, o mapa mostra onde a criança estava nas chamadas/SMS com essa pessoa"
+    ]
+  },
   "2.39.54": {
     "description": "O mapa deixou de saltar: centra uma vez e segue em tempo real.",
     "changes": [
