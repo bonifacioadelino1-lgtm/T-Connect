@@ -1,4 +1,12 @@
 {
+  "2.39.59": {
+    "description": "Contactos com Mensagens/Chamadas/Lixo no topo, e Perfil que reúne a conta.",
+    "changes": [
+      "Contactos: Mensagens, Chamadas e Lixo (SMS ocultadas/apagadas) no topo",
+      "Perfil reúne a conta (e-mail, sessão, tempo real) e abre com contacto e morada",
+      "Permissões e Child & dispositivos agrupados no perfil"
+    ]
+  },
   "2.39.58": {
     "description": "Mapa mais profissional: distância e tempo até ao alvo, satélite mais nítido, e localização pela Atividade.",
     "changes": [
