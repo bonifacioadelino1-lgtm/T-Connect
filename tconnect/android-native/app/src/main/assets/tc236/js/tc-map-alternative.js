@@ -520,20 +520,29 @@
       this.clearContactPoints();
       const grp = window.L.layerGroup();
       const latlngs = [];
+      let lastMarker = null, lastPos = null, lastWhen = 0;
       points.forEach((p) => {
         if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) return;
         latlngs.push([p.lat, p.lng]);
         let when = ''; try { when = new Date(p.time).toLocaleString('pt-PT'); } catch (_) {}
-        const cm = window.L.circleMarker([p.lat, p.lng], { radius: 8, color: '#ffffff', weight: 2, fillColor: '#ffb020', fillOpacity: .9, zIndexOffset: 5000 });
-        const ttl = (label ? ('<b>' + label + '</b><br>') : '') + (p.kind || 'Contacto') + (p.dir ? (' · ' + p.dir) : '') + '<br>' + when;
+        const t = Number(p.time) || 0;
+        const isLast = t >= lastWhen;
+        // O ponto mais recente (última comunicação) fica realçado e maior.
+        const cm = window.L.circleMarker([p.lat, p.lng], { radius: isLast ? 11 : 7, color: '#ffffff', weight: 2, fillColor: isLast ? '#ff3b3b' : '#ffb020', fillOpacity: .92, zIndexOffset: 5000 });
+        const tag = isLast ? '<br><b style="color:#ff6b6b">Última comunicação</b>' : '';
+        const ttl = (label ? ('<b>' + label + '</b><br>') : '') + (p.kind || 'Contacto') + (p.dir ? (' · ' + p.dir) : '') + '<br>' + when + tag;
         cm.bindPopup(ttl);
         cm.addTo(grp);
+        if (t >= lastWhen) { lastWhen = t; lastMarker = cm; lastPos = [p.lat, p.lng]; }
       });
       grp.addTo(map);
       this._contactLayer = grp;
+      // Centra na ÚLTIMA localização onde a pessoa estava a comunicar e abre o balão.
       try {
-        if (latlngs.length === 1) { map.setView(latlngs[0], Math.max(map.getZoom() || 0, 15), { animate: true, duration: .6 }); }
-        else { map.fitBounds(window.L.latLngBounds(latlngs), { padding: [50, 50], maxZoom: 17, animate: true, duration: .6 }); }
+        if (lastPos) {
+          map.setView(lastPos, Math.max(map.getZoom() || 0, 16), { animate: true, duration: .7 });
+          if (lastMarker) setTimeout(() => { try { lastMarker.openPopup(); } catch (_) {} }, 750);
+        }
       } catch (_) {}
     },
     clearContactPoints() {

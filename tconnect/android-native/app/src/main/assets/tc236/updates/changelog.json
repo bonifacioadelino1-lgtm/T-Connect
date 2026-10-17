@@ -1,4 +1,13 @@
 {
+  "2.39.56": {
+    "description": "Nome real do aparelho, contactos da semana e localização na última comunicação.",
+    "changes": [
+      "A engrenagem mostra o nome/modelo real do aparelho de cada pessoa",
+      "Contactos mais ativos da semana (7 dias) e pesquisa por nome/número",
+      "Localizar centra na última comunicação; botão reposicionado",
+      "Atualização mais clara e com ajuda para ativar a instalação no Android"
+    ]
+  },
   "2.39.55": {
     "description": "Rastreio por contacto: onde a criança estava nos momentos de contacto.",
     "changes": [

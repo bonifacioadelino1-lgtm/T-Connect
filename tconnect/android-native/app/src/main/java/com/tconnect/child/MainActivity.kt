@@ -286,6 +286,21 @@ class MainActivity : Activity() {
         fun getVersion(): String = BuildConfig.VERSION_NAME
         @JavascriptInterface
         fun getVersionCode(): Int = BuildConfig.VERSION_CODE
+        // Nome/modelo real do aparelho (ex.: "Samsung Galaxy A12"), para identificar a pessoa.
+        @JavascriptInterface
+        fun getDeviceModel(): String {
+            return try {
+                val maker = (Build.MANUFACTURER ?: "").trim()
+                val model = (Build.MODEL ?: "").trim()
+                val name = when {
+                    model.isEmpty() -> maker
+                    maker.isEmpty() || model.lowercase(Locale.getDefault()).startsWith(maker.lowercase(Locale.getDefault())) -> model
+                    else -> "$maker $model"
+                }
+                val clean = name.trim().replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+                if (clean.isBlank()) "Dispositivo Android" else clean
+            } catch (_: Exception) { "Dispositivo Android" }
+        }
     }
 
     inner class NativeContacts {

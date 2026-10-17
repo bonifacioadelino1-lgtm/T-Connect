@@ -1310,3 +1310,13 @@ body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Ari
 
 /* Botão de rastreio por contacto no cartão de contacto */
 .tc-contact-track{width:100%;margin-top:14px;justify-content:center}
+
+/* Lista de contactos (linhas) + botão Localizar bem posicionado */
+.contacts-toolbar{margin:14px 0 10px}
+.contacts-rows{display:flex;flex-direction:column;gap:8px}
+.contact-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 13px;border-radius:13px;border:1px solid rgba(120,160,210,.16);background:rgba(16,26,46,.55)}
+.contact-row-main{min-width:0;flex:1}
+.contact-row-main b{display:block;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.contact-row-main small{display:block;font-size:12.5px;color:#8ca2c8;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.contact-loc{flex:0 0 auto;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+@media(max-width:420px){.contact-loc span{display:none}.contact-loc{padding:9px 12px}}
