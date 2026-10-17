@@ -1,4 +1,11 @@
 {
+  "2.39.60": {
+    "description": "Contactos na horizontal no telemóvel e menu lateral mais limpo.",
+    "changes": [
+      "Contactos no telemóvel: abas e cartões na horizontal, como no computador",
+      "Menu lateral sem Mensagens, Chamadas, Permissões e Child & dispositivos (já estão nos Contactos e no Perfil)"
+    ]
+  },
   "2.39.59": {
     "description": "Contactos com Mensagens/Chamadas/Lixo no topo, e Perfil que reúne a conta.",
     "changes": [
