@@ -1,4 +1,4 @@
-window.TC_APP_VERSION='2.39.57';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
+window.TC_APP_VERSION='2.39.58';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
 const tcTimeout=(p,ms=10000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado')),ms))]);
 const POS=[-25.9692,32.5732];
 const state={page:'overview',mapType:'roadmap',menuOpen:false,pairingBusy:false,pairingMessage:'',update:{auto:localStorage.getItem('tc_auto_updates')!=='0',checking:false,latest:null,error:''},events:JSON.parse(localStorage.getItem('tc_events')||'[]'),notifications:JSON.parse(localStorage.getItem('tc_notifications')||'[]'),search:'',authenticated:false,authMode:'login',loading:false,recoverySent:false,profile:null,devices:[],messages:[],calls:[],contactsList:[],appsList:[],contactStats:[],trailOn:false,commsSub:false,pairCode:'',pairLink:'',realtime:false,authError:'',lastLocation:null,mapTerminalEvents:JSON.parse(localStorage.getItem('tc_map_terminal_events')||'[]')};
@@ -64,7 +64,9 @@ function lookupContact(query){
   const name=knownContactName(digits)||'Não identificado nos registos';
   const display=digits.startsWith('258')?('+'+digits):(digits.length===9?('+258 '+digits):digits);
   addEvent('PESQUISA','Pesquisa de contacto: '+display+' · '+operator,{status:'CONSULTADO',source:'Guardian',contact:name});
-  showContactCard({number:display,operator,name});
+  // Tenta localizar no mapa onde a criança esteve com este número; se não houver histórico,
+  // o trackContact mostra o cartão de identidade (operadora/nome) como alternativa.
+  try{ trackContact(digits,{number:display,operator,name}); }catch(_){ showContactCard({number:display,operator,name}); }
 }
 window.lookupContact=lookupContact;
 function showContactCard(info){
@@ -88,10 +90,10 @@ function showContactCard(info){
 }
 // Rastreio por contacto: mostra no mapa onde a CRIANÇA estava nos momentos de
 // chamadas/SMS com este número (usa só o histórico de localização do dispositivo).
-async function trackContact(number){
+async function trackContact(number,fallbackCard){
   try{document.getElementById('tc-contact-overlay')?.remove();}catch(_){}
   const d=state.devices[0];
-  if(!d||!d.id||!window.TC_DB?.enabled||!window.TC_DB.client){alert('É preciso um dispositivo vinculado e ligação ativa.');return}
+  if(!d||!d.id||!window.TC_DB?.enabled||!window.TC_DB.client){if(fallbackCard)showContactCard(fallbackCard);else alert('É preciso um dispositivo vinculado e ligação ativa.');return}
   const norm=x=>String(x||'').replace(/[^0-9+]/g,'').slice(-9);
   const key=norm(number); if(!key)return;
   if(!(state.calls&&state.calls.length)){try{await loadCalls()}catch(_){}}
@@ -100,7 +102,7 @@ async function trackContact(number){
   (state.calls||[]).forEach(c=>{if(norm(c.number)===key){const t=tcCallTime(c);if(t)inter.push({t,kind:'Chamada',dir:c.direction||''})}});
   (state.messages||[]).forEach(m=>{if(norm(m.address)===key){const t=tcMsgTime(m);if(t)inter.push({t,kind:'Mensagem',dir:m.direction||''})}});
   const nm=knownContactName(key)||number;
-  if(!inter.length){alert('Sem chamadas ou mensagens com '+nm+' para localizar.');return}
+  if(!inter.length){if(fallbackCard){showContactCard(fallbackCard);}else{alert('Sem chamadas ou mensagens com '+nm+' para localizar no mapa.');}return}
   inter.sort((a,b)=>a.t-b.t);
   const minT=inter[0].t-3600000,maxT=inter[inter.length-1].t+3600000;
   let locs=[];
@@ -113,7 +115,7 @@ async function trackContact(number){
       points.push({lat:Number(best.lat),lng:Number(best.lng),time:it.t,kind:it.kind,dir:it.dir});
     }
   }
-  if(!points.length){alert('Não há localização registada da criança nos horários dos contactos com '+nm+'.\n(O histórico de localização só existe a partir do momento em que o dispositivo começou a enviar posições.)');return}
+  if(!points.length){if(fallbackCard){showContactCard(fallbackCard);}else{alert('Não há localização registada da criança nos horários dos contactos com '+nm+'.\n(O histórico de localização só existe a partir do momento em que o dispositivo começou a enviar posições.)');}return}
   state.page='map';state.menuOpen=false;render();
   addEvent('RASTREIO','Localização da criança nos contactos com '+nm+': '+points.length+' ponto(s).',{status:'CONSULTADO',source:'Guardian',contact:nm});
   setTimeout(()=>{try{if(window.TC_MAP){if(TC_MAP.refresh)TC_MAP.refresh();if(TC_MAP.showContactPoints)TC_MAP.showContactPoints(points,nm);}}catch(e){console.warn(e)}},500);
@@ -572,6 +574,11 @@ async function tcCheckAndUpdate(){if(state.update.checking)return;await checkFor
 function openRelease(release){const u=release?.apk_url||release?.download_url;if(u)openExternal(u)}
 // Notas de versão (novidades) mostradas nas Definições → Atualizações.
 const TC_CHANGELOG={
+  '2.39.58':{changes:[
+    'Mapa: distância e tempo estimado (carro/a pé) até ao alvo, e há quanto tempo foi a última posição',
+    'Satélite mais nítido ao aproximar (tiles nativos de maior zoom)',
+    'Atividade: inserir um número passa a localizar no mapa (ou mostra o cartão do contacto)'
+  ]},
   '2.39.57':{changes:[
     'Shield atualiza em silêncio, sem interromper o envio de dados',
     'Na Atividade, o teclado já não fecha ao escrever',

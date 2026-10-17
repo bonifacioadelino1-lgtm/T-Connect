@@ -1320,3 +1320,7 @@ body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Ari
 .contact-row-main small{display:block;font-size:12.5px;color:#8ca2c8;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .contact-loc{flex:0 0 auto;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
 @media(max-width:420px){.contact-loc span{display:none}.contact-loc{padding:9px 12px}}
+
+/* Realce das métricas de distância/tempo no painel do mapa */
+.tc-glass-panel .tc-g-line.tc-g-hi b{color:#7ee0a6}
+.tc-glass-panel .tc-g-line.tc-g-hi span{color:#9fe8c0}

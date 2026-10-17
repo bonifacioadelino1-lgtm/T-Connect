@@ -41,6 +41,10 @@
   function tcCompassPt(brg){ const dirs=['Norte','Nordeste','Este','Sudeste','Sul','Sudoeste','Oeste','Noroeste']; return dirs[Math.round(((brg%360)/45))%8]; }
   function tcBearing(a,b){ const r=Math.PI/180; const f1=a.lat*r,f2=b.lat*r,dl=(b.lng-a.lng)*r; const y=Math.sin(dl)*Math.cos(f2); const x=Math.cos(f1)*Math.sin(f2)-Math.sin(f1)*Math.cos(f2)*Math.cos(dl); return (Math.atan2(y,x)*180/Math.PI+360)%360; }
   function tcHaversine(a,b){ const R=6371000,r=Math.PI/180; const dLat=(b.lat-a.lat)*r,dLng=(b.lng-a.lng)*r; const s=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dLng/2)*Math.sin(dLng/2); return 2*R*Math.asin(Math.min(1,Math.sqrt(s))); }
+  function tcFmtDist(m){ if(m==null) return '—'; if(m<1000) return Math.round(m)+' m'; return (m/1000).toFixed(m<10000?2:1)+' km'; }
+  function tcMins(mins){ mins=Math.max(0,Math.round(mins)); if(mins<1) return '<1 min'; if(mins<60) return mins+' min'; const h=Math.floor(mins/60); return h+'h '+(mins%60)+'m'; }
+  function tcFmtEta(m){ if(m==null) return '—'; return '🚗 '+tcMins(m/(30000/60))+' · 🚶 '+tcMins(m/(5000/60)); }
+  function tcFmtAge(ms){ if(!ms) return ''; const s=Math.round((Date.now()-ms)/1000); if(s<60) return 'há '+s+'s'; const m=Math.round(s/60); if(m<60) return 'há '+m+' min'; const h=Math.floor(m/60); return 'há '+h+'h '+(m%60)+'m'; }
   function tcUpdateMovement(lat,lng,accuracy){
     const now=Date.now();
     const cur={lat:Number(lat),lng:Number(lng),t:now};
@@ -250,9 +254,11 @@
   const tcTypers = {};
   function tcTypeInto(el, text){ if(!el) return; text=String(text==null?'':text); const key=el.getAttribute('data-k')||Math.random(); if(tcTypers[key]) clearInterval(tcTypers[key]); el.textContent=''; el.classList.add('tc-type-caret'); let i=0; tcTypers[key]=setInterval(function(){ i++; el.textContent=text.slice(0,i); if(i>=text.length){ clearInterval(tcTypers[key]); delete tcTypers[key]; el.classList.remove('tc-type-caret'); } }, 24); }
   function tcGlassInfo(){ const d=window.TC_DEVICE_INFO||{}; const ad=window.TC_MAP_ADDRESS||{}; const lat=lastKnownLocation?lastKnownLocation.lat:null, lng=lastKnownLocation?lastKnownLocation.lng:null; const now=new Date();
-    return { name:(window.TC_DEVICE_NAME||d.name||'Child'), coords:(lat!=null&&lng!=null)?(Number(lat).toFixed(6)+'°, '+Number(lng).toFixed(6)+'°'):'—', addr: (ad.via||areaName) || 'a localizar endereço…', zona:(ad.bairro||ad.distrito||'—'), cidade:(ad.cidade||'—'), pais:(ad.pais||'—'), mov:(tcMovementStr||'—'), acc:(lastKnownLocation&&lastKnownLocation.accuracy?Math.round(lastKnownLocation.accuracy)+' m':'—'), bat:(d.battery!=null&&d.battery!==''?d.battery+'%':'—'), st:(d.status?(d.status==='online'?'ONLINE':String(d.status).toUpperCase()):'ONLINE'), upd: now.toLocaleTimeString('pt-PT') }; }
+    let dist=null; try{ if(lastSelfLocation&&lat!=null&&lng!=null) dist=tcHaversine(lastSelfLocation,{lat:lat,lng:lng}); }catch(_){}
+    const age=(lastKnownLocation&&lastKnownLocation.at)?tcFmtAge(lastKnownLocation.at):'';
+    return { name:(window.TC_DEVICE_NAME||d.name||'Child'), coords:(lat!=null&&lng!=null)?(Number(lat).toFixed(6)+'°, '+Number(lng).toFixed(6)+'°'):'—', addr: (ad.via||areaName) || 'a localizar endereço…', zona:(ad.bairro||ad.distrito||'—'), cidade:(ad.cidade||'—'), pais:(ad.pais||'—'), mov:(tcMovementStr||'—'), acc:(lastKnownLocation&&lastKnownLocation.accuracy?Math.round(lastKnownLocation.accuracy)+' m':'—'), bat:(d.battery!=null&&d.battery!==''?d.battery+'%':'—'), st:(d.status?(d.status==='online'?'ONLINE':String(d.status).toUpperCase()):'ONLINE'), dist:(dist!=null?tcFmtDist(dist):(lastSelfLocation?'—':'ative a sua localização')), eta:(dist!=null?tcFmtEta(dist):'—'), upd: now.toLocaleTimeString('pt-PT')+(age?(' · '+age):'') }; }
   function openGlassPanel(){ if(!mapContainer) return; let p=mapContainer.querySelector('.tc-glass-panel'); const info=tcGlassInfo();
-    if(!p){ p=document.createElement('div'); p.className='tc-glass-panel'; p.innerHTML='<div class="tc-glass-head"><span class="tc-glass-dot"></span><b data-k="name">ALVO</b><button class="tc-glass-close" aria-label="Fechar">×</button></div><div class="tc-glass-body"><div class="tc-g-line"><span>COORDENADAS</span><b data-k="coords"></b></div><div class="tc-g-line"><span>LOCAL / RUA</span><b data-k="addr"></b></div><div class="tc-g-line"><span>MOVIMENTO</span><b data-k="mov"></b></div><div class="tc-g-line"><span>BAIRRO / ZONA</span><b data-k="zona"></b></div><div class="tc-g-line"><span>CIDADE</span><b data-k="cidade"></b></div><div class="tc-g-line"><span>PAÍS</span><b data-k="pais"></b></div><div class="tc-g-line"><span>ATUALIZADO</span><b data-k="upd"></b></div><div class="tc-g-mini"><div><span>BAT</span><b data-k="bat"></b></div><div><span>PREC</span><b data-k="acc"></b></div><div><span>EST</span><b data-k="st"></b></div></div></div>';
+    if(!p){ p=document.createElement('div'); p.className='tc-glass-panel'; p.innerHTML='<div class="tc-glass-head"><span class="tc-glass-dot"></span><b data-k="name">ALVO</b><button class="tc-glass-close" aria-label="Fechar">×</button></div><div class="tc-glass-body"><div class="tc-g-line"><span>COORDENADAS</span><b data-k="coords"></b></div><div class="tc-g-line"><span>LOCAL / RUA</span><b data-k="addr"></b></div><div class="tc-g-line"><span>MOVIMENTO</span><b data-k="mov"></b></div><div class="tc-g-line"><span>BAIRRO / ZONA</span><b data-k="zona"></b></div><div class="tc-g-line"><span>CIDADE</span><b data-k="cidade"></b></div><div class="tc-g-line"><span>PAÍS</span><b data-k="pais"></b></div><div class="tc-g-line tc-g-hi"><span>DISTÂNCIA ATÉ AO ALVO</span><b data-k="dist"></b></div><div class="tc-g-line tc-g-hi"><span>TEMPO ESTIMADO</span><b data-k="eta"></b></div><div class="tc-g-line"><span>ATUALIZADO</span><b data-k="upd"></b></div><div class="tc-g-mini"><div><span>BAT</span><b data-k="bat"></b></div><div><span>PREC</span><b data-k="acc"></b></div><div><span>EST</span><b data-k="st"></b></div></div></div>';
       mapContainer.appendChild(p); p.querySelector('.tc-glass-close').addEventListener('click',function(){ p.classList.remove('open'); try{stopPanelAutoScroll();}catch(_){} try{updateLeader();}catch(_){} });
       requestAnimationFrame(function(){ p.classList.add('open'); }); try{ tcCinematicOpen(); }catch(_){}
       tcTypeInto(p.querySelector('[data-k=name]'), info.name);
@@ -262,6 +268,7 @@
       setTimeout(function(){ tcTypeInto(p.querySelector('[data-k=zona]'), info.zona); },480);
       setTimeout(function(){ tcTypeInto(p.querySelector('[data-k=cidade]'), info.cidade); },540);
       setTimeout(function(){ tcTypeInto(p.querySelector('[data-k=pais]'), info.pais); },640);
+      setTimeout(function(){ const dd=p.querySelector('[data-k=dist]'); if(dd) tcTypeInto(dd,info.dist); const ee=p.querySelector('[data-k=eta]'); if(ee) ee.textContent=info.eta; },680);
       setTimeout(function(){ const u=p.querySelector('[data-k=upd]'); if(u) u.textContent=info.upd; },700);
       setTimeout(function(){ tcTypeInto(p.querySelector('[data-k=bat]'), info.bat); },760);
       setTimeout(function(){ tcTypeInto(p.querySelector('[data-k=acc]'), info.acc); },860);
@@ -270,7 +277,7 @@
   function updateGlassPanel(){ if(!mapContainer) return; const p=mapContainer.querySelector('.tc-glass-panel'); if(!p||!p.classList.contains('open')) return; const info=tcGlassInfo();
     tcTypeInto(p.querySelector('[data-k=coords]'), info.coords); tcTypeInto(p.querySelector('[data-k=addr]'), info.addr);
     const sset=function(k,v){ const el=p.querySelector('[data-k='+k+']'); if(el) el.textContent=v; }; sset('mov',info.mov); sset('zona',info.zona); sset('cidade',info.cidade); sset('pais',info.pais);
-    const bat=p.querySelector('[data-k=bat]'); if(bat) bat.textContent=info.bat; const st=p.querySelector('[data-k=st]'); if(st) st.textContent=info.st; const upd=p.querySelector('[data-k=upd]'); if(upd) upd.textContent=info.upd; }
+    const bat=p.querySelector('[data-k=bat]'); if(bat) bat.textContent=info.bat; const st=p.querySelector('[data-k=st]'); if(st) st.textContent=info.st; const upd=p.querySelector('[data-k=upd]'); if(upd) upd.textContent=info.upd; const dd=p.querySelector('[data-k=dist]'); if(dd) dd.textContent=info.dist; const ee=p.querySelector('[data-k=eta]'); if(ee) ee.textContent=info.eta; }
   window.TC_MAP_SCIFI.panel = openGlassPanel; window.TC_MAP_SCIFI.updatePanel = updateGlassPanel;
 
   function init() {
@@ -339,7 +346,7 @@
     // Mantemos o Esri como alternativa automática caso o Google falhe.
     satelliteLayer = window.L.tileLayer('https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
       subdomains: ['0','1','2','3'],
-      maxNativeZoom: 20,
+      maxNativeZoom: 21,
       maxZoom: 21,
       updateWhenZooming: false,
       updateWhenIdle: true,
@@ -349,7 +356,7 @@
     });
     // Modo híbrido Google (satélite + ruas + nomes), igual ao híbrido do Google Maps.
     hybridLabels = window.L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-      subdomains: ['0','1','2','3'], maxNativeZoom: 20, maxZoom: 21, errorTileUrl: BLANK_TILE, updateWhenZooming: false, updateWhenIdle: true, keepBuffer: 4, attribution: '&copy; Google'
+      subdomains: ['0','1','2','3'], maxNativeZoom: 21, maxZoom: 21, errorTileUrl: BLANK_TILE, updateWhenZooming: false, updateWhenIdle: true, keepBuffer: 4, attribution: '&copy; Google'
     });
     // Alternativa Esri (usada só se os tiles do Google falharem repetidamente).
     esriSatLayer = window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
@@ -556,7 +563,7 @@
       hasLiveLocation = true;
       if (!window.__tcAutoHybrid) { window.__tcAutoHybrid = true; currentType = 'hybrid'; try { updateLayers(); } catch(_){} }
       try { tcUpdateMovement(lat, lng, accuracy); } catch(_) {}
-      lastKnownLocation = {lat, lng, accuracy: Number(accuracy)||60};
+      lastKnownLocation = {lat, lng, accuracy: Number(accuracy)||60, at: Date.now()};
       term('loc',2000,'LOCALIZAÇÃO', 'ATUALIZACAO_DISPOSITIVO', 'OK', {detail:`${(window.TC_DEVICE_NAME||'Child')} · ${lat.toFixed(6)}, ${lng.toFixed(6)}`, contact:(window.TC_DEVICE_NAME||'Child')});
       try { localStorage.setItem('tc:lastKnownLocation', JSON.stringify(lastKnownLocation)); } catch(e) {}
       reverseGeocode(lat, lng);

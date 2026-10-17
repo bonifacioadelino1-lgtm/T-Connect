@@ -1,4 +1,12 @@
 {
+  "2.39.58": {
+    "description": "Mapa mais profissional: distância e tempo até ao alvo, satélite mais nítido, e localização pela Atividade.",
+    "changes": [
+      "Distância e tempo estimado (carro/a pé) do Guardian até ao alvo, e há quanto tempo é a posição",
+      "Satélite mais nítido ao aproximar",
+      "Na Atividade, inserir um número localiza no mapa (ou mostra o cartão do contacto)"
+    ]
+  },
   "2.39.57": {
     "description": "Atualização silenciosa da Shield, teclado estável e histórico completo de mensagens/chamadas.",
     "changes": [
