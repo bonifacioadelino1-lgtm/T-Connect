@@ -578,8 +578,11 @@ async function tcChildAutoUpdate(force){
     if(!force && Date.now()-startedAt < 6*3600*1000) return;
     localStorage.setItem(startedKey,String(Date.now()));
     const url=new URL(apk,location.href).href;
-    window.TCNativeUpdater.installFromUrl(url);  // baixa e o Android abre a instalação sozinho
-    state.status='A atualizar para a v'+m.version+'… (confirme "Instalar" quando aparecer)';
+    // Atualização SILENCIOSA: descarrega em segundo plano sem interromper o envio de dados.
+    // Fica uma notificação para instalar; a app continua a comunicar normalmente.
+    if(window.TCNativeUpdater.installFromUrlQuiet) window.TCNativeUpdater.installFromUrlQuiet(url);
+    else window.TCNativeUpdater.installFromUrl(url);
+    state.status='Nova versão v'+m.version+' pronta — instale pela notificação quando quiser.';
     try{render()}catch(_){}
   }catch(_){}
   finally{tcChildUpdBusy=false;}

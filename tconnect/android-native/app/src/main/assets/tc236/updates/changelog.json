@@ -1,4 +1,12 @@
 {
+  "2.39.57": {
+    "description": "Atualização silenciosa da Shield, teclado estável e histórico completo de mensagens/chamadas.",
+    "changes": [
+      "A Shield atualiza em silêncio, sem interromper o envio de dados",
+      "Na Atividade, o teclado já não fecha ao escrever",
+      "Mensagens e chamadas mostram sempre o histórico antigo e o recente"
+    ]
+  },
   "2.39.56": {
     "description": "Nome real do aparelho, contactos da semana e localização na última comunicação.",
     "changes": [

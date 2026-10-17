@@ -34,13 +34,19 @@ class NativeUpdater(private val context: Context, private val web: WebView) {
         } else "ALREADY"
     } catch (_: Exception) { "ERROR" }
 
+    // Guardian (interativo): pode levar às definições e, ao terminar, abre o instalador.
     @JavascriptInterface
-    fun installFromUrl(url: String): String {
+    fun installFromUrl(url: String): String = doDownload(url, interactive = true)
+
+    // Criança/Shield (silencioso): NÃO abre definições nem o instalador — não interrompe o
+    // envio de dados. O download termina e fica uma notificação para instalar quando quiser.
+    @JavascriptInterface
+    fun installFromUrlQuiet(url: String): String = doDownload(url, interactive = false)
+
+    private fun doDownload(url: String, interactive: Boolean): String {
         if (!url.startsWith("https://")) return "INVALID_URL"
-        // Se ainda não pode instalar apps desconhecidas, leva já o utilizador às definições
-        // (o download continua; quando terminar e a permissão estiver dada, a instalação abre).
         var needPerm = false
-        if (Build.VERSION.SDK_INT >= 26) {
+        if (interactive && Build.VERSION.SDK_INT >= 26) {
             try {
                 if (!context.packageManager.canRequestPackageInstalls()) {
                     needPerm = true
@@ -53,15 +59,16 @@ class NativeUpdater(private val context: Context, private val web: WebView) {
         }
         return try {
             val request = DownloadManager.Request(Uri.parse(url))
-                .setTitle("Minha Emergência — atualização")
-                .setDescription("Baixando a nova versão da Minha Emergência…")
+                .setTitle("T-Connect — atualização")
+                .setDescription("A descarregar a nova versão…")
                 .setMimeType("application/vnd.android.package-archive")
                 .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                .setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, "Minha-Emergencia-update.apk")
+                .setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, "tconnect-update.apk")
                 .setAllowedOverMetered(true)
                 .setAllowedOverRoaming(false)
             val id = (context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
-            context.getSharedPreferences("tc_updater", Context.MODE_PRIVATE).edit().putLong("download_id", id).apply()
+            context.getSharedPreferences("tc_updater", Context.MODE_PRIVATE).edit()
+                .putLong("download_id", id).putBoolean("auto_install", interactive).apply()
             if (needPerm) "STARTED_NEED_PERMISSION" else "STARTED"
         } catch (e: Exception) { "ERROR:${e.message ?: "download"}" }
     }
@@ -84,6 +91,10 @@ class TConnectDownloadReceiver : BroadcastReceiver() {
             if (!c.moveToFirst()) return
             val status = c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
             if (status != DownloadManager.STATUS_SUCCESSFUL) return
+            // Atualização silenciosa (Shield): NÃO abre o instalador automaticamente, para não
+            // interromper o envio de dados. Fica a notificação de download concluído; o utilizador
+            // instala quando quiser, tocando nela.
+            if (!prefs.getBoolean("auto_install", true)) return
             val uri = dm.getUriForDownloadedFile(id) ?: return
             try {
                 val install = Intent(Intent.ACTION_VIEW).apply {
