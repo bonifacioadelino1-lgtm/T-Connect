@@ -1,4 +1,11 @@
 {
+  "2.39.68": {
+    "description": "Novos nomes: o aplicativo da criança passa a chamar-se \"Emergência\" e o do responsável \"Monitoramento\".",
+    "changes": [
+      "App da criança (Shield): nome e descrição passam a \"Emergência\" (sem \"T-Connect\")",
+      "App do responsável (Guardian): nome e descrição passam a \"Monitoramento\" (sem \"Connect Guardian\")"
+    ]
+  },
   "2.39.67": {
     "description": "Aviso automático quando há mesmo uma nova versão: aparece 5 segundos depois de abrir e leva a verificar a atualização.",
     "changes": [

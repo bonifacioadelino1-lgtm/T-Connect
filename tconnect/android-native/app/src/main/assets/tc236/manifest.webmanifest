@@ -1,8 +1,8 @@
 {
-  "name": "T-Connect — Segurança em Tempo Real",
-  "short_name": "T-Connect",
+  "name": "Monitoramento",
+  "short_name": "Monitoramento",
   "id": "/t-connect/",
-  "description": "T Connect — plataforma Web instalável para Guardian e Child.",
+  "description": "Monitoramento — acompanhamento de segurança familiar em tempo real.",
   "lang": "pt-MZ",
   "dir": "ltr",
   "start_url": "/guardian/index.html",
