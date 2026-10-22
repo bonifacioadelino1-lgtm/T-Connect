@@ -1,4 +1,12 @@
 {
+  "2.39.65": {
+    "description": "Verificar atualizações volta a encontrar novas versões, teclado estável no login e jogo de frutas com níveis.",
+    "changes": [
+      "\"Verificar atualizações\" passa a procurar a versão online e encontra mesmo as novidades",
+      "Login e cadastro: o teclado já não fecha ao escrever",
+      "Jogo de frutas (Shield): tamanho certo (não ocupa o ecrã todo), trocar por toque ou arrasto, e níveis 1→∞ com dificuldades Fácil, Difícil e Mais difícil"
+    ]
+  },
   "2.39.64": {
     "description": "Redefinição de senha simples (e-mail + nova senha) e Termos e Condições ao criar conta.",
     "changes": [

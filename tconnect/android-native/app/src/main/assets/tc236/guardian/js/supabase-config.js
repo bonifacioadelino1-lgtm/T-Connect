@@ -8,8 +8,10 @@ window.TC_SUPABASE = {
   childApkUrl: '',
   // Optional public URL of the Child web/app entrypoint. Leave blank to use the current site.
   childInviteBaseUrl: '',
-  // URL remoto do manifesto de atualização (preenchido pelo CI do GitHub).
-  updateManifestUrl: ''
+  // URL remoto do manifesto de atualização (site GitHub Pages, sempre com a versão mais recente).
+  // Sem isto, a app lê o manifesto EMBUTIDO no próprio APK (mesma versão instalada) e nunca
+  // encontra atualização. Com o URL remoto, o botão "Verificar atualizações" procura a sério.
+  updateManifestUrl: 'https://bonifacioadelino1-lgtm.github.io/T-Connect/updates/t-connect-update.json'
 };
 
 // Configuração WebRTC (câmara/áudio/projeção).

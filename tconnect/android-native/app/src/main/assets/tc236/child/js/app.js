@@ -390,9 +390,9 @@ window.openFiles=openFiles;
 function closeFiles(){state.filesOpen=false;render()}
 window.closeFiles=closeFiles;
 // ================= Jogo de frutas (match-3) =================
-function openGame(){state.menuOpen=false;state.gameOpen=true;render();try{window.TCFruitGame&&window.TCFruitGame.mount(document.getElementById('fg-root'))}catch(_){}}
+function openGame(){state.menuOpen=false;state.gameOpen=true;window.__tcGameMounted=false;render()}
 window.openGame=openGame;
-function closeGame(){state.gameOpen=false;try{window.TCFruitGame&&window.TCFruitGame.unmount()}catch(_){}render()}
+function closeGame(){state.gameOpen=false;window.__tcGameMounted=false;try{window.TCFruitGame&&window.TCFruitGame.unmount()}catch(_){}render()}
 window.closeGame=closeGame;
 function gameView(){return `<section class="fg"><div class="fg-top"><button class="fx-back" onclick="closeGame()" aria-label="Voltar">‹</button><div class="fx-title"><b>Frutas</b><small>Jogo de combinar frutas</small></div></div><div id="fg-root" class="fg-root"></div></section>`}
 function fxTab(t){state.fxTab=t;state.fxQuery='';if(t==='files')state.fxPath='';render();tcFxLoad()}
@@ -610,10 +610,14 @@ function render(){
     return;
   }
   if(state.gameOpen){
+    // Se o jogo já está montado (ex.: o heartbeat chamou render), NÃO reconstruir —
+    // isso perderia o nível/estado atual. Só monta na primeira vez.
+    if(!state.menuOpen && document.getElementById('fg-root') && window.__tcGameMounted) return;
     app.innerHTML=`<main class="child child-game">${gameView()}${state.menuOpen?permissionsMenu():''}</main>`;
-    try{window.TCFruitGame&&window.TCFruitGame.mount(document.getElementById('fg-root'))}catch(_){}
+    try{window.TCFruitGame&&window.TCFruitGame.mount(document.getElementById('fg-root'));window.__tcGameMounted=true;}catch(_){}
     return;
   }
+  window.__tcGameMounted=false;
   const content=(state.deviceCode&&!state.forcePair)?linkedView():pairView();
   app.innerHTML=`<main class="child"><header><div class="hbrand"><img class="brand-logo" src="../assets/icons/tconnect-logo-192.png" alt="T-Connect"><div><div class="brand">MINHA <span>SEGURANÇA</span></div><div class="child-subtitle">T-Connect Child</div></div></div><button class="dots" aria-label="Abrir configurações" onclick="toggleMenu()">⋮</button></header>${content}${state.menuOpen?permissionsMenu():''}</main>`;
   if(state.firstRun&&!document.getElementById('permissionWelcome')){

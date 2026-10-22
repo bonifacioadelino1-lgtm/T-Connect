@@ -292,6 +292,14 @@
   function cacheSet(L, txt, val) { var m = ensureMem(L); m[txt] = val; try { localStorage.setItem("tcx:" + L, JSON.stringify(m)); } catch (_) {} }
 
   function inDynSkip(el) { try { return !!(el && el.closest && el.closest(DYN_SKIP_SEL)); } catch (_) { return false; } }
+  // A pessoa está a escrever? Enquanto um campo está focado NÃO mexemos no DOM —
+  // tocar nos atributos do campo focado fecha o teclado no Android.
+  function editingNow() {
+    var a = document.activeElement;
+    if (!a) return false;
+    var tn = a.tagName;
+    return tn === "INPUT" || tn === "TEXTAREA" || tn === "SELECT" || a.isContentEditable === true;
+  }
   // Vale a pena traduzir? Tem de ter pelo menos uma letra e não ser só números,
   // horas, coordenadas, percentagens ou símbolos (esses ficam como estão).
   function translatable(t) {
@@ -373,6 +381,8 @@
       return;
     }
     if (node.nodeType !== 1) return;
+    // Nunca mexer nos atributos do campo focado (fecharia o teclado no Android).
+    if (node === document.activeElement) return;
     // Traduz atributos de QUALQUER elemento (inclui placeholders de inputs).
     for (var i = 0; i < ATTRS.length; i++) {
       var a = ATTRS[i];
@@ -398,6 +408,8 @@
   var obs = null;
   function translateAll() {
     if (lang() === "pt" || !document.body) return;
+    // Enquanto a pessoa escreve, não traduzimos (evita fechar o teclado).
+    if (editingNow()) return;
     if (obs) obs.disconnect();
     try { walk(document.body); } catch (_) {}
     if (obs) obs.observe(document.body, { childList: true, subtree: true, characterData: true });
@@ -418,6 +430,8 @@
       var orig = window.TC_I18N.setLang;
       window.TC_I18N.setLang = function (l) { var r = orig.call(window.TC_I18N, l); schedule(); return r; };
     }
+    // Quando o campo perde o foco (a pessoa deixou de escrever), traduz o que ficou pendente.
+    document.addEventListener("focusout", function () { setTimeout(schedule, 60); });
     translateAll();
   }
   if (document.readyState !== "loading") start();
