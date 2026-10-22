@@ -16,6 +16,8 @@
   window.tcSignIn=async(email,password)=>{await ready();return window.TC_DB.client.auth.signInWithPassword({email,password});};
   window.tcResetPasswordForEmail=async(email)=>{await ready();const redirectTo=location.origin==='null'?undefined:(location.origin+location.pathname);return window.TC_DB.client.auth.resetPasswordForEmail(email,redirectTo?{redirectTo}:undefined);};
   window.tcUpdatePassword=async(password)=>{await ready();return window.TC_DB.client.auth.updateUser({password});};
+  // Redefinição simples (sem e-mail): chama a RPC guardian_reset_password no Supabase.
+  window.tcResetPasswordDirect=async(email,newPassword)=>{await ready();return window.TC_DB.client.rpc('guardian_reset_password',{p_email:String(email||'').trim().toLowerCase(),p_new_password:String(newPassword||'')});};
   window.tcGoogle=async()=>{
     await ready();
     try{

@@ -1,4 +1,11 @@
 {
+  "2.39.64": {
+    "description": "Redefinição de senha simples (e-mail + nova senha) e Termos e Condições ao criar conta.",
+    "changes": [
+      "Esqueceu a senha: agora basta o e-mail, a nova senha e confirmar — sem depender do e-mail de confirmação",
+      "Ao criar conta, aparecem os Termos e Condições com tudo o que o Guardian faz; só prossegue quem aceitar"
+    ]
+  },
   "2.39.63": {
     "description": "Sem plano não há acesso (nem pelo botão Voltar) e o aplicativo da criança ganhou um jogo de frutas.",
     "changes": [

@@ -1,4 +1,4 @@
-window.TC_APP_VERSION='2.39.63';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
+window.TC_APP_VERSION='2.39.64';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
 const tcTimeout=(p,ms=10000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado')),ms))]);
 const POS=[-25.9692,32.5732];
 const state={page:'overview',mapType:'roadmap',menuOpen:false,pairingBusy:false,pairingMessage:'',update:{auto:localStorage.getItem('tc_auto_updates')!=='0',checking:false,latest:null,error:''},events:JSON.parse(localStorage.getItem('tc_events')||'[]'),notifications:JSON.parse(localStorage.getItem('tc_notifications')||'[]'),search:'',authenticated:false,authMode:'login',loading:false,recoverySent:false,profile:null,devices:[],messages:[],calls:[],contactsList:[],appsList:[],contactStats:[],trailOn:false,commsSub:false,pairCode:'',pairLink:'',realtime:false,authError:'',lastLocation:null,mapTerminalEvents:JSON.parse(localStorage.getItem('tc_map_terminal_events')||'[]')};
@@ -11,6 +11,11 @@ window.tcOnBackPressed=function(){
   try{
     // Portão de plano: sem plano ativo, o "Voltar" é consumido e NÃO dá acesso à app.
     if(state.authenticated&&!isSuperAdmin()&&needsPlanChoice()){ try{render();}catch(_){} return true; }
+    // Ecrãs de autenticação: o "Voltar" navega entre eles em vez de sair da app.
+    if(!state.authenticated){
+      if(state.authMode==='terms'){ state.authMode='signup'; render(); return true; }
+      if(state.authMode==='recover'||state.authMode==='signup'||state.authMode==='recoverUpdate'){ state.authMode='login'; state.authError=''; state.recoverySent=false; render(); return true; }
+    }
     if(document.getElementById('tc-screen-preview')||document.getElementById('tc-audio-only-panel')){
       try{endRemoteCapture(tcCaptureRequestId)}catch(_){var a=document.getElementById('tc-screen-preview')||document.getElementById('tc-audio-only-panel');if(a)a.remove();}
       return true;
@@ -451,6 +456,36 @@ async function updateRecoveredPassword(e){
     state.authError='Senha redefinida com sucesso. Agora entre com a nova senha.'; render();
   }catch(err){state.loading=false;state.authError=err?.message||'Não foi possível redefinir a senha.';render();}
 }
+// Redefinição simples de senha: e-mail + nova senha + confirmar (sem passo de e-mail).
+async function resetPasswordDirect(e){
+  e.preventDefault();
+  if(state.loading)return;
+  const fd=new FormData(e.target);
+  const email=String(fd.get('email')||'').trim();
+  const password=String(fd.get('password')||'');
+  const confirm=String(fd.get('confirmPassword')||'');
+  if(!email){state.authError='Escreva o seu e-mail.';render();return;}
+  if(password.length<8){state.authError='A nova senha deve ter pelo menos 8 caracteres.';render();return;}
+  if(password!==confirm){state.authError='As senhas não coincidem.';render();return;}
+  state.loading=true; state.authError=''; state.recoverySent=false; render();
+  try{
+    if(!window.TC_DB.enabled) throw new Error('Configure o Supabase para redefinir a senha.');
+    if(!window.tcResetPasswordDirect) throw new Error('Função de redefinição indisponível. Atualize a aplicação.');
+    const {data,error}=await window.tcResetPasswordDirect(email,password);
+    if(error)throw error;
+    if(data===false) throw new Error('Não existe nenhuma conta com esse e-mail.');
+    state.loading=false; state.recoverySent=true; state.authMode='login';
+    state.authError='Senha redefinida com sucesso. Agora entre com a nova senha.'; render();
+  }catch(err){
+    const m=String(err?.message||'');
+    state.loading=false;
+    state.authError=/function .*does not exist|PGRST202|guardian_reset_password/i.test(m)
+      ? 'A redefinição de senha ainda não está instalada no Supabase. Execute o ficheiro migration-reset-password.sql.'
+      : (m||'Não foi possível redefinir a senha.');
+    render();
+  }
+}
+window.resetPasswordDirect=resetPasswordDirect;
 async function login(e){e.preventDefault();if(state.loading)return;const fd=new FormData(e.target);state.loading=true;state.authError='';render();try{if(window.TC_DB.enabled){const result=await tcSignIn(String(fd.get('email')||'').trim(),String(fd.get('password')||''));if(result?.error)throw result.error;window.TC_DB.user=result?.data?.user||result?.data?.session?.user||window.TC_DB.user;state.authenticated=!!window.TC_DB.user;if(!state.authenticated)throw new Error('A sessão não foi criada. Tente entrar novamente.');state.loading=false;await addEvent('AUTENTICAÇÃO','Sessão iniciada',{source:'Supabase Auth',status:'AUTORIZADO'});await boot();showPreparationThenContinue();if(state.update.auto){checkForUpdates(true);setTimeout(autoUpdateIfNeeded,800)}}else{state.authenticated=true;sessionStorage.setItem('tc_demo','1');state.loading=false;await addEvent('AUTENTICAÇÃO','Sessão local de demonstração',{source:'Demo',status:'TESTE'});render();showPreparationThenContinue()}}catch(err){state.loading=false;state.authError=err?.message||t('login')+' — erro';render()}}
 function tcPwdStrength(v){v=String(v||'');let sc=0;if(v.length>=8)sc++;if(v.length>=12)sc++;if(/[a-z]/.test(v)&&/[A-Z]/.test(v))sc++;if(/[0-9]/.test(v))sc++;if(/[^A-Za-z0-9]/.test(v))sc++;const m=document.getElementById('tc-pwd-meter');if(!m)return;const bar=m.querySelector('.tc-pwd-bar i'),lab=m.querySelector('.tc-pwd-label');let pct,color,txt;if(!v){pct=0;color='#22364a';txt='';}else if(sc<=1){pct=25;color='#ef4444';txt='Senha fraca';}else if(sc===2){pct=50;color='#f59e0b';txt='Senha média';}else if(sc===3){pct=75;color='#eab308';txt='Senha boa';}else{pct=100;color='#22c55e';txt='Senha forte';}if(bar){bar.style.width=pct+'%';bar.style.background=color;}if(lab){lab.textContent=txt;lab.style.color=color;}}
 function tcPwdMatch(v){const p=document.getElementById('tc-signup-pwd');const el=document.getElementById('tc-pwd-match');if(!p||!el)return;if(!v){el.textContent='';return;}if(v===p.value){el.textContent='✓ As senhas coincidem';el.style.color='#22c55e';}else{el.textContent='✗ As senhas não coincidem';el.style.color='#ef4444';}}
@@ -459,34 +494,75 @@ async function signup(e){
   e.preventDefault();
   if(state.loading)return;
   const fd=new FormData(e.target);
+  const email=String(fd.get('email')||'').trim();
+  const password=String(fd.get('password')||'');
+  const name=String(fd.get('name')||'').trim();
+  const confirm=String(fd.get('confirmPassword')||'');
+  state.authError='';
+  if(!window.TC_DB.enabled){state.authError='Configure o Supabase em guardian/js/supabase-config.js antes de criar contas reais.';render();return;}
+  if(password!==confirm){state.authError='As senhas não coincidem.';render();return;}
+  if(password.length<8){state.authError='A senha deve ter pelo menos 8 caracteres.';render();return;}
+  // Guarda os dados e mostra os Termos e Condições ANTES de criar a conta.
+  // A conta só é criada se a pessoa aceitar e prosseguir.
+  state.pendingSignup={email,password,name};
+  state.authMode='terms';
+  render();
+}
+// Depois de aceitar os Termos: cria mesmo a conta e entra.
+async function acceptTermsAndSignup(){
+  const ps=state.pendingSignup;
+  if(!ps){state.authMode='signup';render();return;}
+  if(state.loading)return;
   state.loading=true; state.authError=''; render();
   try{
-    if(!window.TC_DB.enabled)throw new Error('Configure o Supabase em guardian/js/supabase-config.js antes de criar contas reais.');
-    const email=String(fd.get('email')||'').trim();
-    const password=String(fd.get('password')||'');
-    const name=String(fd.get('name')||'').trim();
-    const confirm=String(fd.get('confirmPassword')||'');
-    if(password!==confirm)throw new Error('As senhas não coincidem.');
-    if(password.length<8)throw new Error('A senha deve ter pelo menos 8 caracteres.');
-    const {data,error}=await tcSignUp(email,password,name);
+    const {data,error}=await tcSignUp(ps.email,ps.password,ps.name);
     if(error)throw error;
     if(!data?.session){
-      const signed=await tcSignIn(email,password);
+      const signed=await tcSignIn(ps.email,ps.password);
       if(signed.error){
         if(/not confirmed|confirm/i.test(signed.error.message||''))throw new Error('A confirmação de email está ativada no Supabase. Desative-a em Authentication → Providers → Email (opção "Confirm email") para criar contas sem confirmação.');
         throw signed.error;
       }
     }
+    try{localStorage.setItem('tc_terms_accepted','1')}catch(_){}
+    state.pendingSignup=null;
     state.authenticated=true;
     state.authMode='login';
     state.loading=false;
-    // Sem alert/OK: a sessão do Supabase já está criada; recarregar leva direto ao Guardian.
     location.reload();
   }catch(err){
     state.loading=false;
     state.authError=err?.message||'Falha no cadastro';
+    state.authMode='signup';
     render();
   }
+}
+window.acceptTermsAndSignup=acceptTermsAndSignup;
+function declineTerms(){
+  state.pendingSignup=null;
+  state.authMode='signup';
+  state.authError='Para criar a conta é necessário ler e aceitar os Termos e Condições.';
+  render();
+}
+window.declineTerms=declineTerms;
+// Texto dos Termos e Condições mostrado depois de "Criar conta", antes de prosseguir.
+function tcTermsHtml(){
+  return `
+  <h3>1. O que é o T-Connect Guardian</h3>
+  <p>O T-Connect Guardian é uma ferramenta de <b>segurança familiar</b> que permite a um responsável (pai, mãe ou tutor legal) acompanhar o dispositivo de uma criança sob a sua responsabilidade. Não é um serviço para vigiar adultos nem terceiros sem o seu conhecimento.</p>
+  <h3>2. Vínculo e consentimento</h3>
+  <p>O acompanhamento só funciona depois de o aparelho da criança ser <b>vinculado</b> através de um código, QR ou link gerado por si, e de as permissões serem <b>aceites no próprio aparelho da criança</b>. Deve informar a criança, de forma adequada à idade, de que o dispositivo é acompanhado.</p>
+  <h3>3. Dados que podem ser recolhidos</h3>
+  <p>Conforme as permissões concedidas no aparelho da criança, o Guardian pode mostrar: <b>localização</b>, <b>mensagens (SMS)</b>, <b>chamadas</b>, <b>contactos</b>, <b>aplicações instaladas e uso</b>, <b>nível de bateria</b> e, só com autorização explícita da criança no momento, <b>câmera e áudio ao vivo</b>. Os dados servem apenas para a segurança da criança.</p>
+  <h3>4. Onde ficam os dados</h3>
+  <p>Os dados são guardados na conta de serviço (Supabase) associada ao Guardian e usados apenas para apresentar a informação a si. É responsável por manter a sua senha segura e por usar a aplicação de acordo com a lei aplicável em Moçambique e no seu país.</p>
+  <h3>5. Uso responsável e legal</h3>
+  <p>Compromete-se a usar o T-Connect apenas para proteger uma criança sob a sua tutela legal. Qualquer uso para perseguir, monitorizar ou aceder ao dispositivo de outra pessoa sem autorização é <b>proibido</b> e da sua inteira responsabilidade.</p>
+  <h3>6. Planos e pagamentos</h3>
+  <p>Há um período <b>Grátis de 7 dias</b> com acesso total e planos pagos (Familiar, Premium, Anual). Sem um plano ativo não é possível usar a aplicação. Os pagamentos são processados pelos métodos indicados (M-Pesa, e-Mola, cartão).</p>
+  <h3>7. Suporte</h3>
+  <p>Em caso de dúvida pode falar com o suporte pelo WhatsApp a partir do menu da aplicação.</p>
+  <p class="terms-final">Ao tocar em <b>"Aceito e prosseguir"</b>, declara que leu, compreendeu e aceita estes Termos e Condições e que é o responsável legal pela criança a acompanhar.</p>`;
 }
 async function google(){
   if(state.loading)return;
@@ -631,6 +707,10 @@ async function tcCheckAndUpdate(){if(state.update.checking)return;await checkFor
 function openRelease(release){const u=release?.apk_url||release?.download_url;if(u)openExternal(u)}
 // Notas de versão (novidades) mostradas nas Definições → Atualizações.
 const TC_CHANGELOG={
+  '2.39.64':{changes:[
+    'Esqueceu a senha: basta o e-mail, a nova senha e confirmar (nao depende do e-mail de confirmacao)',
+    'Ao criar conta aparecem os Termos e Condicoes; so prossegue quem aceitar'
+  ]},
   '2.39.63':{changes:[
     'Sem plano nao ha acesso: o botao Voltar do Android ja nao entra na app sem escolher plano gratis ou pago',
     'App da crianca: novo Jogo de frutas (combinar 3+), com pontos e recorde, no menu'
@@ -1258,7 +1338,8 @@ function updateMonitorRefreshUI(){
 window.tcMapTerminalEvent=(type,detail,status,meta)=>pushMapTerminal(type,detail,status,meta);
 function authView(){
   if(state.authMode==='signup')return `<div class="auth-page"><div class="auth-card">${languageSelect('top-lang')}${tcEye()}<div class="brand hero">T <span>CONNECT</span></div><div class="auth-tag">${esc(t('guardianAccount'))}</div><h1>${esc(t('signupTitle'))}</h1><p class="muted">${esc(t('signupDesc'))}</p>${state.authError?`<div class="auth-error" role="alert">${esc(state.authError)}</div>`:''}<form onsubmit="signup(event)"><label>${esc(t('name'))}<input name="name" required placeholder="${esc(t('fullName'))}"></label><label>${esc(t('email'))}<input name="email" type="email" required placeholder="guardian@email.com"></label><label>${esc(t('password'))}<input name="password" id="tc-signup-pwd" type="password" minlength="8" required placeholder="${esc(t('minPassword'))}" oninput="tcPwdStrength(this.value)"></label><div id="tc-pwd-meter" class="tc-pwd-meter"><div class="tc-pwd-bar"><i></i></div><small class="tc-pwd-label"></small></div><label>Confirmar senha<input name="confirmPassword" type="password" minlength="8" required placeholder="Repita a senha" oninput="tcPwdMatch(this.value)"></label><small id="tc-pwd-match" class="tc-pwd-match"></small><button class="btn primary wide" ${state.loading?'disabled':''}>${state.loading?esc(t('creating')):esc(t('createNow'))}</button></form><button class="text-btn" onclick="state.authMode='login';render()">${esc(t('backLogin'))}</button></div></div>`;
-  if(state.authMode==='recover')return `<div class="auth-page"><div class="auth-card">${languageSelect('top-lang')}${tcEye()}<div class="brand hero">T <span>CONNECT</span></div><div class="auth-tag">${esc(t('guardianAccount'))}</div><h1>⚙️ ${esc(t('recoverTitle'))}</h1><p class="muted">${esc(t('recoverDesc'))}</p>${state.authError?`<div class="auth-error" role="alert">${esc(state.authError)}</div>`:''}${state.recoverySent?`<div class="auth-success" role="status">${esc(t('recoverSent'))}</div>`:''}<form onsubmit="recoverPassword(event)"><label>${esc(t('email'))}<input name="email" type="email" required placeholder="guardian@email.com" autocomplete="email"></label><button class="btn primary wide" ${state.loading?'disabled':''}>${state.loading?esc(t('recoverSending')):esc(t('recoverAction'))}</button></form><button class="text-btn" onclick="state.authMode='login';state.recoverySent=false;state.authError='';render()">${esc(t('backLogin'))}</button></div></div>`;
+  if(state.authMode==='recover')return `<div class="auth-page"><div class="auth-card">${languageSelect('top-lang')}${tcEye()}<div class="brand hero">T <span>CONNECT</span></div><div class="auth-tag">${esc(t('guardianAccount'))}</div><h1>⚙️ Redefinir senha</h1><p class="muted">Escreva o seu e-mail e defina uma nova senha. Não é preciso confirmar por e-mail.</p>${state.authError?`<div class="auth-error" role="alert">${esc(state.authError)}</div>`:''}${state.recoverySent?`<div class="auth-success" role="status">Senha redefinida com sucesso.</div>`:''}<form onsubmit="resetPasswordDirect(event)"><label>E-mail<input name="email" type="email" required placeholder="guardian@email.com" autocomplete="email"></label><label>Nova senha<input name="password" id="tc-signup-pwd" type="password" minlength="8" required placeholder="Mínimo 8 caracteres" autocomplete="new-password" oninput="tcPwdStrength(this.value)"></label><div id="tc-pwd-meter" class="tc-pwd-meter"><div class="tc-pwd-bar"><i></i></div><small class="tc-pwd-label"></small></div><label>Confirmar nova senha<input name="confirmPassword" type="password" minlength="8" required placeholder="Repita a nova senha" autocomplete="new-password" oninput="tcPwdMatch(this.value)"></label><small id="tc-pwd-match" class="tc-pwd-match"></small><button class="btn primary wide" ${state.loading?'disabled':''}>${state.loading?'A redefinir…':'Redefinir senha'}</button></form><button class="text-btn" onclick="state.authMode='login';state.recoverySent=false;state.authError='';render()">‹ ${esc(t('backLogin'))}</button></div></div>`;
+  if(state.authMode==='terms')return `<div class="auth-page"><div class="auth-card auth-terms">${languageSelect('top-lang')}<div class="brand hero">T <span>CONNECT</span></div><div class="auth-tag">TERMOS E CONDIÇÕES</div><h1>Antes de prosseguir</h1><p class="muted">Leia e aceite para criar a conta Guardian de ${esc(state.pendingSignup?.name||'')||'responsável'}.</p>${state.authError?`<div class="auth-error" role="alert">${esc(state.authError)}</div>`:''}<div class="terms-box" id="tc-terms-box">${tcTermsHtml()}</div><label class="terms-check"><input type="checkbox" id="tc-terms-agree" onchange="document.getElementById('tc-terms-go')&&(document.getElementById('tc-terms-go').disabled=!this.checked)"> Li e aceito os Termos e Condições.</label><div class="terms-actions"><button class="btn primary wide" id="tc-terms-go" disabled ${state.loading?'disabled':''} onclick="acceptTermsAndSignup()">${state.loading?'A criar conta…':'Aceito e prosseguir'}</button><button class="btn wide" onclick="declineTerms()">Não aceito</button></div></div></div>`;
   if(state.authMode==='recoverUpdate')return `<div class="auth-page"><div class="auth-card">${languageSelect('top-lang')}${tcEye()}<div class="brand hero">T <span>CONNECT</span></div><div class="auth-tag">${esc(t('guardianAccount'))}</div><h1>${esc(t('newPasswordTitle'))}</h1><p class="muted">${esc(t('newPasswordDesc'))}</p>${state.authError?`<div class="auth-error" role="alert">${esc(state.authError)}</div>`:''}<form onsubmit="updateRecoveredPassword(event)"><label>${esc(t('password'))}<input name="password" type="password" minlength="8" required placeholder="${esc(t('minPassword'))}" autocomplete="new-password"></label><label>${esc(t('confirmPassword'))}<input name="confirmPassword" type="password" minlength="8" required placeholder="${esc(t('confirmPasswordPlaceholder'))}" autocomplete="new-password"></label><button class="btn primary wide" ${state.loading?'disabled':''}>${state.loading?esc(t('savingPassword')):esc(t('savePassword'))}</button></form></div></div>`;
   return `<div class="auth-page"><div class="auth-card">${languageSelect('top-lang')}${tcEye()}<div class="brand hero">T <span>CONNECT</span></div><div class="auth-tag">${esc(t('familySafety'))}</div><h1>${esc(t('loginTitle'))}</h1><p class="muted">${esc(t('loginDesc'))}</p>${state.authError?`<div class="auth-error" role="alert">${esc(state.authError)}</div>`:''}<form onsubmit="login(event)"><label>${esc(t('email'))}<input name="email" type="email" required placeholder="guardian@email.com"></label><label>${esc(t('password'))}<input name="password" type="password" required placeholder="••••••••"></label><button class="btn primary wide" ${state.loading?'disabled':''}>${state.loading?esc(t('signingIn')):esc(t('login'))}</button></form><button class="text-btn recovery-link" onclick="state.authMode='recover';state.authError='';state.recoverySent=false;render()">⚙️ ${esc(t('recoverPassword'))}</button><button class="text-btn" onclick="state.authMode='signup';render()">${esc(t('noAccount'))} <b>${esc(t('signup'))}</b></button><div class="demo-note">${window.TC_DB?.enabled?esc(t('supabaseOn')):esc(t('localMode'))}</div></div></div>`;
 }
