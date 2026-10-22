@@ -1,4 +1,11 @@
 {
+  "2.39.61": {
+    "description": "As Definições mostram quando há atualização, com o tamanho em MB, e atualizam pelo próprio app.",
+    "changes": [
+      "As Definições mostram quando há atualização, com o tamanho em MB",
+      "Atualizar pelo próprio app, sem transferir APK à mão; é opcional"
+    ]
+  },
   "2.39.60": {
     "description": "Contactos na horizontal no telemóvel e menu lateral mais limpo.",
     "changes": [

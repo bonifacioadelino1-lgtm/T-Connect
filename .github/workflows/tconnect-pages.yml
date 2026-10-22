@@ -51,12 +51,17 @@ jobs:
           if [ -f "$CL" ]; then NOTES=$(jq --arg v "$VN" '.[$v] // {}' "$CL"); fi
           DESC=$(printf '%s' "$NOTES" | jq -r '.description // "Nova versão disponível com melhorias e correções."')
           CHANGES=$(printf '%s' "$NOTES" | jq -c '.changes // []')
+          # Tamanho (bytes) dos APKs, para o app mostrar os MB da atualização.
+          GB=0; CB=0
+          [ -f apks-build/TConnect-Guardian.apk ] && GB=$(stat -c%s apks-build/TConnect-Guardian.apk 2>/dev/null || echo 0)
+          [ -f apks-build/TConnect-MinhaEmergencia.apk ] && CB=$(stat -c%s apks-build/TConnect-MinhaEmergencia.apk 2>/dev/null || echo 0)
           jq -n \
             --arg version "$VN" --arg date "$DATE" --arg rel "$RELISO" \
             --arg title "T-Connect v$VN" --arg desc "$DESC" \
             --arg apk "$APK_URL" --arg apkc "$APK_CHILD" \
             --argjson changes "$CHANGES" \
-            '{version:$version,date:$date,released_at:$rel,title:$title,description:$desc,download_url:$apk,apk_url:$apk,apk_guardian:$apk,apk_child:$apkc,changes:$changes,releaseNotes:$changes,changelog:$changes}' \
+            --argjson gbytes "${GB:-0}" --argjson cbytes "${CB:-0}" \
+            '{version:$version,date:$date,released_at:$rel,title:$title,description:$desc,download_url:$apk,apk_url:$apk,apk_guardian:$apk,apk_child:$apkc,apk_guardian_bytes:$gbytes,apk_child_bytes:$cbytes,changes:$changes,releaseNotes:$changes,changelog:$changes}' \
             > _site/updates/t-connect-update.json
           echo "Manifesto web carimbado -> v$VN"
           cat _site/updates/t-connect-update.json
