@@ -1378,3 +1378,16 @@ body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Ari
 .update-avail-meta span{display:block;font-size:11px;letter-spacing:.3px;text-transform:uppercase;color:#88a0c6}
 .update-avail-meta b{display:block;font-size:15px;margin-top:2px}
 .update-avail-note{margin-top:10px;font-size:12px;color:#8ca2c8;line-height:1.45}
+
+/* ===== Definições: tradutor no topo-direita + contador de download ===== */
+.settings-topbar{grid-column:1/-1;display:flex;justify-content:flex-end;align-items:center;margin:0 0 2px}
+.settings-topbar .settings-translator .auth-lang{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(180deg,rgba(18,32,52,.85),rgba(12,22,38,.85));border:1px solid rgba(80,120,180,.28);border-radius:12px;padding:7px 12px;box-shadow:0 6px 20px rgba(2,8,20,.28)}
+.settings-topbar .settings-translator .auth-lang span{font-size:12px;letter-spacing:.3px;color:#9fb6d6;white-space:nowrap}
+.settings-topbar .settings-translator .lang-select{background:rgba(8,16,28,.9);color:#eaf2ff;border:1px solid rgba(90,130,190,.35);border-radius:9px;padding:6px 9px;font-weight:700;font-size:13px;outline:none}
+.upd-progress{margin-top:12px}
+.upd-prog-bar{height:12px;border-radius:999px;background:rgba(10,20,36,.75);border:1px solid rgba(80,120,180,.3);overflow:hidden;position:relative}
+.upd-prog-bar i{display:block;height:100%;width:8%;border-radius:999px;background:linear-gradient(90deg,#0ea5e9,#22d3ee);transition:width .4s ease;box-shadow:0 0 12px rgba(34,211,238,.5)}
+.upd-prog-bar.is-done i{background:linear-gradient(90deg,#16a34a,#4ade80);box-shadow:0 0 12px rgba(74,222,128,.5)}
+.upd-prog-label{margin-top:7px;font-size:12.5px;color:#adc3e4;line-height:1.4}
+.update-now-btn{animation:tcUpdPulse 2.4s ease-in-out infinite}
+@keyframes tcUpdPulse{0%,100%{box-shadow:0 0 0 rgba(14,165,233,0)}50%{box-shadow:0 0 16px rgba(14,165,233,.45)}}

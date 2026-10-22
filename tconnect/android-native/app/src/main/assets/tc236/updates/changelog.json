@@ -1,4 +1,14 @@
 {
+  "2.39.62": {
+    "description": "Mapa fica fixo em ALVO LOCALIZADO, tradutor traduz a página toda e atualização com contador dentro do app.",
+    "changes": [
+      "Mapa: depois de localizar, mantém-se em ALVO LOCALIZADO com o painel de vidro sempre visível (não volta a procurar)",
+      "Tradutor movido para o canto superior direito e passa a traduzir 100% da página",
+      "Definições mais simples: Perfil em primeiro, guia no fim e sem o cartão de Configurações",
+      "Atualizar: primeiro verifica; só quando há nova versão aparece \"Atualizar aplicativo\", com contador de transferência e pedido de instalação",
+      "Atividade: a pesquisa dispara sozinha ao completar os 9 dígitos, sem botões"
+    ]
+  },
   "2.39.61": {
     "description": "As Definições mostram quando há atualização, com o tamanho em MB, e atualizam pelo próprio app.",
     "changes": [

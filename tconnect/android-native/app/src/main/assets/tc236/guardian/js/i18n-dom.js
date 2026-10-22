@@ -268,16 +268,108 @@
   var SKIP = { SCRIPT: 1, STYLE: 1, NOSCRIPT: 1, TEXTAREA: 1, INPUT: 1, SELECT: 1, OPTION: 1 };
   var ATTRS = ["placeholder", "title", "aria-label", "alt"];
 
+  // ----------------------------------------------------------------------
+  // Tradução DINÂMICA (100% da página). O dicionário acima é o caminho
+  // rápido e offline; o que ele não cobre é traduzido em tempo real por um
+  // serviço de tradução e fica guardado em cache (localStorage) para não
+  // repetir pedidos. Assim nada fica em português quando se muda o idioma.
+  // ----------------------------------------------------------------------
+  var GT = { en: "en", fr: "fr", zh: "zh-CN" };
+  var DONE = (typeof WeakSet !== "undefined") ? new WeakSet() : null; // nós já tratados
+  var MEM = {}; // MEM[L] = { ptOriginal: traduzido }
+  // Zonas de alta rotação / dados técnicos: o dicionário ainda se aplica,
+  // mas NÃO se envia este texto para tradução dinâmica (evita inundar a rede
+  // com carimbos de hora, coordenadas e códigos que mudam a cada segundo).
+  var DYN_SKIP_SEL = ".terminal,.auto-terminal,.activity-terminal,.msg-seq-terminal,.call-terminal,.screen-terminal,.tc-scifi-hud,.tc-glass-panel,.tc-exact-coordinate-hud,.mapkey,.invite-link,.manual-pair-code,.pair-code,code,pre,.version-pill";
+
+  function ensureMem(L) {
+    if (MEM[L]) return MEM[L];
+    try { MEM[L] = JSON.parse(localStorage.getItem("tcx:" + L) || "{}") || {}; }
+    catch (_) { MEM[L] = {}; }
+    return MEM[L];
+  }
+  function cacheGet(L, txt) { var m = ensureMem(L); return Object.prototype.hasOwnProperty.call(m, txt) ? m[txt] : undefined; }
+  function cacheSet(L, txt, val) { var m = ensureMem(L); m[txt] = val; try { localStorage.setItem("tcx:" + L, JSON.stringify(m)); } catch (_) {} }
+
+  function inDynSkip(el) { try { return !!(el && el.closest && el.closest(DYN_SKIP_SEL)); } catch (_) { return false; } }
+  // Vale a pena traduzir? Tem de ter pelo menos uma letra e não ser só números,
+  // horas, coordenadas, percentagens ou símbolos (esses ficam como estão).
+  function translatable(t) {
+    if (!t || t.length < 2) return false;
+    if (!/[A-Za-zÀ-ÿ]/.test(t)) return false;
+    if (/^[\d\s.,:;+\-–—°%/()[\]#@|]+$/.test(t)) return false;
+    return true;
+  }
+
+  var QUEUE = [];   // { t: ptText, apply: fn(translated) }
+  var INFLIGHT = false;
+
+  function gtrans(L, text) {
+    var tl = GT[L] || L;
+    var url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=pt&tl=" + encodeURIComponent(tl) + "&dt=t&q=" + encodeURIComponent(text);
+    return fetch(url).then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); }).then(function (j) {
+      var out = "";
+      try { (j[0] || []).forEach(function (seg) { if (seg && seg[0]) out += seg[0]; }); } catch (_) {}
+      return out || text;
+    });
+  }
+
+  function flushQueue() {
+    if (INFLIGHT || !QUEUE.length) return;
+    var L = lang();
+    if (L === "pt") { QUEUE = []; return; }
+    INFLIGHT = true;
+    var batch = QUEUE; QUEUE = [];
+    // Agrupa por texto para traduzir cada frase UMA só vez.
+    var groups = {};
+    batch.forEach(function (it) { (groups[it.t] = groups[it.t] || []).push(it.apply); });
+    var texts = Object.keys(groups);
+    var i = 0, POOL = 4, active = 0;
+    function done() {
+      INFLIGHT = false;
+      // aplica as traduções recolhidas sem disparar o próprio observador
+      if (obs) obs.disconnect();
+      pendingApply.forEach(function (fnArgs) { try { fnArgs[0](fnArgs[1]); } catch (_) {} });
+      pendingApply = [];
+      if (obs && document.body) obs.observe(document.body, { childList: true, subtree: true, characterData: true });
+      if (QUEUE.length) flushQueue();
+    }
+    var pendingApply = [];
+    function next() {
+      if (i >= texts.length) { if (active === 0) done(); return; }
+      while (active < POOL && i < texts.length) {
+        var txt = texts[i++]; active++;
+        (function (txt) {
+          var cached = cacheGet(L, txt);
+          var p = (cached != null) ? Promise.resolve(cached) : gtrans(L, txt).then(function (tr) { cacheSet(L, txt, tr); return tr; });
+          p.then(function (tr) {
+            (groups[txt] || []).forEach(function (fn) { pendingApply.push([fn, tr]); });
+          }).catch(function () { /* falhou: fica em pt, tenta de novo noutro ciclo */ })
+            .then(function () { active--; next(); });
+        })(txt);
+      }
+    }
+    next();
+  }
+
   function walk(node) {
     var L = lang();
     if (L === "pt") return;
     if (node.nodeType === 3) {
+      if (DONE && DONE.has(node)) return;
       var raw = node.nodeValue;
       if (!raw) return;
       var t = raw.trim();
       if (!t) return;
       var e = UI[t];
-      if (e && e[L]) node.nodeValue = raw.replace(t, e[L]);
+      if (e && e[L]) { node.nodeValue = raw.replace(t, e[L]); if (DONE) DONE.add(node); return; }
+      // Caminho dinâmico (tudo o resto)
+      if (inDynSkip(node.parentNode)) return;
+      if (!translatable(t)) return;
+      var cached = cacheGet(L, t);
+      if (cached != null) { node.nodeValue = raw.replace(t, cached); if (DONE) DONE.add(node); return; }
+      if (DONE) DONE.add(node); // otimista: evita re-enfileirar o mesmo nó
+      (function (n, r, tt) { QUEUE.push({ t: tt, apply: function (tr) { try { n.nodeValue = r.replace(tt, tr); } catch (_) {} } }); })(node, raw, t);
       return;
     }
     if (node.nodeType !== 1) return;
@@ -285,9 +377,17 @@
     for (var i = 0; i < ATTRS.length; i++) {
       var a = ATTRS[i];
       if (node.hasAttribute && node.hasAttribute(a)) {
-        var v = node.getAttribute(a);
-        var e2 = UI[(v || "").trim()];
-        if (e2 && e2[L]) node.setAttribute(a, e2[L]);
+        var v = (node.getAttribute(a) || "").trim();
+        if (!v) continue;
+        var e2 = UI[v];
+        if (e2 && e2[L]) { node.setAttribute(a, e2[L]); continue; }
+        if (inDynSkip(node) || !translatable(v)) continue;
+        var flag = "data-xl-" + a;
+        if (node.getAttribute(flag) === "1") continue;
+        var c2 = cacheGet(L, v);
+        if (c2 != null) { node.setAttribute(a, c2); node.setAttribute(flag, "1"); continue; }
+        node.setAttribute(flag, "1");
+        (function (el, attr, orig) { QUEUE.push({ t: orig, apply: function (tr) { try { el.setAttribute(attr, tr); } catch (_) {} } }); })(node, a, v);
       }
     }
     // Não desce ao conteúdo de script/style/textarea/select/option/input.
@@ -301,6 +401,7 @@
     if (obs) obs.disconnect();
     try { walk(document.body); } catch (_) {}
     if (obs) obs.observe(document.body, { childList: true, subtree: true, characterData: true });
+    if (QUEUE.length) flushQueue();
   }
   var pending = null;
   function schedule() {

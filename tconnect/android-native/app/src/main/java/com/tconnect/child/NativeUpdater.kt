@@ -34,6 +34,34 @@ class NativeUpdater(private val context: Context, private val web: WebView) {
         } else "ALREADY"
     } catch (_: Exception) { "ERROR" }
 
+    // Progresso do download atual (para o contador dentro do app). Devolve JSON:
+    // {"status":"running|pending|paused|done|failed|none|error","downloaded":N,"total":N,"percent":0-100}
+    @JavascriptInterface
+    fun getDownloadProgress(): String {
+        return try {
+            val prefs = context.getSharedPreferences("tc_updater", Context.MODE_PRIVATE)
+            val id = prefs.getLong("download_id", -1L)
+            if (id < 0) return "{\"status\":\"none\"}"
+            val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+            val c = dm.query(DownloadManager.Query().setFilterById(id)) ?: return "{\"status\":\"none\"}"
+            c.use {
+                if (!it.moveToFirst()) return "{\"status\":\"none\"}"
+                val status = it.getInt(it.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
+                val done = it.getLong(it.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
+                val total = it.getLong(it.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
+                val st = when (status) {
+                    DownloadManager.STATUS_SUCCESSFUL -> "done"
+                    DownloadManager.STATUS_FAILED -> "failed"
+                    DownloadManager.STATUS_PAUSED -> "paused"
+                    DownloadManager.STATUS_PENDING -> "pending"
+                    else -> "running"
+                }
+                val pct = if (total > 0) ((done * 100) / total).toInt() else -1
+                "{\"status\":\"$st\",\"downloaded\":$done,\"total\":$total,\"percent\":$pct}"
+            }
+        } catch (e: Exception) { "{\"status\":\"error\"}" }
+    }
+
     // Guardian (interativo): pode levar às definições e, ao terminar, abre o instalador.
     @JavascriptInterface
     fun installFromUrl(url: String): String = doDownload(url, interactive = true)
