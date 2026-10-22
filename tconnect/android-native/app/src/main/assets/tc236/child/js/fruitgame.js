@@ -68,6 +68,38 @@
   }
   function burst() { try { if (navigator.vibrate) navigator.vibrate(16); } catch (_) {} }
 
+  // ---------- som (Web Audio, sem ficheiros) ----------
+  var AC = null;
+  function muted() { try { return localStorage.getItem("tc_fruit_mute") === "1"; } catch (_) { return false; } }
+  function setMuted(v) { try { localStorage.setItem("tc_fruit_mute", v ? "1" : "0"); } catch (_) {} }
+  function ensureAudio() {
+    try {
+      if (!AC) { var C = window.AudioContext || window.webkitAudioContext; if (C) AC = new C(); }
+      if (AC && AC.state === "suspended") AC.resume();
+    } catch (_) {}
+    return AC;
+  }
+  function beep(freq, dur, type, vol, when) {
+    if (muted()) return;
+    var c = ensureAudio(); if (!c) return;
+    try {
+      var t = c.currentTime + (when || 0);
+      var o = c.createOscillator(), g = c.createGain();
+      o.type = type || "sine"; o.frequency.setValueAtTime(freq, t);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol || 0.08, t + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + (dur || 0.12));
+      o.connect(g); g.connect(c.destination);
+      o.start(t); o.stop(t + (dur || 0.12) + 0.03);
+    } catch (_) {}
+  }
+  function sfxTap() { beep(430, 0.05, "triangle", 0.045); }
+  function sfxSwap() { beep(540, 0.06, "sine", 0.06); beep(700, 0.06, "sine", 0.05, 0.04); }
+  function sfxInvalid() { beep(200, 0.12, "sawtooth", 0.05); beep(150, 0.14, "sawtooth", 0.045, 0.08); }
+  function sfxPop(chain) { var base = 520 + Math.min(chain || 0, 6) * 85; beep(base, 0.09, "triangle", 0.07); beep(base * 1.5, 0.08, "sine", 0.05, 0.045); }
+  function sfxWin() {[523, 659, 784, 1047].forEach(function (f, i) { beep(f, 0.18, "triangle", 0.08, i * 0.12); }); }
+  function sfxLose() {[392, 330, 262].forEach(function (f, i) { beep(f, 0.22, "sawtooth", 0.06, i * 0.14); }); }
+
   // ---------- resolução de cascatas ----------
   function resolve(after) {
     var m = findMatches(G.grid);
@@ -75,7 +107,9 @@
     G.busy = true; G.popping = {};
     m.forEach(function (i) { G.popping[i] = 1; });
     G.score += m.length * 10;
-    burst(); renderBoard(); renderHud();
+    G.cascade = (G.cascade || 0) + 1;
+    burst(); try { sfxPop(G.cascade); } catch (_) {}
+    renderBoard(); renderHud();
     setTimeout(function () {
       m.forEach(function (i) { G.grid[i] = null; });
       collapse(G.grid); G.popping = {}; renderBoard();
@@ -89,10 +123,12 @@
     if ((Math.abs(ra - rb) + Math.abs(ca - cb)) !== 1) return; // só vizinhas
     var t = G.grid[a]; G.grid[a] = G.grid[b]; G.grid[b] = t;
     if (findMatches(G.grid).length) {
-      G.sel = null; G.movesLeft--; renderHud(); renderBoard();
+      try { sfxSwap(); } catch (_) {}
+      G.sel = null; G.movesLeft--; G.cascade = 0; renderHud(); renderBoard();
       resolve();
     } else {
       var t2 = G.grid[a]; G.grid[a] = G.grid[b]; G.grid[b] = t2; // desfaz
+      try { sfxInvalid(); } catch (_) {}
       G.sel = null; renderBoard();
     }
   }
@@ -111,9 +147,11 @@
     if (G.score >= G.target) {
       G.phase = "win";
       var nxt = G.level + 1; if (nxt > loadLevel(G.cfg.key)) saveLevel(G.cfg.key, nxt);
+      try { sfxWin(); } catch (_) {}
       renderAll();
     } else if (G.movesLeft <= 0) {
       G.phase = "lose";
+      try { sfxLose(); } catch (_) {}
       renderAll();
     }
   }
@@ -177,6 +215,7 @@
       '<div class="fg-progress" id="fg-progress"><i></i></div>' +
       '<div class="fg-board" id="fg-board"></div>' +
       '<div class="fg-foot"><button class="fg-restart" data-act="restart">↻ Recomeçar nível</button>' +
+      '<button class="fg-restart" data-act="mute">' + (muted() ? "🔇 Som" : "🔊 Som") + '</button>' +
       '<button class="fg-restart" data-act="menu">⟵ Menu</button></div>' +
       '<p class="fg-tip">Toca numa fruta e na vizinha, ou arrasta uma sobre a outra.</p>' +
       endOverlay();
@@ -202,6 +241,7 @@
         if (a === "next") { startLevel(G.cfg.key, G.level + 1); }
         else if (a === "retry") { startLevel(G.cfg.key, G.level); }
         else if (a === "restart") { startLevel(G.cfg.key, G.level); }
+        else if (a === "mute") { setMuted(!muted()); if (!muted()) { ensureAudio(); try { sfxTap(); } catch (_) {} } renderAll(); }
         else if (a === "menu") { G.phase = "menu"; renderAll(); }
       });
     });
@@ -213,8 +253,10 @@
     return isNaN(i) ? -1 : i;
   }
   function onDown(e) {
+    ensureAudio(); // 1.º toque desbloqueia o som no Android
     if (G.busy || G.phase !== "play") return;
     var i = cellFromEvent(e); if (i < 0) return;
+    try { sfxTap(); } catch (_) {}
     G.drag = { i: i, x: e.clientX, y: e.clientY, moved: false };
   }
   function onUp(e) {

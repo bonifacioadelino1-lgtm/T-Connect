@@ -1,4 +1,12 @@
 {
+  "2.39.71": {
+    "description": "Limite de dispositivos reforçado no servidor, operadora/país de qualquer número e sons no jogo da criança.",
+    "changes": [
+      "Limite de dispositivos do plano passa a ser garantido também no servidor (não só na app)",
+      "Na Atividade, qualquer número (de qualquer país) mostra a operadora/rede e o país",
+      "Jogo de frutas: sons na jogada, ao combinar, ao ganhar e ao perder, com botão para ligar/desligar o som"
+    ]
+  },
   "2.39.70": {
     "description": "Limite de dispositivos por plano, bloqueio automático quando o plano termina e atualização automática no aplicativo da criança.",
     "changes": [

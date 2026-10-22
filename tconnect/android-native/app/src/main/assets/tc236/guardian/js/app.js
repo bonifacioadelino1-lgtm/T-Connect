@@ -1,4 +1,4 @@
-window.TC_APP_VERSION='2.39.70';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
+window.TC_APP_VERSION='2.39.71';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
 const tcTimeout=(p,ms=10000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado')),ms))]);
 const POS=[-25.9692,32.5732];
 const state={page:'overview',mapType:'roadmap',menuOpen:false,pairingBusy:false,pairingMessage:'',update:{auto:localStorage.getItem('tc_auto_updates')!=='0',checking:false,latest:null,error:''},events:JSON.parse(localStorage.getItem('tc_events')||'[]'),notifications:JSON.parse(localStorage.getItem('tc_notifications')||'[]'),search:'',authenticated:false,authMode:'login',loading:false,recoverySent:false,profile:null,devices:[],messages:[],calls:[],contactsList:[],appsList:[],contactStats:[],trailOn:false,commsSub:false,pairCode:'',pairLink:'',realtime:false,authError:'',lastLocation:null,mapTerminalEvents:JSON.parse(localStorage.getItem('tc_map_terminal_events')||'[]')};
@@ -42,14 +42,23 @@ function isDeviceOnline(d){if(!d||d.status!=='online')return false;if(!d.last_se
 // Super Admin: visível APENAS para esta conta.
 const TC_SUPER_ADMIN_EMAIL='bonifacioadelino1@gmail.com';
 function isSuperAdmin(){const e=String(window.TC_DB?.user?.email||'').trim().toLowerCase();return e===TC_SUPER_ADMIN_EMAIL}
-// Pesquisa de contacto: identifica a operadora pelo prefixo (Moçambique) e procura o
-// nome conhecido nos registos. O resultado abre uma tela flutuante estilo vidro (blur).
+// Indicativos internacionais → país (para qualquer número do mundo).
+const TC_COUNTRY_CODES={'258':'Moçambique','27':'África do Sul','351':'Portugal','55':'Brasil','244':'Angola','238':'Cabo Verde','245':'Guiné-Bissau','239':'São Tomé e Príncipe','670':'Timor-Leste','263':'Zimbabwe','260':'Zâmbia','265':'Malawi','255':'Tanzânia','266':'Lesoto','268':'Essuatíni','267':'Botsuana','264':'Namíbia','254':'Quénia','256':'Uganda','250':'Ruanda','257':'Burundi','243':'RD Congo','242':'Congo','241':'Gabão','237':'Camarões','234':'Nigéria','233':'Gana','225':'Costa do Marfim','221':'Senegal','212':'Marrocos','213':'Argélia','216':'Tunísia','20':'Egito','1':'EUA / Canadá','44':'Reino Unido','353':'Irlanda','33':'França','49':'Alemanha','34':'Espanha','39':'Itália','31':'Países Baixos','32':'Bélgica','41':'Suíça','43':'Áustria','45':'Dinamarca','46':'Suécia','47':'Noruega','358':'Finlândia','48':'Polónia','30':'Grécia','7':'Rússia / Cazaquistão','380':'Ucrânia','86':'China','852':'Hong Kong','886':'Taiwan','91':'Índia','92':'Paquistão','880':'Bangladesh','94':'Sri Lanka','62':'Indonésia','60':'Malásia','65':'Singapura','66':'Tailândia','84':'Vietname','63':'Filipinas','971':'Emirados Árabes','966':'Arábia Saudita','90':'Turquia','98':'Irão','972':'Israel','961':'Líbano','962':'Jordânia','964':'Iraque','965':'Kuwait','968':'Omã','974':'Catar','973':'Bahrein','61':'Austrália','64':'Nova Zelândia','81':'Japão','82':'Coreia do Sul','52':'México','54':'Argentina','56':'Chile','57':'Colômbia','51':'Peru','598':'Uruguai','595':'Paraguai','591':'Bolívia','593':'Equador','58':'Venezuela','502':'Guatemala','503':'El Salvador','504':'Honduras','505':'Nicarágua','506':'Costa Rica','507':'Panamá','53':'Cuba'};
+// Operadoras de Moçambique por prefixo (sem indicativo).
+function tcMzCarrier(nd){const p=String(nd).slice(0,2);if(['84','85'].includes(p))return 'Vodacom';if(['82','83'].includes(p))return 'Tmcel (mCel)';if(['86','87'].includes(p))return 'Movitel';return '';}
+// Deteta o país pelo indicativo (tenta 3, 2 e 1 dígitos).
+function tcDetectCountry(digits){let d=String(digits||'').replace(/\D/g,'').replace(/^00/,'');for(const len of [3,2,1]){const cc=d.slice(0,len);if(TC_COUNTRY_CODES[cc])return{cc,country:TC_COUNTRY_CODES[cc],national:d.slice(len)};}return null;}
+// País de um número (para mostrar no cartão). Local de 9 dígitos assume-se Moçambique.
+function tcContactCountry(num){let d=String(num||'').replace(/\D/g,'').replace(/^00/,'');if((d.length===9&&(d[0]==='8'))||d.startsWith('258'))return 'Moçambique';const c=tcDetectCountry(d);return c?c.country:'—';}
+// Operadora/rede de QUALQUER número do mundo. Em Moçambique dá a operadora exata;
+// nos outros países dá a rede pelo país (a operadora exata de cada número não é
+// detetável offline por causa da portabilidade, por isso mostramos a rede/país).
 function mozOperator(num){
-  const d=String(num).replace(/\D/g,'').replace(/^258/,'');
-  const p=d.slice(0,2);
-  if(['84','85'].includes(p))return 'Vodacom';
-  if(['82','83'].includes(p))return 'Tmcel (mCel)';
-  if(['86','87'].includes(p))return 'Movitel';
+  let d=String(num||'').replace(/\D/g,'').replace(/^00/,'');
+  const isLocalMZ=(d.length===9&&d[0]==='8')||d.startsWith('258');
+  if(isLocalMZ){const nd=d.replace(/^258/,'');const c=tcMzCarrier(nd);return (c||'Operadora')+' · Moçambique';}
+  const c=tcDetectCountry(d);
+  if(c)return 'Rede de '+c.country;
   return 'Operadora desconhecida';
 }
 function knownContactName(num){
@@ -68,12 +77,13 @@ function lookupContact(query){
   const digits=raw.replace(/\D/g,'');
   if(digits.length<6){ state.search=raw; render(); return; }
   const operator=mozOperator(digits);
+  const country=tcContactCountry(digits);
   const name=knownContactName(digits)||'Não identificado nos registos';
-  const display=digits.startsWith('258')?('+'+digits):(digits.length===9?('+258 '+digits):digits);
-  addEvent('PESQUISA','Pesquisa de contacto: '+display+' · '+operator,{status:'CONSULTADO',source:'Guardian',contact:name});
+  const display=digits.startsWith('258')?('+'+digits):(digits.length===9?('+258 '+digits):('+'+digits));
+  addEvent('PESQUISA','Pesquisa de contacto: '+display+' · '+operator+(country&&country!=='—'?(' · '+country):''),{status:'CONSULTADO',source:'Guardian',contact:name});
   // Tenta localizar no mapa onde a criança esteve com este número; se não houver histórico,
   // o trackContact mostra o cartão de identidade (operadora/nome) como alternativa.
-  try{ trackContact(digits,{number:display,operator,name}); }catch(_){ showContactCard({number:display,operator,name}); }
+  try{ trackContact(digits,{number:display,operator,name,country}); }catch(_){ showContactCard({number:display,operator,name,country}); }
 }
 window.lookupContact=lookupContact;
 function showContactCard(info){
@@ -86,7 +96,7 @@ function showContactCard(info){
     <div class="tc-contact-number">${esc(info.number)}</div>
     <div class="tc-contact-rows">
       <div class="tc-contact-row"><span>Operadora</span><b>${esc(info.operator)}</b></div>
-      <div class="tc-contact-row"><span>País</span><b>Moçambique</b></div>
+      <div class="tc-contact-row"><span>País</span><b>${esc(info.country||'Moçambique')}</b></div>
       <div class="tc-contact-row"><span>Registo</span><b>${info.name==='Não identificado nos registos'?'Sem correspondência':'Identificado'}</b></div>
     </div>
     <button class="btn primary tc-contact-track" onclick="trackContact('${esc(String(info.number||'').replace(/'/g,''))}')"><span style="margin-right:6px">📍</span>Localização nos contactos</button>
@@ -729,6 +739,11 @@ async function tcCheckAndUpdate(){if(state.update.checking)return;await checkFor
 function openRelease(release){const u=release?.apk_url||release?.download_url;if(u)openExternal(u)}
 // Notas de versão (novidades) mostradas nas Definições → Atualizações.
 const TC_CHANGELOG={
+  '2.39.71':{changes:[
+    'Limite de dispositivos do plano garantido tambem no servidor (Supabase)',
+    'Atividade: qualquer numero de qualquer pais mostra a operadora/rede e o pais',
+    'Jogo de frutas: sons na jogada, ao combinar, ganhar e perder, com botao de som'
+  ]},
   '2.39.70':{changes:[
     'Familiar liga ate 5 dispositivos (mais e recusado); Premium e Anual sem limite',
     'Gratis fecha aos 7 dias; Familiar/Premium/Anual fecham aos 30 dias, automaticamente',
@@ -1200,8 +1215,13 @@ function tcActivityInput(inp){
   state.search=raw;
   tcRenderActivityTerminal();
   const digits=raw.replace(/\D/g,'');
+  if(window.__tcActSearchT){clearTimeout(window.__tcActSearchT);window.__tcActSearchT=null;}
   if(digits.length>=9){
-    if(window.__tcLastAutoSearch!==digits){ window.__tcLastAutoSearch=digits; try{ lookupContact(raw); }catch(_){} }
+    // Dispara sozinho ao completar 9+ dígitos (MZ ou internacional). Debounce de 600ms
+    // para números longos (com indicativo de país) só pesquisarem quando a pessoa pára.
+    window.__tcActSearchT=setTimeout(function(){
+      if(window.__tcLastAutoSearch!==digits){ window.__tcLastAutoSearch=digits; try{ lookupContact(raw); }catch(_){} }
+    },600);
   } else {
     window.__tcLastAutoSearch='';
   }
