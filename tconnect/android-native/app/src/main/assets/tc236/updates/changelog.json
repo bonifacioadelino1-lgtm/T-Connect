@@ -1,4 +1,11 @@
 {
+  "2.39.67": {
+    "description": "Aviso automático quando há mesmo uma nova versão: aparece 5 segundos depois de abrir e leva a verificar a atualização.",
+    "changes": [
+      "Cerca de 5 segundos depois de abrir, se houver uma versão MAIS RECENTE que a instalada, aparece \"Nova versão já foi lançada\" com o botão Verificar",
+      "O aviso só surge para versões novas — nunca para a versão já instalada — e cada nova versão avisa de novo"
+    ]
+  },
   "2.39.66": {
     "description": "Ao concluir a transferência, o ecrã de instalação do Android aparece mesmo (com botão \"Instalar agora\").",
     "changes": [

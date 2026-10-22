@@ -1,4 +1,4 @@
-window.TC_APP_VERSION='2.39.66';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
+window.TC_APP_VERSION='2.39.67';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
 const tcTimeout=(p,ms=10000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado')),ms))]);
 const POS=[-25.9692,32.5732];
 const state={page:'overview',mapType:'roadmap',menuOpen:false,pairingBusy:false,pairingMessage:'',update:{auto:localStorage.getItem('tc_auto_updates')!=='0',checking:false,latest:null,error:''},events:JSON.parse(localStorage.getItem('tc_events')||'[]'),notifications:JSON.parse(localStorage.getItem('tc_notifications')||'[]'),search:'',authenticated:false,authMode:'login',loading:false,recoverySent:false,profile:null,devices:[],messages:[],calls:[],contactsList:[],appsList:[],contactStats:[],trailOn:false,commsSub:false,pairCode:'',pairLink:'',realtime:false,authError:'',lastLocation:null,mapTerminalEvents:JSON.parse(localStorage.getItem('tc_map_terminal_events')||'[]')};
@@ -594,9 +594,9 @@ function tcShowUpdateBanner(release){
   }
   const old=document.getElementById('tc-update-banner'); if(old) old.remove();
   const el=document.createElement('div'); el.id='tc-update-banner'; el.className='tc-update-banner';
-  el.innerHTML='<span class="ub-ico">⬆️</span><div class="ub-main"><b>Nova versão v'+esc(ver)+' disponível</b><small>'+esc(release.description||'Toque em Atualizar para instalar pelo próprio app.')+'</small></div><button class="ub-go" id="tc-ub-go">Atualizar agora</button><button class="ub-x" id="tc-ub-x" aria-label="Depois">×</button>';
+  el.innerHTML='<span class="ub-ico">🚀</span><div class="ub-main"><b>Nova versão v'+esc(ver)+' já foi lançada</b><small>Toque em Verificar e depois em “Atualizar aplicativo”.</small></div><button class="ub-go" id="tc-ub-go">Verificar</button><button class="ub-x" id="tc-ub-x" aria-label="Depois">×</button>';
   document.body.appendChild(el);
-  const go=document.getElementById('tc-ub-go'); if(go) go.onclick=()=>{ go.textContent='A preparar…'; go.disabled=true; try{updateAppNow();}catch(_){} };
+  const goBtn=document.getElementById('tc-ub-go'); if(goBtn) goBtn.onclick=()=>{ el.remove(); try{window.go?window.go('settings'):go('settings');}catch(_){} };
   const x=document.getElementById('tc-ub-x'); if(x) x.onclick=()=>{ try{localStorage.setItem('tc_update_banner_dismissed',ver);}catch(_){} el.remove(); };
   // Regista também na lista de notificações (sino), para ficar o registo.
   try{
@@ -724,6 +724,10 @@ async function tcCheckAndUpdate(){if(state.update.checking)return;await checkFor
 function openRelease(release){const u=release?.apk_url||release?.download_url;if(u)openExternal(u)}
 // Notas de versão (novidades) mostradas nas Definições → Atualizações.
 const TC_CHANGELOG={
+  '2.39.67':{changes:[
+    'Cerca de 5s depois de abrir, se houver versao mais recente, aparece "Nova versao ja foi lancada" com o botao Verificar',
+    'O aviso so surge para versoes novas (nunca para a ja instalada) e cada nova versao avisa de novo'
+  ]},
   '2.39.66':{changes:[
     'Ao concluir a transferencia, o ecra de instalacao do Android aparece mesmo (botao "Instalar agora")',
     'Se faltar a permissao de instalar apps desconhecidas, abre as definicoes e fica o botao para concluir'
@@ -1742,10 +1746,28 @@ window.addEventListener('tc-pwa-install-ready',()=>{const e=document.getElementB
     }
   }catch(err){console.warn('Atualização automática:',err?.message||err)}
 }
+// ~5s depois de abrir: se houver mesmo uma NOVA versão (maior que a instalada), mostra
+// a mensagem "Nova versão vX já foi lançada" a convidar a ir verificar a atualização.
+// Só aparece para versões mais recentes — nunca para a versão que já está instalada.
+async function tcAnnounceNewVersion(){
+  try{
+    if(!state.authenticated||!navigator.onLine) return;
+    const release=await fetchReleaseManifest();
+    if(!release?.version) return;
+    const current=String(window.TCNativeUpdater?.getCurrentVersion?.()||window.TC_APP_VERSION||'').replace(/^v/i,'');
+    if(cmpVersion(release.version,current)>0){
+      state.update.latest=release;
+      tcShowUpdateBanner(release);
+    }
+  }catch(_){}
+}
+window.tcAnnounceNewVersion=tcAnnounceNewVersion;
 boot().then(()=>{
   if(state.authenticated){
     showPreparationThenContinue();
     if(state.update.auto){checkForUpdates(true);setTimeout(autoUpdateIfNeeded,800);}
+    // Anúncio de nova versão 5 segundos depois de abrir (independente da atualização automática).
+    setTimeout(()=>{try{tcAnnounceNewVersion()}catch(_){}} ,5000);
   }
   const autoUpdateCheck=()=>{if(state.authenticated&&state.update.auto&&navigator.onLine)autoUpdateIfNeeded()};
   window.addEventListener('online',autoUpdateCheck);
