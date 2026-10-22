@@ -62,16 +62,50 @@ class NativeUpdater(private val context: Context, private val web: WebView) {
         } catch (e: Exception) { "{\"status\":\"error\"}" }
     }
 
-    // Guardian (interativo): pode levar às definições e, ao terminar, abre o instalador.
+    // Abre o instalador do Android para o APK já descarregado (o ecrã "Instalar?").
+    // Chamado pelo JS assim que o contador chega a 100%, para o pedido de instalação
+    // aparecer mesmo (não depender só do BroadcastReceiver, que nem sempre dispara).
     @JavascriptInterface
-    fun installFromUrl(url: String): String = doDownload(url, interactive = true)
+    fun installDownloaded(): String {
+        return try {
+            val prefs = context.getSharedPreferences("tc_updater", Context.MODE_PRIVATE)
+            val id = prefs.getLong("download_id", -1L)
+            if (id < 0) return "NO_DOWNLOAD"
+            val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+            var ok = false
+            dm.query(DownloadManager.Query().setFilterById(id))?.use { c ->
+                if (c.moveToFirst()) {
+                    ok = c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS)) == DownloadManager.STATUS_SUCCESSFUL
+                }
+            }
+            if (!ok) return "NOT_READY"
+            // Precisa da permissão "Instalar apps desconhecidas" para o ecrã aparecer.
+            if (Build.VERSION.SDK_INT >= 26 && !context.packageManager.canRequestPackageInstalls()) {
+                openInstallPermission()
+                return "NEED_PERMISSION"
+            }
+            val uri = dm.getUriForDownloadedFile(id) ?: return "NO_URI"
+            val install = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/vnd.android.package-archive")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(install)
+            "INSTALLING"
+        } catch (e: Exception) { "ERROR:${e.message ?: "install"}" }
+    }
+
+    // Guardian (interativo): pede a permissão de instalação no início se faltar.
+    // NÃO marca auto_install — quem abre o instalador é o JS (installDownloaded),
+    // quando o contador chega a 100%, para não haver dois pedidos de instalação.
+    @JavascriptInterface
+    fun installFromUrl(url: String): String = doDownload(url, interactive = true, autoInstall = false)
 
     // Criança/Shield (silencioso): NÃO abre definições nem o instalador — não interrompe o
     // envio de dados. O download termina e fica uma notificação para instalar quando quiser.
     @JavascriptInterface
-    fun installFromUrlQuiet(url: String): String = doDownload(url, interactive = false)
+    fun installFromUrlQuiet(url: String): String = doDownload(url, interactive = false, autoInstall = false)
 
-    private fun doDownload(url: String, interactive: Boolean): String {
+    private fun doDownload(url: String, interactive: Boolean, autoInstall: Boolean = false): String {
         if (!url.startsWith("https://")) return "INVALID_URL"
         var needPerm = false
         if (interactive && Build.VERSION.SDK_INT >= 26) {
@@ -96,7 +130,7 @@ class NativeUpdater(private val context: Context, private val web: WebView) {
                 .setAllowedOverRoaming(false)
             val id = (context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
             context.getSharedPreferences("tc_updater", Context.MODE_PRIVATE).edit()
-                .putLong("download_id", id).putBoolean("auto_install", interactive).apply()
+                .putLong("download_id", id).putBoolean("auto_install", autoInstall).apply()
             if (needPerm) "STARTED_NEED_PERMISSION" else "STARTED"
         } catch (e: Exception) { "ERROR:${e.message ?: "download"}" }
     }

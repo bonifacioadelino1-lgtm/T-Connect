@@ -1,4 +1,11 @@
 {
+  "2.39.66": {
+    "description": "Ao concluir a transferência, o ecrã de instalação do Android aparece mesmo (com botão \"Instalar agora\").",
+    "changes": [
+      "Depois do contador chegar a 100%, o T-Connect abre o instalador do Android (ecrã \"Instalar?\") automaticamente",
+      "Se faltar a permissão \"Instalar apps desconhecidas\", abre as definições e fica o botão \"Instalar agora\" para concluir"
+    ]
+  },
   "2.39.65": {
     "description": "Verificar atualizações volta a encontrar novas versões, teclado estável no login e jogo de frutas com níveis.",
     "changes": [
