@@ -1,4 +1,12 @@
 {
+  "2.39.70": {
+    "description": "Limite de dispositivos por plano, bloqueio automático quando o plano termina e atualização automática no aplicativo da criança.",
+    "changes": [
+      "Familiar liga até 5 dispositivos; mais do que isso é recusado. Premium e Anual ligam sem limite",
+      "Grátis liga vários, mas fecha automaticamente ao fim de 7 dias; Familiar, Premium e Anual fecham aos 30 dias — sem exceções",
+      "Aplicativo da criança: ao sair nova versão, descarrega e abre o instalador sozinho (o Android só pede \"Instalar\" uma vez)"
+    ]
+  },
   "2.39.69": {
     "description": "Nome do ícone mais curto e atualização que entra mesmo na versão nova.",
     "changes": [

@@ -585,17 +585,38 @@ async function tcChildAutoUpdate(force){
     const startedAt=Number(localStorage.getItem(startedKey)||0);
     if(!force && Date.now()-startedAt < 6*3600*1000) return;
     localStorage.setItem(startedKey,String(Date.now()));
-    const url=new URL(apk,location.href).href;
-    // Atualização SILENCIOSA: descarrega em segundo plano sem interromper o envio de dados.
-    // Fica uma notificação para instalar; a app continua a comunicar normalmente.
-    if(window.TCNativeUpdater.installFromUrlQuiet) window.TCNativeUpdater.installFromUrlQuiet(url);
-    else window.TCNativeUpdater.installFromUrl(url);
-    state.status='Nova versão v'+m.version+' pronta — instale pela notificação quando quiser.';
+    // Cache-busting pela versão: garante que descarrega o APK da versão NOVA.
+    let url=new URL(apk,location.href).href;
+    url += (url.includes('?')?'&':'?')+'v='+encodeURIComponent(m.version)+'&t='+Date.now();
+    // Atualização AUTOMÁTICA: descarrega e, ao terminar, abre o instalador sozinho.
+    // (O Android, por segurança, mostra sempre um "Instalar?" para apps normais; é a
+    //  única ação que o utilizador faz. Tudo o resto — detetar, descarregar e abrir o
+    //  instalador — acontece sozinho, sem tocar em nada dentro da app.)
+    state.status='Nova versão v'+m.version+' encontrada — a atualizar automaticamente…';
     try{render()}catch(_){}
+    const r=String(window.TCNativeUpdater.installFromUrl(url)||'');
+    if(r==='STARTED'||r==='STARTED_NEED_PERMISSION'){ tcChildPollInstall(m.version); }
   }catch(_){}
   finally{tcChildUpdBusy=false;}
 }
 window.tcChildAutoUpdate=tcChildAutoUpdate;
+// Quando o download termina, abre o instalador do Android automaticamente (ecrã "Instalar?").
+function tcChildPollInstall(ver){
+  if(!window.TCNativeUpdater||!window.TCNativeUpdater.getDownloadProgress)return;
+  if(window.__tcChildInstPoll){clearInterval(window.__tcChildInstPoll);window.__tcChildInstPoll=null;}
+  window.__tcChildInstPoll=setInterval(()=>{
+    let p={};try{p=JSON.parse(window.TCNativeUpdater.getDownloadProgress()||'{}')||{}}catch(_){p={}}
+    if(p.status==='done'){
+      clearInterval(window.__tcChildInstPoll);window.__tcChildInstPoll=null;
+      try{window.TCNativeUpdater.installDownloaded&&window.TCNativeUpdater.installDownloaded()}catch(_){}
+      state.status='A instalar a nova versão v'+ver+'…';try{render()}catch(_){}
+    }else if(p.status==='failed'){
+      clearInterval(window.__tcChildInstPoll);window.__tcChildInstPoll=null;
+    }
+  },1500);
+  setTimeout(()=>{try{if(window.__tcChildInstPoll){clearInterval(window.__tcChildInstPoll);window.__tcChildInstPoll=null;}}catch(_){}},10*60*1000);
+}
+window.tcChildPollInstall=tcChildPollInstall;
 // Verifica ao voltar para primeiro plano e de tempos a tempos.
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') tcChildAutoUpdate(); });
 window.addEventListener('online',()=>tcChildAutoUpdate());
