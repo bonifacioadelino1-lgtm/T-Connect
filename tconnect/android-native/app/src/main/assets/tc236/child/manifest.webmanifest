@@ -1,8 +1,8 @@
 {
-  "name": "Emergência",
-  "short_name": "Emergência",
+  "name": "Minha Emergência — T-Connect Child",
+  "short_name": "Minha Emergência",
   "id": "/child/",
-  "description": "Emergência — botão de socorro e segurança no telemóvel.",
+  "description": "Aplicativo Child do T-Connect para segurança e emergência.",
   "lang": "pt-MZ",
   "dir": "ltr",
   "start_url": "./index.html",

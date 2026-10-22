@@ -1,9 +1,16 @@
 {
-  "2.39.68": {
-    "description": "Novos nomes: o aplicativo da criança passa a chamar-se \"Emergência\" e o do responsável \"Monitoramento\".",
+  "2.39.69": {
+    "description": "Nome do ícone mais curto e atualização que entra mesmo na versão nova.",
     "changes": [
-      "App da criança (Shield): nome e descrição passam a \"Emergência\" (sem \"T-Connect\")",
-      "App do responsável (Guardian): nome e descrição passam a \"Monitoramento\" (sem \"Connect Guardian\")"
+      "Nome do aplicativo (por fora, no ícone): a criança fica \"Minha Emergência\" e o responsável \"Monitoramento\" — sem mudar nada por dentro",
+      "Atualizar instala sempre o APK da versão mais recente (sem cache antiga), por isso já não fica preso na versão anterior",
+      "Só descarrega quando há mesmo uma versão nova; na mesma versão não baixa nada"
+    ]
+  },
+  "2.39.68": {
+    "description": "Novos nomes do ícone: criança \"Minha Emergência\" e responsável \"Monitoramento\".",
+    "changes": [
+      "Nome do aplicativo (no ícone): criança \"Minha Emergência\", responsável \"Monitoramento\""
     ]
   },
   "2.39.67": {

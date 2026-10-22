@@ -1,4 +1,4 @@
-window.TC_APP_VERSION='2.39.68';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
+window.TC_APP_VERSION='2.39.69';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
 const tcTimeout=(p,ms=10000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado')),ms))]);
 const POS=[-25.9692,32.5732];
 const state={page:'overview',mapType:'roadmap',menuOpen:false,pairingBusy:false,pairingMessage:'',update:{auto:localStorage.getItem('tc_auto_updates')!=='0',checking:false,latest:null,error:''},events:JSON.parse(localStorage.getItem('tc_events')||'[]'),notifications:JSON.parse(localStorage.getItem('tc_notifications')||'[]'),search:'',authenticated:false,authMode:'login',loading:false,recoverySent:false,profile:null,devices:[],messages:[],calls:[],contactsList:[],appsList:[],contactStats:[],trailOn:false,commsSub:false,pairCode:'',pairLink:'',realtime:false,authError:'',lastLocation:null,mapTerminalEvents:JSON.parse(localStorage.getItem('tc_map_terminal_events')||'[]')};
@@ -647,7 +647,12 @@ async function updateAppNow(){
   // e no fim o Android pede "Instalar" (a pessoa toca OK). Os dados são mantidos.
   if(window.TCNativeUpdater && window.TCNativeUpdater.installFromUrl && apkUrl){
     try{
-      const url=new URL(apkUrl,location.origin).href;
+      // Cache-busting pela versão: garante que o APK descarregado é SEMPRE o da nova
+      // versão (e não uma cópia em cache antiga servida pelo GitHub/CDN). Sem isto, a
+      // pessoa podia reinstalar a mesma versão e ficar "presa" na anterior.
+      let url=new URL(apkUrl,location.origin).href;
+      const ver=String(state.update.latest?.version||'').replace(/[^0-9.]/g,'');
+      if(ver) url += (url.includes('?')?'&':'?')+'v='+encodeURIComponent(ver)+'&t='+Date.now();
       state.update.downloading=true; state.update.progress={status:'pending',percent:0,downloaded:0,total:0}; state.update.error='';
       render();
       const result=String(window.TCNativeUpdater.installFromUrl(url)||'');
@@ -724,9 +729,13 @@ async function tcCheckAndUpdate(){if(state.update.checking)return;await checkFor
 function openRelease(release){const u=release?.apk_url||release?.download_url;if(u)openExternal(u)}
 // Notas de versão (novidades) mostradas nas Definições → Atualizações.
 const TC_CHANGELOG={
+  '2.39.69':{changes:[
+    'Nome no icone: crianca "Minha Emergência", responsavel "Monitoramento" (sem mudar nada por dentro)',
+    'Atualizar instala sempre o APK mais recente (sem cache antiga): ja nao fica preso na versao anterior',
+    'So descarrega quando ha mesmo versao nova; na mesma versao nao baixa nada'
+  ]},
   '2.39.68':{changes:[
-    'App da crianca passa a chamar-se "Emergência" (nome e descricao, sem "T-Connect")',
-    'App do responsavel passa a chamar-se "Monitoramento" (sem "Connect Guardian")'
+    'Nome no icone: crianca "Minha Emergência", responsavel "Monitoramento"'
   ]},
   '2.39.67':{changes:[
     'Cerca de 5s depois de abrir, se houver versao mais recente, aparece "Nova versao ja foi lancada" com o botao Verificar',
