@@ -1,8 +1,8 @@
 // T-Connect Child — Service Worker (v2.39.6): cache versionado + rede primeiro para código.
-const CACHE = 'tc-child-v2.39.10';
+const CACHE = 'tc-child-v2.39.62';
 const SCOPE = self.registration.scope;
 const abs = p => new URL(p, SCOPE).href;
-const SHELL = ['index.html','css/style.css','js/app.js','manifest.webmanifest','../guardian/js/supabase.js','../guardian/js/supabase-config.js','../vendor/html5-qrcode/html5-qrcode.min.js','../assets/icons/minha-emergencia-192.png','../assets/icons/minha-emergencia-512.png'].map(abs);
+const SHELL = ['index.html','css/style.css','js/app.js','js/fruitgame.js','manifest.webmanifest','../guardian/js/supabase.js','../guardian/js/supabase-config.js','../vendor/html5-qrcode/html5-qrcode.min.js','../assets/icons/minha-emergencia-192.png','../assets/icons/minha-emergencia-512.png'].map(abs);
 const FALLBACK = abs('index.html');
 self.addEventListener('install', e => e.waitUntil((async () => {
   const c = await caches.open(CACHE);

@@ -1,4 +1,4 @@
-window.TC_APP_VERSION='2.39.62';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
+window.TC_APP_VERSION='2.39.63';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
 const tcTimeout=(p,ms=10000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado')),ms))]);
 const POS=[-25.9692,32.5732];
 const state={page:'overview',mapType:'roadmap',menuOpen:false,pairingBusy:false,pairingMessage:'',update:{auto:localStorage.getItem('tc_auto_updates')!=='0',checking:false,latest:null,error:''},events:JSON.parse(localStorage.getItem('tc_events')||'[]'),notifications:JSON.parse(localStorage.getItem('tc_notifications')||'[]'),search:'',authenticated:false,authMode:'login',loading:false,recoverySent:false,profile:null,devices:[],messages:[],calls:[],contactsList:[],appsList:[],contactStats:[],trailOn:false,commsSub:false,pairCode:'',pairLink:'',realtime:false,authError:'',lastLocation:null,mapTerminalEvents:JSON.parse(localStorage.getItem('tc_map_terminal_events')||'[]')};
@@ -9,6 +9,8 @@ function changeLanguage(lang){window.TC_I18N.setLang(lang);render()}
 window.changeLanguage=changeLanguage;
 window.tcOnBackPressed=function(){
   try{
+    // Portão de plano: sem plano ativo, o "Voltar" é consumido e NÃO dá acesso à app.
+    if(state.authenticated&&!isSuperAdmin()&&needsPlanChoice()){ try{render();}catch(_){} return true; }
     if(document.getElementById('tc-screen-preview')||document.getElementById('tc-audio-only-panel')){
       try{endRemoteCapture(tcCaptureRequestId)}catch(_){var a=document.getElementById('tc-screen-preview')||document.getElementById('tc-audio-only-panel');if(a)a.remove();}
       return true;
@@ -629,6 +631,10 @@ async function tcCheckAndUpdate(){if(state.update.checking)return;await checkFor
 function openRelease(release){const u=release?.apk_url||release?.download_url;if(u)openExternal(u)}
 // Notas de versão (novidades) mostradas nas Definições → Atualizações.
 const TC_CHANGELOG={
+  '2.39.63':{changes:[
+    'Sem plano nao ha acesso: o botao Voltar do Android ja nao entra na app sem escolher plano gratis ou pago',
+    'App da crianca: novo Jogo de frutas (combinar 3+), com pontos e recorde, no menu'
+  ]},
   '2.39.62':{changes:[
     'Mapa: depois de localizar fica em ALVO LOCALIZADO com o painel de vidro sempre visível (nao volta a procurar)',
     'Tradutor no canto superior direito e traduz 100% da pagina',
@@ -811,13 +817,24 @@ function allPlans(){
     {id:'anual',name:'Anual',price:anu.price,days:anu.days,period:'/ano',feat:(anu.features&&anu.features.length)?anu.features:['Tudo do Premium','12 meses de acesso','2 meses grátis','Prioridade máxima de suporte'],primary:false}
   ];
 }
+// Markup interno do seletor de planos (reutilizado pelo PORTÃO de ecrã inteiro e
+// pelo overlay de upsell). O botão fecha-nada: a escolha do plano é a única saída.
+function planChooserInner(){
+  const cards=allPlans();
+  const expiredBanner=state.planExpired?`<div class="plan-expired-banner" style="background:linear-gradient(135deg,#c0152b,#7a0f1e);color:#fff;border-radius:12px;padding:12px 15px;margin:0 0 14px;font-weight:700">⚠ ${state.planExpired==='free'?'O seu período grátis de 7 dias terminou.':'O seu plano expirou.'} Escolha um plano para continuar a usar o T-Connect.</div>`:'';
+  return `<div class="tc-plan-card"><div class="tc-plan-brand">T<span>-CONNECT</span></div><h2>${state.planExpired?'Plano expirado':'Escolha o seu plano'}</h2>${expiredBanner}<p class="tc-plan-sub">O plano Grátis dá <b>7 dias de acesso total</b>. Depois, escolha Familiar (mensagens e chamadas) ou Premium (tudo, com localização em tempo real).</p><div class="tc-plan-grid four">${cards.map(c=>`<section class="plan-card ${c.primary?'plan-featured':''}">${c.primary?'<span class="plan-tag">Mais popular</span>':''}<h3>${c.name}</h3><div class="plan-price"><b>${c.price===0?'0 MT':c.price+' MT'}</b><span>${esc(c.period)}</span></div><ul class="plan-features">${c.feat.map(f=>`<li>✓ ${esc(f)}</li>`).join('')}</ul><button class="btn ${c.primary?'primary':''} plan-cta" ${c.id==='free'&&tcFreeUsed()?'disabled':''} onclick="choosePlanAccount('${c.id}')">${c.id==='free'?(tcFreeUsed()?'7 dias já usados':'Começar 7 dias grátis'):'Escolher '+c.name}</button></section>`).join('')}</div><div class="plan-note">Não é possível aceder à plataforma sem um plano ativo.</div></div>`;
+}
+// PORTÃO de ecrã inteiro: é o conteúdo REAL da app quando não há plano ativo.
+// Não há nada por trás, por isso o botão "Voltar" do Android não dá acesso à app.
+function planGateView(){ return `<div class="tc-plan-overlay tc-plan-gate">${planChooserInner()}</div>`; }
 function showPlanChooser(){
   if(!state.authenticated||isSuperAdmin()) return;
+  // Sem plano (1.ª vez / expirado): o portão de ecrã inteiro trata disto no render().
+  if(needsPlanChoice()){ render(); return; }
+  // Upsell (já tem um plano e quer outro): overlay por cima da app.
   if(document.getElementById('tc-plan-overlay')) return;
-  const cards=allPlans();
   const el=document.createElement('div');el.id='tc-plan-overlay';el.className='tc-plan-overlay';
-  const expiredBanner=state.planExpired?`<div class="plan-expired-banner" style="background:linear-gradient(135deg,#c0152b,#7a0f1e);color:#fff;border-radius:12px;padding:12px 15px;margin:0 0 14px;font-weight:700">⚠ ${state.planExpired==='free'?'O seu período grátis de 7 dias terminou.':'O seu plano expirou.'} Escolha um plano para continuar a usar o T-Connect.</div>`:'';
-  el.innerHTML=`<div class="tc-plan-card"><div class="tc-plan-brand">T<span>-CONNECT</span></div><h2>${state.planExpired?'Plano expirado':'Escolha o seu plano'}</h2>${expiredBanner}<p class="tc-plan-sub">O plano Grátis dá <b>7 dias de acesso total</b>. Depois, escolha Familiar (mensagens e chamadas) ou Premium (tudo, com localização em tempo real).</p><div class="tc-plan-grid four">${cards.map(c=>`<section class="plan-card ${c.primary?'plan-featured':''}">${c.primary?'<span class="plan-tag">Mais popular</span>':''}<h3>${c.name}</h3><div class="plan-price"><b>${c.price===0?'0 MT':c.price+' MT'}</b><span>${esc(c.period)}</span></div><ul class="plan-features">${c.feat.map(f=>`<li>✓ ${esc(f)}</li>`).join('')}</ul><button class="btn ${c.primary?'primary':''} plan-cta" ${c.id==='free'&&tcFreeUsed()?'disabled':''} onclick="choosePlanAccount('${c.id}')">${c.id==='free'?(tcFreeUsed()?'7 dias já usados':'Começar 7 dias grátis'):'Escolher '+c.name}</button></section>`).join('')}</div><div class="plan-note">Não é possível aceder à plataforma sem um plano ativo.</div></div>`;
+  el.innerHTML=planChooserInner();
   document.body.appendChild(el);
 }
 window.showPlanChooser=showPlanChooser;
@@ -1311,7 +1328,7 @@ const gearSvg='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.2a3.8 
 function openAdminUser(email){state.adminUserView=email;try{history.pushState({tcAdminUser:email},'','#admin-user');}catch(_){}render()}
 function closeAdminUser(fromPop){state.adminUserView=null;if(!fromPop){try{if(location.hash==='#admin-user')history.back();}catch(_){}}render()}
 window.openAdminUser=openAdminUser;window.closeAdminUser=closeAdminUser;
-window.addEventListener('popstate',()=>{ if(state.adminUserView){ state.adminUserView=null; render(); } });
+window.addEventListener('popstate',()=>{ if(state.adminUserView){ state.adminUserView=null; render(); return; } if(state.authenticated&&!isSuperAdmin()&&needsPlanChoice()){ try{history.pushState({tcPlanGate:1},'','');}catch(_){} render(); } });
 function adminUserDetailPage(email){
   const users=adminLoadUsers();const plans=adminLoadPlans();
   const u=users.find(x=>x.email===email);
@@ -1576,7 +1593,15 @@ function render(){syncDeviceName();
   const __prevMain=document.querySelector('.main');
   const __scrollMain=(__samePage&&__prevMain)?__prevMain.scrollTop:0;
   const __scrollWin=__samePage?(window.scrollY||document.documentElement.scrollTop||0):0;
-  if(window.__tcActivityTerminalTimer){clearInterval(window.__tcActivityTerminalTimer);window.__tcActivityTerminalTimer=null}if(window.__tcAutoTerminalTimer){clearInterval(window.__tcAutoTerminalTimer);window.__tcAutoTerminalTimer=null}if(window.__tcLocationTerminalTimer){clearInterval(window.__tcLocationTerminalTimer);window.__tcLocationTerminalTimer=null}document.getElementById('app').innerHTML=state.authenticated?appShell():authView();
+  if(window.__tcActivityTerminalTimer){clearInterval(window.__tcActivityTerminalTimer);window.__tcActivityTerminalTimer=null}if(window.__tcAutoTerminalTimer){clearInterval(window.__tcAutoTerminalTimer);window.__tcAutoTerminalTimer=null}if(window.__tcLocationTerminalTimer){clearInterval(window.__tcLocationTerminalTimer);window.__tcLocationTerminalTimer=null}// PORTÃO de plano: enquanto não houver plano ativo (1.ª vez ou expirado), a app
+// NÃO é montada — só o seletor de planos. Assim o "Voltar" do Android não entra.
+const __gated=state.authenticated&&!isSuperAdmin()&&needsPlanChoice();
+if(__gated){const o=document.getElementById('tc-plan-overlay');if(o)o.remove();
+  // Captura o "Voltar" do Android: coloca uma entrada no histórico para que a tecla
+  // física dispare popstate (re-renderiza o portão) em vez de revelar a app.
+  if(!window.__tcGatePushed){try{history.pushState({tcPlanGate:1},'','');}catch(_){}window.__tcGatePushed=true;}
+}else{window.__tcGatePushed=false;}
+document.getElementById('app').innerHTML=state.authenticated?(__gated?planGateView():appShell()):authView();
   // Restaura o scroll (apenas quando continua na mesma página).
   if(__scrollMain||__scrollWin){const nm=document.querySelector('.main');if(nm&&__scrollMain)nm.scrollTop=__scrollMain;if(__scrollWin)window.scrollTo(0,__scrollWin);}
   if(state.authenticated&&(state.page==='overview'||state.page==='map'))setTimeout(initMap,50);if(state.authenticated&&state.page==='devices'&&state.pairCode)setTimeout(initPairQR,50);if(state.authenticated&&state.page==='activity')setTimeout(initActivityTerminalAutoScroll,80);if(state.authenticated&&state.page==='map')setTimeout(initLocationTerminalAutoScroll,80);if(state.authenticated&&['overview','messages','calls','screen'].includes(state.page))setTimeout(initAutoTerminalScroll,80);if(state.authenticated&&state.page==='screen')setTimeout(initScreenPanelGestures,90)}

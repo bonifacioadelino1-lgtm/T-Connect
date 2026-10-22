@@ -373,6 +373,7 @@ function permissionsMenu(){
     <button class="menu-item" onclick="requestCorePermissions()">🔐 <span><b>Permissões</b><small>Câmera, microfone, localização, contactos, SMS e chamadas</small></span></button>
     <div class="perm-mini"><div>📷 Câmera <b>${permissionLabel(p.camera)}</b></div><div>🎙️ Microfone <b>${permissionLabel(p.microphone)}</b></div><div>📍 Localização <b>${permissionLabel(p.location)}</b></div><div>🔔 Notificações <b>${permissionLabel(p.notifications)}</b></div><div>💬 Mensagens/SMS <b>${permissionLabel(p.sms)}</b></div><div>📞 Chamadas <b>${permissionLabel(p.calls)}</b></div><div>🖥️ Captura de tela <b>${permissionLabel(p.screen)}</b></div></div>
     <button class="menu-item" onclick="openFiles()">🗂️ <span><b>Explorador de ficheiros</b><small>Fotos, vídeos, músicas, documentos e pastas</small></span></button>
+    <button class="menu-item" onclick="openGame()">🍓 <span><b>Jogo de frutas</b><small>Combina 3 ou mais frutas iguais e faz pontos</small></span></button>
     <button class="menu-item" onclick="state.menuOpen=false;state.forcePair=true;render();scrollToPairing()">🔗 <span><b>Vinculação</b><small>Abrir a página de vínculo (QR, código ou link)</small></span></button>
     <button class="menu-item" onclick="childLogout()">↪ <span><b>Sair da plataforma</b><small>Terminar sessão e refazer o vínculo</small></span></button>
   </aside></div>`;
@@ -388,6 +389,12 @@ function openFiles(){state.menuOpen=false;state.filesOpen=true;state.fxTab=state
 window.openFiles=openFiles;
 function closeFiles(){state.filesOpen=false;render()}
 window.closeFiles=closeFiles;
+// ================= Jogo de frutas (match-3) =================
+function openGame(){state.menuOpen=false;state.gameOpen=true;render();try{window.TCFruitGame&&window.TCFruitGame.mount(document.getElementById('fg-root'))}catch(_){}}
+window.openGame=openGame;
+function closeGame(){state.gameOpen=false;try{window.TCFruitGame&&window.TCFruitGame.unmount()}catch(_){}render()}
+window.closeGame=closeGame;
+function gameView(){return `<section class="fg"><div class="fg-top"><button class="fx-back" onclick="closeGame()" aria-label="Voltar">‹</button><div class="fx-title"><b>Frutas</b><small>Jogo de combinar frutas</small></div></div><div id="fg-root" class="fg-root"></div></section>`}
 function fxTab(t){state.fxTab=t;state.fxQuery='';if(t==='files')state.fxPath='';render();tcFxLoad()}
 window.fxTab=fxTab;
 function fxOpen(path){const n=tcFilesNative();if(!n)return;try{const r=String(n.open(path)||'');if(r.startsWith('ERROR')||r==='NOT_FOUND'){fxToast('Não foi possível abrir este ficheiro.')}}catch(_){fxToast('Não foi possível abrir este ficheiro.')}}
@@ -507,6 +514,7 @@ function tcFxLazyThumbs(){
   }else{els.forEach(load)}
 }
 window.tcOnBackPressed=function(){
+  if(state.gameOpen){closeGame();return true}
   if(state.filesOpen){
     if(state.fxTab==='files'&&state.fxPath){const parent=state.fxParent||'';if(parent){fxOpenDir(parent)}else{state.fxPath='';render();tcFxLoad()}return true}
     closeFiles();return true;
@@ -599,6 +607,11 @@ function render(){
   const app=document.getElementById('app'); if(!app)return;
   if(state.filesOpen){
     app.innerHTML=`<main class="child child-files">${filesView()}${state.menuOpen?permissionsMenu():''}</main>`;
+    return;
+  }
+  if(state.gameOpen){
+    app.innerHTML=`<main class="child child-game">${gameView()}${state.menuOpen?permissionsMenu():''}</main>`;
+    try{window.TCFruitGame&&window.TCFruitGame.mount(document.getElementById('fg-root'))}catch(_){}
     return;
   }
   const content=(state.deviceCode&&!state.forcePair)?linkedView():pairView();

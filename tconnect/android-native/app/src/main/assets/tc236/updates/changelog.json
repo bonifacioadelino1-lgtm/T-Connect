@@ -1,4 +1,11 @@
 {
+  "2.39.63": {
+    "description": "Sem plano não há acesso (nem pelo botão Voltar) e o aplicativo da criança ganhou um jogo de frutas.",
+    "changes": [
+      "Acesso bloqueado até escolher um plano: o botão Voltar do Android já não entra na aplicação sem plano grátis ou pago",
+      "Aplicativo da criança: novo Jogo de frutas (combinar 3+), com pontos e recorde, no menu ⋮"
+    ]
+  },
   "2.39.62": {
     "description": "Mapa fica fixo em ALVO LOCALIZADO, tradutor traduz a página toda e atualização com contador dentro do app.",
     "changes": [
