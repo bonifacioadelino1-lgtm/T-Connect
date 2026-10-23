@@ -1,4 +1,14 @@
 {
+  "2.39.72": {
+    "description": "Vínculo permanente, mensagens/chamadas sempre atualizadas, abas de contactos em baixo, botão ⋮ da criança e jogo com frutas-alvo.",
+    "changes": [
+      "Vínculo agora é permanente: sobrevive a reinícios e muda-se de sessão sem perder a ligação (código, QR, link ou e-mail)",
+      "Mensagens e chamadas recentes aparecem sempre — sincronização contínua e recarga automática",
+      "Contactos: as abas Mensagens/Chamadas/Lixo passaram para baixo, com ícones reais de mensagem e chamada",
+      "Aplicativo da criança: o botão de menu (⋮) abre de forma fiável",
+      "Jogo de frutas: as frutas-alvo aparecem por cima e só essas contam para ganhar; interface centralizada"
+    ]
+  },
   "2.39.71": {
     "description": "Limite de dispositivos reforçado no servidor, operadora/país de qualquer número e sons no jogo da criança.",
     "changes": [

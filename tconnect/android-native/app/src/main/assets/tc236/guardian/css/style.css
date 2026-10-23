@@ -1404,3 +1404,10 @@ body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Ari
 .terms-check input{width:20px;height:20px;margin-top:1px;flex:0 0 auto;accent-color:#0ea5e9}
 .terms-actions{display:flex;flex-direction:column;gap:8px}
 .terms-actions .btn[disabled]{opacity:.5}
+
+/* Abas de Mensagens/Chamadas/Lixo movidas para BAIXO da lista de contactos */
+.contacts-bottom-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:20px 0 4px}
+.contacts-bottom-tabs .cbt-sep{grid-column:1/-1;height:1px;background:linear-gradient(90deg,transparent,rgba(120,160,210,.25),transparent);margin:0 0 8px}
+.ctab-svg{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:11px;background:rgba(14,165,233,.14);border:1px solid rgba(14,165,233,.3)}
+.ctab-svg svg{width:20px;height:20px;fill:none;stroke:#7dd3fc;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+@media(max-width:600px){.contacts-bottom-tabs{grid-template-columns:1fr;gap:8px}}

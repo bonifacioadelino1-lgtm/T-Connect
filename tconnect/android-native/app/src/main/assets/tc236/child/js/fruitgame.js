@@ -107,6 +107,13 @@
     G.busy = true; G.popping = {};
     m.forEach(function (i) { G.popping[i] = 1; });
     G.score += m.length * 10;
+    // Conta APENAS as frutas-alvo (as que estão por cima) para o objetivo do nível.
+    m.forEach(function (i) {
+      var f = G.grid[i];
+      for (var k = 0; k < (G.targets || []).length; k++) {
+        if (G.targets[k].fruit === f && G.targets[k].got < G.targets[k].need) { G.targets[k].got++; break; }
+      }
+    });
     G.cascade = (G.cascade || 0) + 1;
     burst(); try { sfxPop(G.cascade); } catch (_) {}
     renderBoard(); renderHud();
@@ -142,9 +149,10 @@
     else { G.sel = i; renderBoard(); }
   }
 
+  function targetsDone() { return (G.targets || []).length > 0 && G.targets.every(function (t) { return t.got >= t.need; }); }
   function checkEnd() {
     if (G.phase !== "play") return;
-    if (G.score >= G.target) {
+    if (targetsDone()) {
       G.phase = "win";
       var nxt = G.level + 1; if (nxt > loadLevel(G.cfg.key)) saveLevel(G.cfg.key, nxt);
       try { sfxWin(); } catch (_) {}
@@ -159,12 +167,18 @@
   // ---------- render ----------
   function renderHud() {
     var h = G.host.querySelector("#fg-hud"); if (!h) return;
+    var tg = (G.targets || []).map(function (t) {
+      var left = Math.max(0, t.need - t.got), done = left === 0;
+      return '<span class="fg-target' + (done ? ' fg-target-done' : '') + '"><i>' + t.fruit + '</i><b>' + (done ? '✓' : left) + '</b></span>';
+    }).join("");
     h.innerHTML =
-      '<div class="fg-stat"><small>NÍVEL</small><b>' + G.level + '</b></div>' +
-      '<div class="fg-stat"><small>PONTOS</small><b>' + G.score + ' / ' + G.target + '</b></div>' +
-      '<div class="fg-stat"><small>JOGADAS</small><b>' + Math.max(0, G.movesLeft) + '</b></div>';
+      '<div class="fg-targets"><small>APANHA ESTAS FRUTAS</small><div class="fg-target-row">' + tg + '</div></div>' +
+      '<div class="fg-stat-row"><div class="fg-stat"><small>NÍVEL</small><b>' + G.level + '</b></div>' +
+      '<div class="fg-stat"><small>JOGADAS</small><b>' + Math.max(0, G.movesLeft) + '</b></div>' +
+      '<div class="fg-stat"><small>PONTOS</small><b>' + G.score + '</b></div></div>';
+    var need = 0, got = 0; (G.targets || []).forEach(function (t) { need += t.need; got += Math.min(t.got, t.need); });
     var bar = G.host.querySelector("#fg-progress i");
-    if (bar) bar.style.width = Math.min(100, Math.round(G.score / G.target * 100)) + "%";
+    if (bar) bar.style.width = (need ? Math.min(100, Math.round(got / need * 100)) : 0) + "%";
   }
 
   function renderBoard() {
@@ -194,13 +208,14 @@
   function endOverlay() {
     if (G.phase === "win") {
       return '<div class="fg-over"><div class="fg-over-card win"><div class="fg-over-emoji">🎉</div><h3>Nível ' + G.level + ' concluído!</h3>' +
-        '<p>Fizeste <b>' + G.score + '</b> pontos.</p>' +
+        '<p>Apanhaste todas as frutas e fizeste <b>' + G.score + '</b> pontos.</p>' +
         '<button class="btn primary wide" data-act="next">Próximo nível (' + (G.level + 1) + ') →</button>' +
         '<button class="btn wide" data-act="menu">Menu</button></div></div>';
     }
     if (G.phase === "lose") {
+      var falta = (G.targets || []).reduce(function (s, t) { return s + Math.max(0, t.need - t.got); }, 0);
       return '<div class="fg-over"><div class="fg-over-card lose"><div class="fg-over-emoji">😮</div><h3>Sem jogadas</h3>' +
-        '<p>Faltaram ' + Math.max(0, G.target - G.score) + ' pontos. Tenta outra vez!</p>' +
+        '<p>Faltaram ' + falta + ' fruta(s)-alvo. Tenta outra vez!</p>' +
         '<button class="btn primary wide" data-act="retry">Tentar de novo</button>' +
         '<button class="btn wide" data-act="menu">Menu</button></div></div>';
     }
@@ -273,21 +288,36 @@
     trySwap(d.i, nr * G.n + nc);
   }
 
+  // ---------- objetivos (frutas-alvo que aparecem por cima) ----------
+  // O nível só se GANHA apanhando as frutas mostradas por cima. As frutas normais
+  // não contam para o objetivo (embora deem pontos de bónus).
+  function buildTargets(cfg, level) {
+    var pal = palette();
+    var k = cfg.key === "facil" ? 1 : (cfg.key === "dificil" ? 2 : 3);
+    k = Math.min(k, pal.length);
+    var pool = pal.slice(), chosen = [];
+    for (var i = 0; i < k && pool.length; i++) { chosen.push(pool.splice((Math.random() * pool.length) | 0, 1)[0]); }
+    var base = cfg.key === "facil" ? 8 : (cfg.key === "dificil" ? 10 : 12);
+    var per = cfg.key === "insano" ? 3 : 2;
+    var need = base + (level - 1) * per;
+    return chosen.map(function (f) { return { fruit: f, need: need, got: 0 }; });
+  }
   // ---------- fluxo de jogo ----------
   function startDifficulty(key) { startLevel(key, loadLevel(key)); }
   function startLevel(key, level) {
     var cfg = DIFF[key] || DIFF.facil;
     level = Math.max(1, level | 0);
     G.cfg = cfg; G.n = cfg.n; G.level = level;
-    G.target = targetFor(cfg, level); G.movesLeft = cfg.moves;
-    G.score = 0; G.sel = null; G.busy = false; G.popping = {}; G.drag = null; G.phase = "play";
+    G.movesLeft = cfg.moves;
+    G.score = 0; G.cascade = 0; G.sel = null; G.busy = false; G.popping = {}; G.drag = null; G.phase = "play";
+    G.targets = buildTargets(cfg, level);
     G.grid = freshGrid(); ensurePlayable(G.grid);
     renderAll();
   }
 
   function mount(host) {
     if (!host) return;
-    G = { host: host, cfg: DIFF.facil, n: DIFF.facil.n, level: 1, target: 0, moves: 0, movesLeft: 0, score: 0, grid: [], sel: null, busy: false, popping: {}, drag: null, phase: "menu" };
+    G = { host: host, cfg: DIFF.facil, n: DIFF.facil.n, level: 1, movesLeft: 0, score: 0, targets: [], grid: [], sel: null, busy: false, popping: {}, drag: null, phase: "menu" };
     renderAll();
   }
   function unmount() { G = null; }
