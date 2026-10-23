@@ -189,7 +189,7 @@ body{background:#060d1e}
 .fg-top{display:flex;align-items:center;gap:10px;padding:12px 14px 4px}
 .fg-top .fx-title b{font-size:17px;color:#eaf4ff}
 .fg-top .fx-title small{display:block;color:#8aa6c6;font-size:12px}
-.fg-root{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px 12px 16px;position:relative}
+.fg-root{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px 10px 10px;position:relative;overflow:hidden;min-height:0}
 /* Menu de dificuldade */
 .fg-menu{max-width:440px;text-align:center;padding:18px 6px}
 .fg-menu-emoji{font-size:40px;letter-spacing:4px}
@@ -209,8 +209,8 @@ body{background:#060d1e}
 .fg-progress{width:100%;max-width:460px;height:8px;border-radius:999px;background:rgba(10,20,36,.8);border:1px solid rgba(90,130,190,.25);overflow:hidden;margin-bottom:10px}
 .fg-progress i{display:block;height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,#16a34a,#4ade80);transition:width .35s ease}
 /* Tabuleiro — limitado para NÃO ocupar todo o ecrã */
-.fg-board{display:grid;grid-template-columns:repeat(var(--fg-n,8),1fr);gap:4px;width:min(92vw,48vh);aspect-ratio:1/1;background:rgba(6,14,26,.6);border:1px solid rgba(90,130,190,.25);border-radius:16px;padding:5px;touch-action:none;user-select:none}
-.fg-cell{display:flex;align-items:center;justify-content:center;font-size:calc(min(92vw,48vh)/var(--fg-n,8)*0.56);line-height:1;border:0;border-radius:10px;background:linear-gradient(180deg,rgba(28,48,74,.85),rgba(16,30,50,.85));box-shadow:inset 0 1px 0 rgba(255,255,255,.06);cursor:pointer;user-select:none;touch-action:none;transition:transform .1s ease,box-shadow .12s ease}
+.fg-board{display:grid;grid-template-columns:repeat(var(--fg-n,8),1fr);gap:4px;--fg-size:min(94vw, calc(100dvh - 300px), 460px);width:var(--fg-size);aspect-ratio:1/1;background:rgba(6,14,26,.6);border:1px solid rgba(90,130,190,.25);border-radius:16px;padding:5px;touch-action:none;user-select:none}
+.fg-cell{display:flex;align-items:center;justify-content:center;font-size:calc(var(--fg-size,320px)/var(--fg-n,8)*0.58);line-height:1;border:0;border-radius:10px;background:linear-gradient(180deg,rgba(28,48,74,.85),rgba(16,30,50,.85));box-shadow:inset 0 1px 0 rgba(255,255,255,.06);cursor:pointer;user-select:none;touch-action:none;transition:transform .1s ease,box-shadow .12s ease}
 .fg-cell:active{transform:scale(.92)}
 .fg-cell.fg-sel{box-shadow:0 0 0 3px #22d3ee,0 0 14px rgba(34,211,238,.6);transform:scale(1.06);z-index:2}
 .fg-cell.fg-pop{animation:fgPop .22s ease forwards}
@@ -247,3 +247,19 @@ body{background:#060d1e}
 
 /* Versão no rodapé do menu da criança */
 .menu-ver{margin-top:14px;text-align:center;color:#6f8aa0;font-size:12px;letter-spacing:.3px;padding-top:12px;border-top:1px solid #16314a}
+
+/* Jogo: layout compacto e inteligente para caber em qualquer nível/dificuldade */
+.fg-hud{margin:0 0 4px}
+.fg-targets{margin-bottom:4px}
+.fg-targets small{margin-bottom:3px}
+.fg-target{padding:4px 9px;border-radius:11px}
+.fg-target i{font-size:19px}
+.fg-target b{font-size:14px}
+.fg-stat{padding:5px 6px}
+.fg-stat b{font-size:15px}
+.fg-progress{margin-bottom:6px;height:7px}
+.fg-board{gap:3px;padding:4px}
+.fg-foot{margin-top:8px;gap:6px}
+.fg-foot .fg-restart{padding:8px 10px;font-size:12px}
+.fg-tip{margin:6px auto 0;font-size:11.5px}
+@media(max-height:680px){.fg-tip{display:none}.fg-board{--fg-size:min(94vw, calc(100dvh - 250px), 460px)}}

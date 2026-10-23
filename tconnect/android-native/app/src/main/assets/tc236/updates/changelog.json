@@ -1,4 +1,12 @@
 {
+  "2.39.76": {
+    "description": "WhatsApp separado das mensagens, leitura com data/hora em cima e mensagem completa, e jogo que se ajusta a qualquer nível.",
+    "changes": [
+      "Removido o cartão WhatsApp de dentro das Mensagens; tudo do WhatsApp fica só na aba WhatsApp",
+      "Mensagens e WhatsApp: cada mensagem mostra a data/hora em cima e o texto completo por baixo, sem cortes",
+      "Jogo da criança: a interface ajusta-se automaticamente para caber bem em todos os níveis e dificuldades"
+    ]
+  },
   "2.39.75": {
     "description": "Aplicativo da criança mostra a versão no menu e atualiza-se automaticamente de forma fiável.",
     "changes": [
