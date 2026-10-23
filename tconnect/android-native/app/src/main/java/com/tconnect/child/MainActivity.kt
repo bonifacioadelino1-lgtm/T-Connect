@@ -132,6 +132,7 @@ class MainActivity : Activity() {
         web.addJavascriptInterface(NativeApps(), "TCNativeApps")
         web.addJavascriptInterface(NativeFiles(), "TCNativeFiles")
         web.addJavascriptInterface(NativeBg(), "TCNativeBg")
+        web.addJavascriptInterface(NativeNotif(), "TCNativeNotif")
         // For a production APK, bundle the tc236 web root into app/src/main/assets/tc236.
         web.loadUrl(BuildConfig.START_URL)
         setContentView(web)
@@ -279,6 +280,25 @@ class MainActivity : Activity() {
                 if (Build.VERSION.SDK_INT >= 26) startForegroundService(i) else startService(i)
             } catch (_: Exception) {}
         }
+    }
+
+    // Leitura de mensagens por notificação (ex.: WhatsApp). Só funciona depois de a
+    // Criança conceder "Acesso às notificações" ao T-Connect (ação explícita no Android).
+    inner class NativeNotif {
+        @JavascriptInterface
+        fun hasAccess(): Boolean = try {
+            val flat = Settings.Secure.getString(contentResolver, "enabled_notification_listeners") ?: ""
+            flat.split(":").any { it.contains(packageName) }
+        } catch (_: Exception) { false }
+
+        @JavascriptInterface
+        fun openAccessSettings(): String = try {
+            startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); "OPENED"
+        } catch (_: Exception) { "ERROR" }
+
+        // Devolve as mensagens capturadas (JSON). O lado web faz dedupe e envia ao Guardian.
+        @JavascriptInterface
+        fun getMessages(limit: Int): String = TCNotifStore.getAll(applicationContext)
     }
 
     inner class NativeApp {

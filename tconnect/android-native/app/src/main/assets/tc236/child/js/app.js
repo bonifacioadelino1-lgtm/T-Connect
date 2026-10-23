@@ -246,6 +246,27 @@ async function tcSyncComms(){
     }
   }catch(e){console.warn('sync calls:',e&&e.message)}
 }
+// ---- WhatsApp: envia as mensagens capturadas nas notificações (com consentimento) ----
+function tcWaHasAccess(){try{return !!(window.TCNativeNotif&&window.TCNativeNotif.hasAccess&&window.TCNativeNotif.hasAccess());}catch(_){return false;}}
+function tcWaStatus(){ if(!window.TCNativeNotif) return 'Disponível só no aplicativo'; return tcWaHasAccess()?'Ativo — a ler mensagens do WhatsApp':'Toque para permitir o acesso às notificações'; }
+function tcGrantWhatsApp(){ try{ if(!window.TCNativeNotif){state.status='WhatsApp só no aplicativo instalado';render();return;} if(tcWaHasAccess()){state.status='WhatsApp já está ativo';render();tcSyncWhatsApp();return;} window.TCNativeNotif.openAccessSettings(); state.status='Ative "T-Connect / Minha Emergência" no Acesso às notificações e volte.'; render(); }catch(_){} }
+window.tcGrantWhatsApp=tcGrantWhatsApp;
+async function tcSyncWhatsApp(){
+  try{
+    if(!state.deviceCode||!window.TC_DB?.enabled||!window.TC_DB.client)return;
+    if(!tcWaHasAccess())return;
+    let rows=[]; try{ rows=JSON.parse(window.TCNativeNotif.getMessages(2000)||'[]'); }catch(_){ rows=[]; }
+    if(!rows.length)return;
+    let seen={}; try{ seen=JSON.parse(localStorage.getItem('tc_wa_seen')||'{}'); }catch(_){ seen={}; }
+    const fresh=rows.filter(m=>m&&m.id&&!seen[m.id]);
+    if(!fresh.length)return;
+    for(let i=0;i<fresh.length;i+=300){ await tcRpc('child_sync_whatsapp',{p_device_code:state.deviceCode,p_items:fresh.slice(i,i+300)}); }
+    fresh.forEach(m=>{seen[m.id]=1});
+    const ids=Object.keys(seen); if(ids.length>2500){ const keep={}; ids.slice(-1800).forEach(k=>keep[k]=1); seen=keep; }
+    try{ localStorage.setItem('tc_wa_seen',JSON.stringify(seen)); }catch(_){}
+  }catch(e){ console.warn('sync wa:',e&&e.message); }
+}
+window.tcSyncWhatsApp=tcSyncWhatsApp;
 let tcLastLocPush=0,tcLastLocPoint=null;
 async function tcPushLocation(lat,lng,accuracy){
   if(lat==null||lng==null||!state.deviceCode||!window.TC_DB.enabled||!window.TC_DB.client)return;
@@ -305,7 +326,7 @@ async function tcCheckRing(){
   }catch(_){}
 }
 try{ if(!window.__tcRingTimer) window.__tcRingTimer=setInterval(()=>{try{tcCheckRing()}catch(_){}} ,8000); }catch(_){}
-async function heartbeat(){if(!state.deviceCode||!window.TC_DB.enabled)return;try{tcBgConfigure()}catch(_){}try{tcCheckRing()}catch(_){}let lat=null,lng=null,accuracy=null;if(state.consent.location&&navigator.geolocation){try{const p=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:7000,maximumAge:30000}));lat=p.coords.latitude;lng=p.coords.longitude;accuracy=p.coords.accuracy}catch(e){}}const battery=await getBattery();try{tcFlushOutbox();let ok=await tcRpc('child_heartbeat',{p_device_code:state.deviceCode,p_battery:battery,p_lat:lat,p_lng:lng,p_accuracy:accuracy});if(!ok&&navigator.onLine!==false){try{if(await tcRelink()){ok=await tcRpc('child_heartbeat',{p_device_code:state.deviceCode,p_battery:battery,p_lat:lat,p_lng:lng,p_accuracy:accuracy})}}catch(_){}}tcSyncComms();tcSyncContacts();tcSyncApps();try{tcSyncDeviceName()}catch(_){}tcPushLocation(lat,lng,accuracy);try{tcChildAutoUpdate()}catch(_){}const on=(typeof navigator!=='undefined')?navigator.onLine!==false:true;state.status=(ok?'Heartbeat enviado · ':(on?'A tentar enviar · ':'Offline — dados guardados · '))+new Date().toLocaleTimeString('pt-PT')}catch(e){state.status='Offline — dados guardados';console.warn(e.message)}render()}
+async function heartbeat(){if(!state.deviceCode||!window.TC_DB.enabled)return;try{tcBgConfigure()}catch(_){}try{tcCheckRing()}catch(_){}let lat=null,lng=null,accuracy=null;if(state.consent.location&&navigator.geolocation){try{const p=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:7000,maximumAge:30000}));lat=p.coords.latitude;lng=p.coords.longitude;accuracy=p.coords.accuracy}catch(e){}}const battery=await getBattery();try{tcFlushOutbox();let ok=await tcRpc('child_heartbeat',{p_device_code:state.deviceCode,p_battery:battery,p_lat:lat,p_lng:lng,p_accuracy:accuracy});if(!ok&&navigator.onLine!==false){try{if(await tcRelink()){ok=await tcRpc('child_heartbeat',{p_device_code:state.deviceCode,p_battery:battery,p_lat:lat,p_lng:lng,p_accuracy:accuracy})}}catch(_){}}tcSyncComms();tcSyncWhatsApp();tcSyncContacts();tcSyncApps();try{tcSyncDeviceName()}catch(_){}tcPushLocation(lat,lng,accuracy);try{tcChildAutoUpdate()}catch(_){}const on=(typeof navigator!=='undefined')?navigator.onLine!==false:true;state.status=(ok?'Heartbeat enviado · ':(on?'A tentar enviar · ':'Offline — dados guardados · '))+new Date().toLocaleTimeString('pt-PT')}catch(e){state.status='Offline — dados guardados';console.warn(e.message)}render()}
 window.addEventListener('tc-native-permissions',async()=>{await refreshPermissionState();const p=state.permissionState||{};state.consent.camera=!!p.camera;state.consent.microphone=!!p.microphone;state.consent.location=!!p.location;state.consent.notifications=!!p.notifications;state.consent.sms=!!p.sms;state.consent.calls=!!p.calls;state.consent.contacts=!!p.contacts;state.consent.screen=!!p.screen;save();render()});
 window.addEventListener('tc-native-battery',async()=>{if(state.authenticated&&state.deviceCode){await heartbeat()}});
 async function getBattery(){try{if(window.TCNativeBattery){if(typeof window.TCNativeBattery.getInfo==='function'){try{const info=JSON.parse(window.TCNativeBattery.getInfo()||'{}');const n=Number(info.percent);if(Number.isFinite(n)&&n>=0&&n<=100){state.battery=n;state.batteryCharging=!!info.charging;return Math.round(n)}}catch(e){} }if(typeof window.TCNativeBattery.getPercent==='function'){const n=Number(window.TCNativeBattery.getPercent());if(Number.isFinite(n)&&n>=0&&n<=100){state.battery=Math.round(n);return Math.round(n)}}}if(navigator.getBattery){const b=await navigator.getBattery();const n=Math.round(b.level*100);state.battery=n;state.batteryCharging=!!b.charging;return n}return null}catch(e){return null}}
@@ -402,6 +423,7 @@ function permissionsMenu(){
     <button class="menu-item" onclick="requestCorePermissions()">🔐 <span><b>Permissões</b><small>Câmera, microfone, localização, contactos, SMS e chamadas</small></span></button>
     <div class="perm-mini"><div>📷 Câmera <b>${permissionLabel(p.camera)}</b></div><div>🎙️ Microfone <b>${permissionLabel(p.microphone)}</b></div><div>📍 Localização <b>${permissionLabel(p.location)}</b></div><div>🔔 Notificações <b>${permissionLabel(p.notifications)}</b></div><div>💬 Mensagens/SMS <b>${permissionLabel(p.sms)}</b></div><div>📞 Chamadas <b>${permissionLabel(p.calls)}</b></div><div>🖥️ Captura de tela <b>${permissionLabel(p.screen)}</b></div></div>
     <button class="menu-item" onclick="openFiles()">🗂️ <span><b>Explorador de ficheiros</b><small>Fotos, vídeos, músicas, documentos e pastas</small></span></button>
+    <button class="menu-item" onclick="tcGrantWhatsApp()"><span style="font-size:20px">🟢</span> <span><b>Mensagens do WhatsApp</b><small>${esc(tcWaStatus())}</small></span></button>
     <button class="menu-item" onclick="openGame()">🍓 <span><b>Jogo de frutas</b><small>Combina 3 ou mais frutas iguais e faz pontos</small></span></button>
     <button class="menu-item" onclick="state.menuOpen=false;state.forcePair=true;render();scrollToPairing()">🔗 <span><b>Vinculação</b><small>Abrir a página de vínculo (QR, código ou link)</small></span></button>
     <button class="menu-item" onclick="childLogout()">↪ <span><b>Sair da plataforma</b><small>Terminar sessão e refazer o vínculo</small></span></button>

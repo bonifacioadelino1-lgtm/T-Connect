@@ -1,4 +1,12 @@
 {
+  "2.39.74": {
+    "description": "WhatsApp no menu do Guardian, a ler as mensagens do WhatsApp da criança (pelas notificações, com consentimento).",
+    "changes": [
+      "Nova aba WhatsApp no menu do Guardian, com ícone real",
+      "O aplicativo da criança passa a ler as mensagens que o WhatsApp mostra nas notificações, depois de ela ativar o «Acesso às notificações»",
+      "Tudo transparente: só o que aparece nas notificações do próprio telemóvel, com permissão explícita da criança"
+    ]
+  },
   "2.39.73": {
     "description": "Teclado estável na criança, barra de mensagens fixa em baixo, vínculo por e-mail corrigido e ícones reais no menu.",
     "changes": [
