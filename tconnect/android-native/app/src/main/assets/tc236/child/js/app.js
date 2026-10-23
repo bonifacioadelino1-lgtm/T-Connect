@@ -61,15 +61,23 @@ async function requestPairingByEmail(e){
     await ensureChildSession();
     if(!window.TC_DB?.client)throw new Error('Serviço de vinculação indisponível. Verifique a configuração do Supabase.');
     const device=state.deviceCode||('TC-CHILD-'+Math.random().toString(36).slice(2,8).toUpperCase());
-    const {data,error}=await window.TC_DB.client.rpc('request_pairing_by_email',{p_email:email,p_device_code:device,p_device_name:state.deviceName});
+    const tok=tcLocalToken();
+    const {data,error}=await window.TC_DB.client.rpc('request_pairing_by_email',{p_email:email,p_device_code:device,p_device_name:state.deviceName,p_token:tok});
     if(error)throw error;
-    if(data&&data.ok){
+    if(data&&data.linked){
+      // A criança está na própria conta do Guardian → vínculo imediato e permanente.
+      try{localStorage.setItem('tc_child_pair_token',(data.pair_token||tok));localStorage.setItem('tc_token_server_set','1');}catch(_){}
+      state.deviceCode=device;state.forcePair=false;save();
+      state.pairMessage='Vinculação concluída com sucesso.';state.status='Dispositivo vinculado';
+      heartbeat();if(!window.__tcBatteryHeartbeatTimer)window.__tcBatteryHeartbeatTimer=setInterval(heartbeat,30000);
+      render();
+    }else if(data&&data.ok){
       state.emailPairing=true;
       state.pairMessage='Pedido enviado a '+email+'. Aguarde a aprovação do Guardian no aplicativo dele…';
       render();
       tcChildPollPairing(device);
     }else{
-      state.pairMessage='Não encontrámos um Guardian com esse e-mail. Confirme o e-mail da conta do Guardian.';
+      state.pairMessage='Não encontrámos nenhuma conta com esse e-mail. Confirme o e-mail da conta do Guardian (a mesma com que faz login no Monitoramento).';
       render();
     }
   }catch(err){state.pairMessage=err.message||'Falha ao enviar o pedido de vínculo';render()}
@@ -645,8 +653,13 @@ try{ if(!window.__tcChildUpdTimer) window.__tcChildUpdTimer=setInterval(()=>{try
 function scrollToPairing(){setTimeout(()=>document.getElementById('pairing-area')?.scrollIntoView({behavior:'smooth',block:'start'}),60)}
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();window.__tcDeferredInstallPrompt=e});
 window.addEventListener('appinstalled',()=>{state.status='Minha Emergência instalada';render()});
+function tcEditingField(){var a=document.activeElement;return !!(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA'||a.isContentEditable===true));}
+try{document.addEventListener('focusout',function(){ setTimeout(function(){ if(window.__tcRenderPending&&!tcEditingField()){ window.__tcRenderPending=false; try{render()}catch(_){} } },80); });}catch(_){}
 function render(){
   const app=document.getElementById('app'); if(!app)return;
+  // Não reconstruir a página enquanto a pessoa escreve (ex.: e-mail/código na
+  // vinculação) — isso fechava o teclado. Fica pendente e re-renderiza ao sair do campo.
+  if(tcEditingField()){ window.__tcRenderPending=true; return; }
   if(state.filesOpen){
     app.innerHTML=`<main class="child child-files">${filesView()}${state.menuOpen?permissionsMenu():''}</main>`;
     return;

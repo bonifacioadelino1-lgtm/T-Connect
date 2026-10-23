@@ -1,4 +1,13 @@
 {
+  "2.39.73": {
+    "description": "Teclado estável na criança, barra de mensagens fixa em baixo, vínculo por e-mail corrigido e ícones reais no menu.",
+    "changes": [
+      "Criança: o teclado já não fecha ao escrever o e-mail ou o código de vínculo",
+      "Contactos: a barra Mensagens/Chamadas/Lixo fica fixa em baixo (em cartões) e visível ao rolar os contactos",
+      "Vínculo por e-mail corrigido: encontra a conta do Guardian pelo e-mail (deixa de dizer que não há guardião); se a criança usar a própria conta do Guardian, vincula na hora",
+      "Menu do Guardian com ícones reais em tudo (Monitoramento, Atividades, Estado, Localização, Contactos, Apps, Câmara, Definições…)"
+    ]
+  },
   "2.39.72": {
     "description": "Vínculo permanente, mensagens/chamadas sempre atualizadas, abas de contactos em baixo, botão ⋮ da criança e jogo com frutas-alvo.",
     "changes": [

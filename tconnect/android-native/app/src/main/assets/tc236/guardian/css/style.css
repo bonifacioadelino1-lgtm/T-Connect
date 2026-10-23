@@ -1405,9 +1405,23 @@ body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Ari
 .terms-actions{display:flex;flex-direction:column;gap:8px}
 .terms-actions .btn[disabled]{opacity:.5}
 
-/* Abas de Mensagens/Chamadas/Lixo movidas para BAIXO da lista de contactos */
-.contacts-bottom-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:20px 0 4px}
-.contacts-bottom-tabs .cbt-sep{grid-column:1/-1;height:1px;background:linear-gradient(90deg,transparent,rgba(120,160,210,.25),transparent);margin:0 0 8px}
-.ctab-svg{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:11px;background:rgba(14,165,233,.14);border:1px solid rgba(14,165,233,.3)}
-.ctab-svg svg{width:20px;height:20px;fill:none;stroke:#7dd3fc;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-@media(max-width:600px){.contacts-bottom-tabs{grid-template-columns:1fr;gap:8px}}
+/* Abas de Mensagens/Chamadas/Lixo FIXAS em baixo (sticky), em cartões (não lista) */
+.contacts-bottom-tabs{position:sticky;bottom:0;z-index:6;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px -4px 0;padding:10px 4px calc(8px + env(safe-area-inset-bottom,0px));background:linear-gradient(180deg,rgba(9,16,28,0),rgba(9,16,28,.97) 38%);backdrop-filter:blur(6px)}
+.contacts-bottom-tabs .cbt-sep{grid-column:1/-1;height:1px;background:linear-gradient(90deg,transparent,rgba(120,160,210,.3),transparent);margin:0 0 6px}
+.contacts-bottom-tabs .ctab{flex-direction:column;align-items:center;gap:6px;text-align:center;padding:11px 8px}
+.contacts-bottom-tabs .ctab-t small{display:none}
+.contacts-bottom-tabs .ctab-t b{font-size:13px}
+.contacts-bottom-tabs .ctab-ic{font-size:20px}
+.ctab-svg{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:12px;background:rgba(14,165,233,.14);border:1px solid rgba(14,165,233,.3)}
+.ctab-svg svg{width:21px;height:21px;fill:none;stroke:#7dd3fc;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.contacts-bottom-tabs .ctab-badge{position:absolute;top:6px;right:8px}
+/* espaço para a lista não ficar escondida atrás da barra fixa */
+#tc-contacts-list-host{padding-bottom:6px}
+
+/* Ícones reais (SVG) no menu lateral e no menu mobile */
+.nav-ic-svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}
+.nav i .nav-ic-svg{width:20px;height:20px}
+.nav i{display:inline-flex;align-items:center;justify-content:center}
+.nav-link{display:flex;align-items:center;gap:10px}
+.nav-link .nav-ic-svg{flex:0 0 auto}
+.mobile-menu-link .nav-ic-svg,.nav-link .nav-ic-svg{color:inherit}
