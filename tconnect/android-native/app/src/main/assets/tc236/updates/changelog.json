@@ -1,4 +1,12 @@
 {
+  "2.39.78": {
+    "description": "WhatsApp fora das estatísticas de contactos, janela de mensagens mais contida e logótipo SS TEAM no menu.",
+    "changes": [
+      "Os cartões «mais contactado» e «mais contactados da semana» deixam de contar mensagens do WhatsApp — só contactos reais",
+      "Janela de «mensagens/chamadas recebidas» mais estreita e arrumada, como as outras",
+      "Logótipo SS TEAM no fundo do menu, como marca de água"
+    ]
+  },
   "2.39.77": {
     "description": "WhatsApp totalmente separado: fora das mensagens recebidas e dos contactos; rolagem manual no WhatsApp.",
     "changes": [
