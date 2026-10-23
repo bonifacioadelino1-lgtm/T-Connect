@@ -1,4 +1,13 @@
 {
+  "2.39.77": {
+    "description": "WhatsApp totalmente separado: fora das mensagens recebidas e dos contactos; rolagem manual no WhatsApp.",
+    "changes": [
+      "Mensagens recebidas e enviadas deixam de mostrar WhatsApp — só SMS",
+      "Em «mais contactos» já não aparecem contactos vindos do WhatsApp",
+      "Na aba WhatsApp a rolagem é manual (não desliza sozinha) e cada conversa/grupo fica agrupada num único sítio",
+      "Interface das mensagens ajustada ao tamanho das outras"
+    ]
+  },
   "2.39.76": {
     "description": "WhatsApp separado das mensagens, leitura com data/hora em cima e mensagem completa, e jogo que se ajusta a qualquer nível.",
     "changes": [
