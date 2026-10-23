@@ -1,4 +1,12 @@
 {
+  "2.39.79": {
+    "description": "Tamanho real da atualização no app e no site, e janela de mensagens recebidas que cabe sempre sem cortar.",
+    "changes": [
+      "A atualização mostra o tamanho real em MB da nova versão (e reflete se a nova for maior)",
+      "O site de download mostra o tamanho real de cada APK, atualizado a cada versão",
+      "Janela de «mensagens/chamadas recebidas» ajustada para caber sempre no ecrã, sem cortar o conteúdo"
+    ]
+  },
   "2.39.78": {
     "description": "WhatsApp fora das estatísticas de contactos, janela de mensagens mais contida e logótipo SS TEAM no menu.",
     "changes": [

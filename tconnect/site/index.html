@@ -123,7 +123,7 @@
       <a class="dl" href="downloads/TConnect-Guardian.apk">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M5 21h14"/></svg> Baixar APK
       </a>
-      <div class="meta">Android 8.0+ · ~5.6 MB</div>
+      <div class="meta" id="meta-guardian">Android 8.0+</div>
     </article>
 
     <article class="card"><span class="tag">Android</span>
@@ -140,7 +140,7 @@
       <a class="dl" href="downloads/TConnect-MinhaEmergencia.apk">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M5 21h14"/></svg> Baixar APK
       </a>
-      <div class="meta">Android 8.0+ · ~5.6 MB</div>
+      <div class="meta" id="meta-child">Android 8.0+</div>
     </article>
 
   </div>
@@ -214,7 +214,7 @@
     try{
       fetch('updates/t-connect-update.json',{cache:'no-store'})
         .then(function(r){return r.ok?r.json():null;})
-        .then(function(j){if(j&&j.version)document.getElementById('ver').textContent='v'+j.version;})
+        .then(function(j){if(!j)return;var mb=function(b){b=Number(b||0);return b>0?(b/1048576).toFixed(1)+' MB':'';};if(j.version)document.getElementById('ver').textContent='v'+j.version;var vg=j.version?('v'+j.version+' · '):'';var g=document.getElementById('meta-guardian');var c=document.getElementById('meta-child');var sg=mb(j.apk_guardian_bytes);var sc=mb(j.apk_child_bytes);if(g)g.textContent='Android 8.0+ · '+vg+(sg||'');if(c)c.textContent='Android 8.0+ · '+vg+(sc||'');})
         .catch(function(){});
     }catch(e){}
   })();
