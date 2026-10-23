@@ -226,7 +226,32 @@
   // Preenche `host` com tiles de satélite Esri, centrando (lat,lng) no meio da caixa viewW×viewH.
   function tcFillTiles(host, lat, lng, z, viewW, viewH){ try{ host.innerHTML=''; z=Math.max(1,Math.min(17,Math.round(z))); const n=Math.pow(2,z); const fx=lon2tileF(lng,z), fy=lat2tileF(lat,z); const px=fx*256, py=fy*256; const originX=viewW/2-px, originY=viewH/2-py; const minTX=Math.floor((px-viewW/2)/256), maxTX=Math.floor((px+viewW/2)/256); const minTY=Math.floor((py-viewH/2)/256), maxTY=Math.floor((py+viewH/2)/256); for(let tx=minTX; tx<=maxTX; tx++){ for(let ty=minTY; ty<=maxTY; ty++){ const wx=((tx%n)+n)%n; if(ty<0||ty>=n) continue; const img=document.createElement('img'); img.className='pf-tile'; img.alt=''; img.decoding='async'; img.src='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/'+z+'/'+ty+'/'+wx; img.style.left=Math.round(originX+tx*256)+'px'; img.style.top=Math.round(originY+ty*256)+'px'; img.onerror=function(){ this.style.visibility='hidden'; }; host.appendChild(img); } } }catch(_){} }
   // Lightbox: imagem grande e nítida da área ao clicar numa tela
-  function openPhotoLightbox(lat,lng,z,title){ try{ const host=mapContainer||document.body; let ov=host.querySelector('.tc-photo-modal'); if(ov) ov.parentNode.removeChild(ov); ov=document.createElement('div'); ov.className='tc-photo-modal'; const vw=Math.min(Math.round((mapContainer?mapContainer.clientWidth:360)*0.92),520); const vh=Math.round((mapContainer?mapContainer.clientHeight:360)*0.7); ov.innerHTML='<div class="pm-box" style="width:'+vw+'px"><div class="pm-head"><b>'+title+'</b><button class="pm-close" aria-label="Fechar">×</button></div><div class="pm-view" style="height:'+vh+'px"><div class="pm-tiles"></div><span class="pm-scan"></span><span class="pm-mark"></span><span class="pm-c tl"></span><span class="pm-c tr"></span><span class="pm-c bl"></span><span class="pm-c br"></span></div><div class="pm-foot"><span>'+Number(lat).toFixed(6)+'°, '+Number(lng).toFixed(6)+'°</span><span>SATÉLITE · Z'+z+'</span></div></div>'; host.appendChild(ov); tcFillTiles(ov.querySelector('.pm-tiles'), lat, lng, z, vw, vh); try{ tcCinematicOpen(); }catch(_){} const close=function(){ ov.classList.remove('on'); setTimeout(function(){ if(ov&&ov.parentNode) ov.parentNode.removeChild(ov); },260); }; ov.querySelector('.pm-close').addEventListener('click',close); ov.addEventListener('click',function(e){ if(e.target===ov) close(); }); requestAnimationFrame(function(){ ov.classList.add('on'); }); }catch(_){} }
+  function openPhotoLightbox(lat,lng,z,title){ try{ const host=mapContainer||document.body; let ov=host.querySelector('.tc-photo-modal'); if(ov) ov.parentNode.removeChild(ov); ov=document.createElement('div'); ov.className='tc-photo-modal';
+    const vw=Math.min(Math.round((mapContainer?mapContainer.clientWidth:360)*0.92),520); const vh=Math.round((mapContainer?mapContainer.clientHeight:360)*0.7);
+    const MINZ=12, MAXZ=20; let curZ=Math.max(MINZ,Math.min(MAXZ,Math.round(z)));
+    ov.innerHTML='<div class="pm-box" style="width:'+vw+'px"><div class="pm-head"><b>'+(title||'SATÉLITE')+'</b><button class="pm-close" aria-label="Fechar">×</button></div><div class="pm-view" style="height:'+vh+'px"><div class="pm-pan"><div class="pm-tiles"></div></div><span class="pm-scan"></span><span class="pm-mark"></span><span class="pm-c tl"></span><span class="pm-c tr"></span><span class="pm-c bl"></span><span class="pm-c br"></span><div class="pm-zoom"><button class="pm-zin" aria-label="Aproximar">+</button><button class="pm-zout" aria-label="Afastar">−</button></div><div class="pm-zlabel">Z'+curZ+'</div></div><div class="pm-foot"><span>'+Number(lat).toFixed(6)+'°, '+Number(lng).toFixed(6)+'°</span><span class="pm-zinfo">SATÉLITE · Z'+curZ+'</span></div></div>';
+    host.appendChild(ov);
+    const view=ov.querySelector('.pm-view'), pan=ov.querySelector('.pm-pan'), tilesHost=ov.querySelector('.pm-tiles'), zlabel=ov.querySelector('.pm-zlabel'), zinfo=ov.querySelector('.pm-zinfo');
+    let scale=1, panX=0, panY=0;
+    function applyT(){ pan.style.transform='translate('+panX+'px,'+panY+'px) scale('+scale+')'; }
+    function fill(){ tcFillTiles(tilesHost, lat, lng, curZ, vw, vh); if(zlabel)zlabel.textContent='Z'+curZ; if(zinfo)zinfo.textContent='SATÉLITE · Z'+curZ; }
+    // Cada aproximação busca tiles de satélite num nível de zoom maior → imagem mais nítida (limpa) até Z'+MAXZ.
+    function setZoom(nz){ nz=Math.max(MINZ,Math.min(MAXZ,nz)); scale=1; panX=0; panY=0; if(nz===curZ){ applyT(); return; } curZ=nz; applyT(); fill(); }
+    fill();
+    ov.querySelector('.pm-zin').addEventListener('click',function(e){ e.stopPropagation(); setZoom(curZ+1); });
+    ov.querySelector('.pm-zout').addEventListener('click',function(e){ e.stopPropagation(); setZoom(curZ-1); });
+    view.addEventListener('wheel',function(e){ e.preventDefault(); setZoom(curZ+(e.deltaY<0?1:-1)); },{passive:false});
+    view.addEventListener('dblclick',function(e){ e.preventDefault(); setZoom(curZ+1); });
+    // Pinça (2 dedos) para ampliar + arrastar para deslocar; ao soltar converte a ampliação em nível de zoom real (nítido).
+    const pts=new Map(); let startDist=0, startScale=1, startPanX=0, startPanY=0, dragSX=0, dragSY=0, dragging=false;
+    view.addEventListener('pointerdown',function(e){ pts.set(e.pointerId,{x:e.clientX,y:e.clientY}); try{view.setPointerCapture(e.pointerId)}catch(_){} if(pts.size===2){ const a=[...pts.values()]; startDist=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y); startScale=scale; dragging=false; } else if(pts.size===1){ dragging=true; dragSX=e.clientX; dragSY=e.clientY; startPanX=panX; startPanY=panY; } });
+    view.addEventListener('pointermove',function(e){ if(!pts.has(e.pointerId))return; pts.set(e.pointerId,{x:e.clientX,y:e.clientY}); if(pts.size===2){ const a=[...pts.values()]; const d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y); if(startDist>0){ scale=Math.max(1,Math.min(3.4,startScale*(d/startDist))); applyT(); } } else if(dragging&&scale>1.02){ panX=startPanX+(e.clientX-dragSX); panY=startPanY+(e.clientY-dragSY); applyT(); } });
+    const up=function(e){ pts.delete(e.pointerId); if(pts.size<2){ if(scale>1.18){ const add=Math.max(1,Math.round(Math.log2(scale))); setZoom(curZ+add); } else if(pts.size===0){ scale=1; applyT(); } startDist=0; if(pts.size===0) dragging=false; } };
+    view.addEventListener('pointerup',up); view.addEventListener('pointercancel',up);
+    try{ tcCinematicOpen(); }catch(_){}
+    const close=function(){ ov.classList.remove('on'); setTimeout(function(){ if(ov&&ov.parentNode) ov.parentNode.removeChild(ov); },260); };
+    ov.querySelector('.pm-close').addEventListener('click',close); ov.addEventListener('click',function(e){ if(e.target===ov) close(); });
+    requestAnimationFrame(function(){ ov.classList.add('on'); }); }catch(_){} }
   function openPhotoScreens(){ if(!mapContainer||!lastKnownLocation) return; const scifi=mapContainer.querySelector('.tc-scifi-hud'); if(!scifi) return;
     let deck=scifi.querySelector('.tc-photo-deck'); if(deck) deck.parentNode.removeChild(deck);
     const lat=lastKnownLocation.lat, lng=lastKnownLocation.lng;
@@ -238,7 +263,9 @@
       fig.innerHTML='<span class="holo-beam"></span><span class="holo-base"></span><div class="pf-inner"><div class="pf-tiles"></div><div class="pf-scan"></div>'+(s.mark?'<span class="pf-mark"></span>':'')+'<span class="pf-corner tl"></span><span class="pf-corner tr"></span><span class="pf-corner bl"></span><span class="pf-corner br"></span></div>';
       deck.appendChild(fig);
       tcFillTiles(fig.querySelector('.pf-tiles'), lat, lng, s.z, 104, 72);
-      const open=function(){ openPhotoLightbox(lat, lng, s.big, ''); };
+      const open=function(){ // Tocar na tela de vidro: abre o LOCAL no mapa (satélite, bem aproximado) e a tela ampliável.
+        try{ if(map&&lastKnownLocation){ try{ if(satelliteLayer&&roadLayer&&map.hasLayer&&!map.hasLayer(satelliteLayer)){ map.removeLayer(roadLayer); satelliteLayer.addTo(map); } }catch(_){} const mz=(map.getMaxZoom?map.getMaxZoom():20); map.setView([lastKnownLocation.lat,lastKnownLocation.lng], Math.min(mz,19), {animate:true}); try{ map.invalidateSize(false); }catch(_){} } }catch(_){}
+        openPhotoLightbox(lat, lng, s.big, 'ÁREA DO ALVO'); };
       fig.addEventListener('click', open); fig.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open(); } });
     });
     scifi.appendChild(deck);

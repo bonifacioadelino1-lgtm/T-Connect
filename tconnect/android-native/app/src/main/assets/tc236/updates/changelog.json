@@ -1,4 +1,14 @@
 {
+  "2.39.81": {
+    "description": "Estatística de chamadas nos contactos, notificações que abrem o local, tempo real a cada 5 segundos, janela de mensagens ajustada e telas de vidro do mapa com zoom.",
+    "changes": [
+      "Contactos: gráfico de Chamadas mais efetuadas nos últimos 7 dias (deixa de mostrar só SMS)",
+      "Tocar numa notificação do sino abre o local correspondente (ex.: emergência → mapa, atualização → definições)",
+      "Tempo real reforçado: tudo o que sai da Shield chega ao Guardian a cada 5 segundos",
+      "Mensagens recebidas: janela ajustada, compacta, sem cobrir nem cortar o ecrã",
+      "Mapa: tocar nas telas de vidro abre o local no mapa; captura ampliável com zoom que vai limpando a imagem"
+    ]
+  },
   "2.39.80": {
     "description": "Mensagens, chamadas e WhatsApp sempre recentes: atualização a cada 10 segundos nos dois lados.",
     "changes": [
