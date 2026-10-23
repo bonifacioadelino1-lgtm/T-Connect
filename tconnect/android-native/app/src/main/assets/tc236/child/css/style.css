@@ -244,3 +244,6 @@ body{background:#060d1e}
 .fg-target-done{border-color:rgba(74,222,128,.7);background:linear-gradient(180deg,rgba(22,74,52,.9),rgba(12,40,28,.9))}
 .fg-target-done b{color:#4ade80}
 .fg-stat-row{display:flex;gap:8px}
+
+/* Versão no rodapé do menu da criança */
+.menu-ver{margin-top:14px;text-align:center;color:#6f8aa0;font-size:12px;letter-spacing:.3px;padding-top:12px;border-top:1px solid #16314a}

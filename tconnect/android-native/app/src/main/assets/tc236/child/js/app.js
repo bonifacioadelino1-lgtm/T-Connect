@@ -39,7 +39,7 @@ async function tcSyncDeviceName(){
     window.__tcNameSynced=1;
   }catch(_){}
 }
-async function boot(){try{if(window.TC_DB_READY) await window.TC_DB_READY;}catch(e){console.warn('Database initialization:',e)}window.TC_DB=window.TC_DB||{enabled:false,user:null,client:null};tcEnsureDeviceName();try{await ensureChildSession();}catch(e){state.pairMessage=e.message||'Sessão Child indisponível';console.warn('Anonymous Child session:',e.message||e)}if(window.TC_DB.user){state.authenticated=true;state.email=window.TC_DB.user.email||''}if(inviteCode){localStorage.setItem('tc_pending_invite',JSON.stringify({code:inviteCode,device:inviteDevice||state.deviceCode||''}));}render();setTimeout(async()=>{try{await refreshPermissionState();if(state.firstRun)requestCorePermissions();else render();}catch(e){console.warn('Permission bootstrap:',e)}},350);if(state.authenticated&&state.deviceCode){if(!window.__tcChildCaptureReady){window.__tcChildCaptureReady=1;setupChildCaptureRealtime()}try{await tcRelink()}catch(_){}await heartbeat();try{await tcEnsureToken()}catch(_){}if(!window.__tcBatteryHeartbeatTimer)window.__tcBatteryHeartbeatTimer=setInterval(heartbeat,30000)}if(state.authenticated&&!state.deviceCode){const pending=localStorage.getItem('tc_pending_invite');if(pending){try{const p=JSON.parse(pending);setTimeout(()=>claimInvite(`https://t-connect.local/?pair=${encodeURIComponent(p.code)}&device=${encodeURIComponent(p.device||'')}`),250)}catch(e){console.warn(e)}}}}
+async function boot(){try{if(window.TC_DB_READY) await window.TC_DB_READY;}catch(e){console.warn('Database initialization:',e)}window.TC_DB=window.TC_DB||{enabled:false,user:null,client:null};tcEnsureDeviceName();try{await ensureChildSession();}catch(e){state.pairMessage=e.message||'Sessão Child indisponível';console.warn('Anonymous Child session:',e.message||e)}if(window.TC_DB.user){state.authenticated=true;state.email=window.TC_DB.user.email||''}if(inviteCode){localStorage.setItem('tc_pending_invite',JSON.stringify({code:inviteCode,device:inviteDevice||state.deviceCode||''}));}render();setTimeout(async()=>{try{await refreshPermissionState();if(state.firstRun)requestCorePermissions();else render();}catch(e){console.warn('Permission bootstrap:',e)}},350);if(state.authenticated&&state.deviceCode){if(!window.__tcChildCaptureReady){window.__tcChildCaptureReady=1;setupChildCaptureRealtime()}try{await tcRelink()}catch(_){}await heartbeat();try{await tcEnsureToken()}catch(_){}if(!window.__tcBatteryHeartbeatTimer)window.__tcBatteryHeartbeatTimer=setInterval(heartbeat,30000);setTimeout(()=>{try{tcChildAutoUpdate(true)}catch(_){}},5000)}if(state.authenticated&&!state.deviceCode){const pending=localStorage.getItem('tc_pending_invite');if(pending){try{const p=JSON.parse(pending);setTimeout(()=>claimInvite(`https://t-connect.local/?pair=${encodeURIComponent(p.code)}&device=${encodeURIComponent(p.device||'')}`),250)}catch(e){console.warn(e)}}}}
 async function auth(e){e.preventDefault();const fd=new FormData(e.target);state.loading=true;state.pairMessage='';render();try{if(state.mode==='signup'){const {error}=await tcSignUp(fd.get('email'),fd.get('password'),fd.get('name')||'Child');if(error)throw error;state.mode='login';state.pairMessage='Conta criada. Entre para concluir a vinculação.'}else{const {error}=await tcSignIn(fd.get('email'),fd.get('password'));if(error)throw error;location.reload()}}catch(err){state.pairMessage=err.message||'Falha de autenticação'}finally{state.loading=false;render()}}
 function parseInvite(value){const raw=String(value||'').trim();if(!raw)throw new Error('Informe o código ou link de convite.');const compact=raw.replace(/[\s-]+/g,'');if(/^\d{6}$/.test(compact))return {code:compact,device:''};if(/^[A-Z0-9]{6,32}$/i.test(compact))return {code:compact.toUpperCase(),device:''};try{const u=new URL(raw);const code=String(u.searchParams.get('pair')||'').trim().toUpperCase();const device=String(u.searchParams.get('device')||'').trim();if(!code)throw new Error('Este QR/link não contém um convite T-Connect válido.');return {code,device}}catch(e){throw new Error(e.message||'Convite inválido.')}}
 async function claimInvite(value){try{if(!window.TC_DB.enabled)throw new Error('Serviço de vinculação indisponível. Verifique a configuração do Supabase.');await ensureChildSession();if(!window.TC_DB.user)throw new Error('Não foi possível iniciar a sessão segura do dispositivo.');const parsed=parseInvite(value);const device=parsed.device||state.deviceCode||('TC-CHILD-'+Math.random().toString(36).slice(2,8).toUpperCase());const tok=tcLocalToken();const {data,error}=await window.TC_DB.client.rpc('claim_pairing_code',{p_code:parsed.code,p_device_code:device,p_device_name:state.deviceName,p_token:tok});if(error)throw error;try{const srv=(data&&data.pair_token)||tok;localStorage.setItem('tc_child_pair_token',srv);localStorage.setItem('tc_token_server_set','1');}catch(_){}state.deviceCode=device;state.forcePair=false;localStorage.removeItem('tc_pending_invite');save();heartbeat();if(!window.__tcBatteryHeartbeatTimer)window.__tcBatteryHeartbeatTimer=setInterval(heartbeat,30000);try{if(!window.__tcChildCaptureReady){window.__tcChildCaptureReady=1;setupChildCaptureRealtime()}}catch(e){}state.status='Dispositivo vinculado';state.pairMessage='Vinculação concluída com sucesso.';await childLog('PAIRING','Vinculação concluída através de código manual/convite','AUTORIZADO');render()}catch(err){const m=String(err&&err.message||'');state.pairMessage=/LIMITE_DISPOSITIVOS/i.test(m)?'O plano do Guardian já atingiu o número máximo de dispositivos. Peça para libertar um lugar ou atualizar o plano.':(m||'Falha no vínculo');render()}}
@@ -426,7 +426,10 @@ function permissionsMenu(){
     <button class="menu-item" onclick="tcGrantWhatsApp()"><span style="font-size:20px">🟢</span> <span><b>Mensagens do WhatsApp</b><small>${esc(tcWaStatus())}</small></span></button>
     <button class="menu-item" onclick="openGame()">🍓 <span><b>Jogo de frutas</b><small>Combina 3 ou mais frutas iguais e faz pontos</small></span></button>
     <button class="menu-item" onclick="state.menuOpen=false;state.forcePair=true;render();scrollToPairing()">🔗 <span><b>Vinculação</b><small>Abrir a página de vínculo (QR, código ou link)</small></span></button>
+    <button class="menu-item" onclick="tcChildAllowInstall()"><span style="font-size:20px">⬆️</span> <span><b>Atualizações automáticas</b><small>${tcCanInstall()?'Ativas — instala sozinho quando houver nova versão':'Toque para permitir instalar atualizações'}</small></span></button>
+    <button class="menu-item" onclick="tcChildAutoUpdate(true)"><span style="font-size:20px">🔄</span> <span><b>Verificar atualização agora</b><small>Procurar e instalar a versão mais recente</small></span></button>
     <button class="menu-item" onclick="childLogout()">↪ <span><b>Sair da plataforma</b><small>Terminar sessão e refazer o vínculo</small></span></button>
+    <div class="menu-ver">Minha Emergência · v${esc(tcChildVersion()||'—')}</div>
   </aside></div>`;
 }
 // ================= Explorador de ficheiros =================
@@ -620,7 +623,7 @@ let tcChildUpdBusy=false;
 async function tcChildAutoUpdate(force){
   if(tcChildUpdBusy||!navigator.onLine)return;
   const last=Number(localStorage.getItem('tc_child_upd_check')||0);
-  if(!force && Date.now()-last < 3*3600*1000) return; // verifica no máximo a cada 3h
+  if(!force && Date.now()-last < 15*60*1000) return; // verifica no máximo a cada 15 min
   localStorage.setItem('tc_child_upd_check',String(Date.now()));
   tcChildUpdBusy=true;
   try{
@@ -631,11 +634,15 @@ async function tcChildAutoUpdate(force){
     if(tcCmpVer(m.version,current)<=0)return;   // já está na versão mais recente
     const apk=m.apk_child||m.apk_url||m.download_url;
     if(!apk||!window.TCNativeUpdater||!window.TCNativeUpdater.installFromUrl)return;
-    // Não reinicia o download da MESMA versão em menos de 6h (evita insistência).
+    // Não reinicia o download da MESMA versão em menos de 45 min (evita insistência,
+    // mas tenta de novo com frequência se a instalação ainda não foi concluída).
     const startedKey='tc_child_upd_started_'+m.version;
     const startedAt=Number(localStorage.getItem(startedKey)||0);
-    if(!force && Date.now()-startedAt < 6*3600*1000) return;
+    if(!force && Date.now()-startedAt < 45*60*1000) return;
     localStorage.setItem(startedKey,String(Date.now()));
+    // Garante a permissão "Instalar apps desconhecidas" (uma vez) para a instalação
+    // poder ser automática. Se faltar, abre as definições para a criança ativar.
+    try{ if(window.TCNativeUpdater.canInstall && !window.TCNativeUpdater.canInstall()){ window.TCNativeUpdater.openInstallPermission&&window.TCNativeUpdater.openInstallPermission(); } }catch(_){}
     // Cache-busting pela versão: garante que descarrega o APK da versão NOVA.
     let url=new URL(apk,location.href).href;
     url += (url.includes('?')?'&':'?')+'v='+encodeURIComponent(m.version)+'&t='+Date.now();
@@ -668,6 +675,11 @@ function tcChildPollInstall(ver){
   setTimeout(()=>{try{if(window.__tcChildInstPoll){clearInterval(window.__tcChildInstPoll);window.__tcChildInstPoll=null;}}catch(_){}},10*60*1000);
 }
 window.tcChildPollInstall=tcChildPollInstall;
+// Versão instalada (para mostrar no menu).
+function tcChildVersion(){try{return String((window.TCNativeUpdater&&window.TCNativeUpdater.getCurrentVersion&&window.TCNativeUpdater.getCurrentVersion())||(window.TCNativeApp&&window.TCNativeApp.getVersion&&window.TCNativeApp.getVersion())||'').replace(/^v/i,'');}catch(_){return '';}}
+function tcCanInstall(){try{return !!(window.TCNativeUpdater&&window.TCNativeUpdater.canInstall&&window.TCNativeUpdater.canInstall());}catch(_){return false;}}
+function tcChildAllowInstall(){try{ if(window.TCNativeUpdater&&window.TCNativeUpdater.openInstallPermission){ const r=String(window.TCNativeUpdater.openInstallPermission()||''); state.status=(r==='ALREADY')?'Atualizações automáticas já estão ativas.':'Ative "Instalar apps desconhecidas" para o T-Connect e volte.'; render(); setTimeout(()=>tcChildAutoUpdate(true),1200);} }catch(_){}}
+window.tcChildVersion=tcChildVersion;window.tcCanInstall=tcCanInstall;window.tcChildAllowInstall=tcChildAllowInstall;
 // Verifica ao voltar para primeiro plano e de tempos a tempos.
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') tcChildAutoUpdate(); });
 window.addEventListener('online',()=>tcChildAutoUpdate());

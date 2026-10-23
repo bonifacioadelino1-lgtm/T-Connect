@@ -1,4 +1,12 @@
 {
+  "2.39.75": {
+    "description": "Aplicativo da criança mostra a versão no menu e atualiza-se automaticamente de forma fiável.",
+    "changes": [
+      "Menu da criança mostra o número da versão instalada",
+      "Atualização automática mais fiável: verifica ao abrir e a cada 15 min, descarrega e abre o instalador sozinho quando há nova versão",
+      "Menu da criança tem «Atualizações automáticas» (ativar a permissão de instalar, uma só vez) e «Verificar atualização agora»"
+    ]
+  },
   "2.39.74": {
     "description": "WhatsApp no menu do Guardian, a ler as mensagens do WhatsApp da criança (pelas notificações, com consentimento).",
     "changes": [
