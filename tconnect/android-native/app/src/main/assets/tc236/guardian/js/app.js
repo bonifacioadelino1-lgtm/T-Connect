@@ -1,4 +1,4 @@
-window.TC_APP_VERSION='2.39.79';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
+window.TC_APP_VERSION='2.39.80';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
 const tcTimeout=(p,ms=10000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado')),ms))]);
 const POS=[-25.9692,32.5732];
 const state={page:'overview',mapType:'roadmap',menuOpen:false,pairingBusy:false,pairingMessage:'',update:{auto:localStorage.getItem('tc_auto_updates')!=='0',checking:false,latest:null,error:''},events:JSON.parse(localStorage.getItem('tc_events')||'[]'),notifications:JSON.parse(localStorage.getItem('tc_notifications')||'[]'),search:'',authenticated:false,authMode:'login',loading:false,recoverySent:false,profile:null,devices:[],messages:[],calls:[],contactsList:[],appsList:[],contactStats:[],trailOn:false,commsSub:false,pairCode:'',pairLink:'',realtime:false,authError:'',lastLocation:null,mapTerminalEvents:JSON.parse(localStorage.getItem('tc_map_terminal_events')||'[]')};
@@ -739,6 +739,11 @@ async function tcCheckAndUpdate(){if(state.update.checking)return;await checkFor
 function openRelease(release){const u=release?.apk_url||release?.download_url;if(u)openExternal(u)}
 // Notas de versão (novidades) mostradas nas Definições → Atualizações.
 const TC_CHANGELOG={
+  '2.39.80':{changes:[
+    'Guardian atualiza Mensagens, Chamadas e WhatsApp a cada 10 segundos',
+    'Shield envia mensagens/chamadas/WhatsApp a cada 10 segundos — tudo recente, de primeira mao',
+    'Historico antigo continua guardado; o recente aparece sempre no topo'
+  ]},
   '2.39.79':{changes:[
     'Atualizacao mostra o tamanho real em MB da nova versao (reflete se for maior)',
     'Site de download mostra o tamanho real de cada APK, por versao',
@@ -1909,5 +1914,7 @@ boot().then(()=>{
   setInterval(()=>{ if(state.authenticated&&!isSuperAdmin()&&isPlanExpired()){enforcePlan();} },60000);
   // Rede de segurança: recarrega mensagens/chamadas/contactos de tempos a tempos,
   // para as recentes aparecerem mesmo que o tempo-real falhe um evento.
-  setInterval(()=>{ if(!state.authenticated||document.visibilityState==='hidden')return; try{ if(state.page==='messages')loadMessages(); else if(state.page==='calls')loadCalls(); else if(state.page==='contacts')loadContacts(); else if(state.page==='whatsapp')loadMessages(); }catch(_){} },25000);
+  // Atualização a cada 10s nas páginas de Mensagens, Chamadas, WhatsApp e Contactos:
+  // apanha sempre o que a Shield acabou de enviar (além do tempo-real), mostrando o recente.
+  setInterval(()=>{ if(!state.authenticated||document.visibilityState==='hidden')return; try{ if(state.page==='messages')loadMessages(); else if(state.page==='calls')loadCalls(); else if(state.page==='contacts')loadContacts(); else if(state.page==='whatsapp')loadMessages(); }catch(_){} },10000);
 });

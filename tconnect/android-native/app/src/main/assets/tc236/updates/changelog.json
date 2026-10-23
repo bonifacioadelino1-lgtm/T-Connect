@@ -1,4 +1,12 @@
 {
+  "2.39.80": {
+    "description": "Mensagens, chamadas e WhatsApp sempre recentes: atualização a cada 10 segundos nos dois lados.",
+    "changes": [
+      "O Guardian atualiza Mensagens, Chamadas e WhatsApp a cada 10 segundos",
+      "A Shield envia mensagens/chamadas/WhatsApp a cada 10 segundos — tudo chega recente, de primeira mão",
+      "O histórico antigo continua guardado; o mais recente aparece sempre no topo"
+    ]
+  },
   "2.39.79": {
     "description": "Tamanho real da atualização no app e no site, e janela de mensagens recebidas que cabe sempre sem cortar.",
     "changes": [

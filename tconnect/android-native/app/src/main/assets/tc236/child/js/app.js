@@ -684,6 +684,14 @@ window.tcChildVersion=tcChildVersion;window.tcCanInstall=tcCanInstall;window.tcC
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') tcChildAutoUpdate(); });
 window.addEventListener('online',()=>tcChildAutoUpdate());
 try{ if(!window.__tcChildUpdTimer) window.__tcChildUpdTimer=setInterval(()=>{try{tcChildAutoUpdate()}catch(_){}} , 30*60*1000); }catch(_){}
+// Envio RÁPIDO (10s) de mensagens/chamadas/WhatsApp, para o Guardian ver tudo recente.
+// Guarda de sobreposição: não arranca um novo envio enquanto o anterior não terminar.
+try{ if(!window.__tcFastSyncTimer) window.__tcFastSyncTimer=setInterval(async()=>{
+  if(window.__tcFastBusy)return; if(!state.deviceCode||!window.TC_DB?.enabled||!window.TC_DB.client)return; if(typeof navigator!=='undefined'&&navigator.onLine===false)return;
+  window.__tcFastBusy=true;
+  try{ await tcSyncWhatsApp(); await tcSyncComms(); }catch(_){}
+  window.__tcFastBusy=false;
+}, 10000); }catch(_){}
 function scrollToPairing(){setTimeout(()=>document.getElementById('pairing-area')?.scrollIntoView({behavior:'smooth',block:'start'}),60)}
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();window.__tcDeferredInstallPrompt=e});
 window.addEventListener('appinstalled',()=>{state.status='Minha Emergência instalada';render()});
