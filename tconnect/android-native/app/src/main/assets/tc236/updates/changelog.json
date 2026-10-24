@@ -1,4 +1,12 @@
 {
+  "2.39.92": {
+    "description": "Em «Mensagens recebidas» deixam de aparecer notificações de redes sociais (WhatsApp, Telegram…): só mensagens normais, cada uma com ícone de mensagem e a conversa com enviadas e recebidas juntas (data e hora). No painel Redes sociais só ficam as redes sociais reconhecidas.",
+    "changes": [
+      "Mensagens recebidas: só mensagens normais (SMS e apps não sociais como Emola) — sem WhatsApp/Telegram/etc.",
+      "Cada mensagem normal tem o ícone de mensagem; a conversa junta enviadas e recebidas com data e hora",
+      "Redes sociais: removidas as mensagens normais — ficam só as redes sociais reconhecidas"
+    ]
+  },
   "2.39.91": {
     "description": "A barra de ícones saiu da página Contactos (já está dentro de Redes sociais) e as mensagens normais (ex.: Emola, bancos) passam automaticamente para «Mensagens recebidas»; só as redes sociais reconhecidas ficam no painel Redes sociais.",
     "changes": [
