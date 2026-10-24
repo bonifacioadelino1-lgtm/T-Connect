@@ -1,4 +1,12 @@
 {
+  "2.39.90": {
+    "description": "A barra de ícones saiu da página Contactos (já está dentro de Redes sociais) e as mensagens das redes sociais passam a aparecer também em «Mensagens recebidas».",
+    "changes": [
+      "Barra Mensagens/Chamadas/Lixo removida da página Contactos — evita estar em dois sítios",
+      "As mensagens das redes sociais/apps sobem automaticamente também para «Mensagens recebidas»",
+      "Só mensagens (notificações de mensagens) sobem; as enviadas continuam a ser só SMS"
+    ]
+  },
   "2.39.89": {
     "description": "A barra de ícones Mensagens, Chamadas e Lixo passou a aparecer também dentro da página Redes sociais.",
     "changes": [
