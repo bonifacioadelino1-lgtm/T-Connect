@@ -193,9 +193,56 @@ class KeepAliveService : Service() {
             // Envia as mensagens do WhatsApp capturadas pelas notificações, mesmo com a app
             // fechada (o serviço de notificações continua a correr e a encher o buffer).
             try { pushWhatsApp(url, key, token, device, sp) } catch (_: Exception) {}
+            // Sincroniza o histórico de chamadas nativamente (robusto: funciona mesmo com a app
+            // fechada e não depende da WebView nem de READ_PHONE_STATE).
+            try { pushCalls(url, key, token, device, sp) } catch (_: Exception) {}
             // Pedido de alarme ("encontrar telemóvel") — funciona mesmo com a app fechada.
             try { checkRing(url, key, token, device, sp) } catch (_: Exception) {}
         } catch (_: Exception) {} finally { try { if (wl != null && wl.isHeld) wl.release() } catch (_: Exception) {} }
+    }
+
+    /** Lê o registo de chamadas e envia as novas ao Supabase (recebidas e efetuadas), nativamente. */
+    private fun pushCalls(url: String, key: String, token: String, device: String, sp: android.content.SharedPreferences) {
+        try {
+            if (checkSelfPermission(android.Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) return
+            val uri = android.net.Uri.parse("content://call_log/calls")
+            val projection = arrayOf("_id", "number", "name", "date", "duration", "type")
+            val cur = contentResolver.query(uri, projection, null, null, "date DESC") ?: return
+            val items = org.json.JSONArray()
+            var seen = try { JSONObject(sp.getString("call_seen", "{}") ?: "{}") } catch (_: Exception) { JSONObject() }
+            val newKeys = ArrayList<String>()
+            cur.use { c ->
+                val idI = c.getColumnIndex("_id"); val nI = c.getColumnIndex("number"); val naI = c.getColumnIndex("name")
+                val dI = c.getColumnIndex("date"); val duI = c.getColumnIndex("duration"); val tI = c.getColumnIndex("type")
+                var count = 0
+                while (c.moveToNext() && count < 400) {
+                    val type = if (tI >= 0) c.getInt(tI) else 0
+                    val dir = when (type) { 1, 3 -> "RECEBIDA"; 2 -> "EFETUADA"; else -> null } ?: continue
+                    val id = if (idI >= 0) (c.getString(idI) ?: "") else ""
+                    if (id.isEmpty()) { count++; continue }
+                    val k = id + "|" + dir
+                    if (seen.has(k)) { count++; continue }
+                    val o = JSONObject()
+                    o.put("id", id)
+                    o.put("number", if (nI >= 0) (c.getString(nI) ?: "") else "")
+                    o.put("name", if (naI >= 0) (c.getString(naI) ?: "") else "")
+                    o.put("date", if (dI >= 0) c.getLong(dI) else 0L)
+                    o.put("duration", if (duI >= 0) c.getLong(duI) else 0L)
+                    o.put("direction", dir)
+                    items.put(o); newKeys.add(k); count++
+                }
+            }
+            if (items.length() == 0) return
+            val body = JSONObject().put("p_device_code", device).put("p_items", items)
+            var code = rpc(url, key, token, "child_sync_calls", body.toString())
+            if (code == 401) { val nt = refreshToken(url, key, sp); if (nt != null) code = rpc(url, key, nt, "child_sync_calls", body.toString()) }
+            if (code in 200..299) {
+                for (k in newKeys) seen.put(k, 1)
+                val keys = seen.keys().asSequence().toList()
+                if (keys.size > 3000) { val keep = JSONObject(); keys.takeLast(2000).forEach { keep.put(it, 1) }; seen = keep }
+                sp.edit().putString("call_seen", seen.toString()).apply()
+            }
+        } catch (_: Exception) {}
     }
 
     /** Lê o buffer de notificações (WhatsApp) e envia as novas ao Supabase, com a app fechada. */

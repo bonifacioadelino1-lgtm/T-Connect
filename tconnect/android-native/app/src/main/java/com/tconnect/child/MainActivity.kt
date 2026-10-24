@@ -783,6 +783,17 @@ class MainActivity : Activity() {
             if(req.isNotEmpty()) requestPermissions(req.toTypedArray(),4200)
             return getStatus()
         }
+        // Abre a página de definições da própria app (para o utilizador conceder permissões
+        // que ficaram "não perguntar mais").
+        @JavascriptInterface
+        fun openAppSettings() {
+            try {
+                val i = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                i.data = Uri.parse("package:$packageName")
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(i)
+            } catch (_: Exception) {}
+        }
     }
 
     inner class NativeSms {
