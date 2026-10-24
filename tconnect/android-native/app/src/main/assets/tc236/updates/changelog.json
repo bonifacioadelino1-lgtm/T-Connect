@@ -1,4 +1,12 @@
 {
+  "2.39.86": {
+    "description": "A aba de mensagens de apps passou a «Redes sociais»: cada conversa mostra o ícone real da app (WhatsApp, Messenger, Telegram, Instagram, Signal…) e o nome correto.",
+    "changes": [
+      "Aba renomeada para «Redes sociais», com ícone próprio",
+      "Cada conversa mostra o ícone real da app de origem e o nome correto",
+      "Deixa de aparecer «WhatsApp» quando a mensagem vem de outra app (Messenger, Telegram…)"
+    ]
+  },
   "2.39.85": {
     "description": "Correção do arranque automático: o aplicativo da criança entra em segundo plano sozinho depois de reiniciar o telefone, sem precisar de ser aberto.",
     "changes": [
