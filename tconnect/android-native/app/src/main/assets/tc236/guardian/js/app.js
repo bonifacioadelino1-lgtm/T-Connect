@@ -1,4 +1,4 @@
-window.TC_APP_VERSION='2.39.90';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
+window.TC_APP_VERSION='2.39.91';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
 const tcTimeout=(p,ms=10000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado')),ms))]);
 const POS=[-25.9692,32.5732];
 const state={page:'overview',mapType:'roadmap',menuOpen:false,pairingBusy:false,pairingMessage:'',update:{auto:localStorage.getItem('tc_auto_updates')!=='0',checking:false,latest:null,error:''},events:JSON.parse(localStorage.getItem('tc_events')||'[]'),notifications:JSON.parse(localStorage.getItem('tc_notifications')||'[]'),search:'',authenticated:false,authMode:'login',loading:false,recoverySent:false,profile:null,devices:[],messages:[],calls:[],contactsList:[],appsList:[],contactStats:[],trailOn:false,commsSub:false,pairCode:'',pairLink:'',realtime:false,authError:'',lastLocation:null,mapTerminalEvents:JSON.parse(localStorage.getItem('tc_map_terminal_events')||'[]')};
@@ -744,9 +744,10 @@ async function tcCheckAndUpdate(){if(state.update.checking)return;await checkFor
 function openRelease(release){const u=release?.apk_url||release?.download_url;if(u)openExternal(u)}
 // Notas de versão (novidades) mostradas nas Definições → Atualizações.
 const TC_CHANGELOG={
-  '2.39.90':{changes:[
-    'Removida a barra Mensagens/Chamadas/Lixo da pagina Contactos (ja esta dentro de Redes sociais)',
-    'As mensagens das redes sociais sobem automaticamente tambem para "Mensagens recebidas"'
+  '2.39.91':{changes:[
+    'Barra Mensagens/Chamadas/Lixo so dentro de Redes sociais (removida dos Contactos)',
+    'Mensagens normais (ex.: Emola, bancos, servicos) sobem automaticamente para "Mensagens recebidas"',
+    'So as redes sociais reconhecidas (WhatsApp, Messenger, Telegram…) ficam no painel Redes sociais'
   ]},
   '2.39.89':{changes:[
     'A barra Mensagens/Chamadas/Lixo passou a aparecer tambem DENTRO de Redes sociais',
@@ -1418,14 +1419,20 @@ function tcMsgApp(m){
   const a=String((m&&m.app)||'').toLowerCase();
   return (a&&a!=='sms')?a:(a||'whatsapp');
 }
-// Uma mensagem é SMS quando NÃO tem pacote de app no source_id e a app é 'sms'/vazia.
-// (As mensagens de apps têm source_id a começar por "pacote|…".)
-function tcIsSms(m){
+// Apps que contam como REDES SOCIAIS (ficam no painel Redes sociais). Tudo o resto
+// (SMS e notificações de apps não-sociais como Emola, bancos, serviços) é "mensagem normal".
+const TC_SOCIAL_APPS=['whatsapp','whatsapp business','telegram','messenger','instagram','signal','viber','snapchat','tiktok','twitter','x','discord','line','wechat','skype','facebook','imo','kik','botim','hangouts'];
+function tcIsSocialMsg(m){
   const sid=String((m&&(m.source_id||m.id))||'');
-  if(sid.indexOf('|')>0)return false;
-  const a=String((m&&m.app)||'').toLowerCase();
-  return !a||a==='sms';
+  const i=sid.indexOf('|');
+  let key='';
+  if(i>0)key=tcPkgToApp(sid.slice(0,i)); // só reconhece pacotes de redes sociais
+  if(!key){const a=String((m&&m.app)||'').toLowerCase();if(a&&a!=='sms')key=a;}
+  return TC_SOCIAL_APPS.indexOf(key)>=0;
 }
+// Mensagem "normal": SMS reais + notificações de apps NÃO sociais (Emola, bancos…). Vão todas
+// para "Mensagens recebidas". Só as redes sociais reconhecidas ficam no painel Redes sociais.
+function tcIsSms(m){ return !tcIsSocialMsg(m); }
 function tcImAppName(a){a=String(a||'').toLowerCase();const m={whatsapp:'WhatsApp','whatsapp business':'WhatsApp Business',telegram:'Telegram',messenger:'Messenger',instagram:'Instagram',signal:'Signal',imo:'imo',viber:'Viber',snapchat:'Snapchat',tiktok:'TikTok',twitter:'X',x:'X',discord:'Discord',line:'LINE',wechat:'WeChat',skype:'Skype',kik:'Kik',botim:'Botim',hangouts:'Hangouts',gmail:'Gmail',outlook:'Outlook',facebook:'Facebook'};return m[a]||(a?a.charAt(0).toUpperCase()+a.slice(1):'App');}
 // Ícone real (marca) de cada rede social / app de mensagens.
 function tcAppIcon(a){a=String(a||'').toLowerCase();
