@@ -1,4 +1,12 @@
 {
+  "2.39.95": {
+    "description": "Correção de bugs: ao abrir uma conversa, deixa de se fechar sozinha na atualização automática, e a posição de leitura (scroll) deixa de saltar para o topo a cada 5 segundos.",
+    "changes": [
+      "Ao abrir uma conversa, mantém-se aberta (não fecha sozinha na atualização automática)",
+      "A posição de leitura do terminal deixa de voltar ao topo a cada 5 segundos",
+      "Vale para Mensagens e para Redes sociais"
+    ]
+  },
   "2.39.94": {
     "description": "Na página Mensagens foram removidos os cartões «Mensagens recebidas» e «Mensagens enviadas» — fica só o terminal com tudo — e o terminal deixa de rolar sozinho (rolamento manual).",
     "changes": [
