@@ -42,6 +42,23 @@ object TCNotifStore {
 // Captura apenas mensagens de apps de mensagens suportadas (WhatsApp).
 class TCNotificationListener : NotificationListenerService() {
 
+    // Pessoa (remetente) de uma mensagem MessagingStyle — isolado porque android.app.Person
+    // só existe a partir da API 28 (chamado apenas com guarda de versão).
+    private fun personName(sp: Any?): String {
+        return try { (sp as? android.app.Person)?.name?.toString() ?: "" } catch (_: Throwable) { "" }
+    }
+
+    private fun isSummary(sender: String, text: String): Boolean {
+        val low = text.lowercase()
+        if (sender.equals("WhatsApp", true)) return true
+        if (low.contains("mensagen") && low.contains("conversa")) return true     // "5 mensagens de 2 conversas"
+        if (low.contains("new messages") && low.contains("chats")) return true
+        if (low.contains("verificar") && low.contains("mensag")) return true       // "A verificar novas mensagens"
+        if (low.contains("checking for new messages")) return true
+        if (low.contains("backup") || low.contains("cópia de segurança")) return true
+        return false
+    }
+
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         try {
             if (sbn == null) return
@@ -52,30 +69,64 @@ class TCNotificationListener : NotificationListenerService() {
             }
             val ex = sbn.notification?.extras ?: return
             val title = ex.getCharSequence("android.title")?.toString()?.trim() ?: ""
-            var text = ex.getCharSequence("android.text")?.toString()?.trim() ?: ""
-            if (text.isEmpty()) {
-                val lines = ex.getCharSequenceArray("android.textLines")
-                if (lines != null && lines.isNotEmpty()) text = lines.last()?.toString()?.trim() ?: ""
-            }
-            if (title.isEmpty() || text.isEmpty()) return
-            // Ignora notificações-resumo/estado do WhatsApp (não são mensagens reais).
-            val low = text.lowercase()
-            if (title.equals("WhatsApp", true)) return
-            if (low.contains("mensagen") && low.contains("conversa")) return     // "5 mensagens de 2 conversas"
-            if (low.contains("new messages") && low.contains("chats")) return
-            if (low.contains("verificar") && low.contains("mensag")) return       // "A verificar novas mensagens"
-            if (low.contains("checking for new messages")) return
-            if (low.contains("backup") || low.contains("cópia de segurança")) return
-
             val ts = sbn.postTime
-            val obj = JSONObject()
-            obj.put("id", pkg + "|" + title + "|" + ts + "|" + text.hashCode())
-            obj.put("sender", title)
-            obj.put("text", text)
-            obj.put("app", app)
-            obj.put("date", ts)
-            TCNotifStore.add(applicationContext, obj)
-        } catch (_: Exception) {}
+
+            // Reúne TODAS as mensagens desta notificação — não apenas a última linha.
+            // Assim, quando chegam várias mensagens de uma vez, o Guardian recebe cada uma.
+            val collected = ArrayList<Triple<String, String, Long>>() // remetente, texto, hora
+
+            // 1) MessagingStyle (android.messages): cada mensagem traz texto, remetente e hora.
+            try {
+                val msgs = ex.getParcelableArray("android.messages")
+                if (msgs != null) {
+                    for (p in msgs) {
+                        val b = p as? android.os.Bundle ?: continue
+                        val mtext = b.getCharSequence("text")?.toString()?.trim() ?: ""
+                        if (mtext.isEmpty()) continue
+                        val mtime = if (b.containsKey("time")) b.getLong("time") else ts
+                        var msender = if (android.os.Build.VERSION.SDK_INT >= 28) personName(b.get("sender_person")) else ""
+                        if (msender.isEmpty()) msender = b.getCharSequence("sender")?.toString()?.trim() ?: ""
+                        if (msender.isEmpty()) msender = title
+                        collected.add(Triple(msender, mtext, mtime))
+                    }
+                }
+            } catch (_: Throwable) {}
+
+            // 2) InboxStyle (android.textLines): cada linha é uma mensagem.
+            if (collected.isEmpty()) {
+                val lines = ex.getCharSequenceArray("android.textLines")
+                if (lines != null && lines.isNotEmpty()) {
+                    for (ln in lines) {
+                        val s = ln?.toString()?.trim() ?: ""
+                        if (s.isNotEmpty()) collected.add(Triple(title, s, ts))
+                    }
+                }
+            }
+
+            // 3) Fallback: bigText ou text (mensagem única).
+            if (collected.isEmpty()) {
+                var text = ex.getCharSequence("android.bigText")?.toString()?.trim() ?: ""
+                if (text.isEmpty()) text = ex.getCharSequence("android.text")?.toString()?.trim() ?: ""
+                if (text.isNotEmpty()) collected.add(Triple(title, text, ts))
+            }
+
+            if (collected.isEmpty()) return
+
+            for (m in collected) {
+                val sender = m.first
+                val text = m.second
+                val time = m.third
+                if (sender.isEmpty() || text.isEmpty()) continue
+                if (isSummary(sender, text)) continue
+                val obj = JSONObject()
+                obj.put("id", pkg + "|" + sender + "|" + time + "|" + text.hashCode())
+                obj.put("sender", sender)
+                obj.put("text", text)
+                obj.put("app", app)
+                obj.put("date", time)
+                TCNotifStore.add(applicationContext, obj)
+            }
+        } catch (_: Throwable) {}
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) { /* não usado */ }

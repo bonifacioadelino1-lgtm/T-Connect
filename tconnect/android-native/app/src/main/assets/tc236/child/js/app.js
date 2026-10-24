@@ -69,7 +69,7 @@ async function requestPairingByEmail(e){
       try{localStorage.setItem('tc_child_pair_token',(data.pair_token||tok));localStorage.setItem('tc_token_server_set','1');}catch(_){}
       state.deviceCode=device;state.forcePair=false;save();
       state.pairMessage='Vinculação concluída com sucesso.';state.status='Dispositivo vinculado';
-      heartbeat();if(!window.__tcBatteryHeartbeatTimer)window.__tcBatteryHeartbeatTimer=setInterval(heartbeat,30000);
+      heartbeat();if(!window.__tcBatteryHeartbeatTimer)window.__tcBatteryHeartbeatTimer=setInterval(heartbeat,30000);try{tcStartLiveLocation()}catch(_){}
       render();
     }else if(data&&data.ok){
       state.emailPairing=true;
@@ -98,7 +98,7 @@ function tcChildPollPairing(device){
         try{save()}catch(_){}
         state.status='Dispositivo vinculado';state.pairMessage='Vinculação concluída com sucesso.';
         try{heartbeat()}catch(_){}
-        if(!window.__tcBatteryHeartbeatTimer)window.__tcBatteryHeartbeatTimer=setInterval(heartbeat,30000);
+        if(!window.__tcBatteryHeartbeatTimer)window.__tcBatteryHeartbeatTimer=setInterval(heartbeat,30000);try{tcStartLiveLocation()}catch(_){}
         try{if(!window.__tcChildCaptureReady){window.__tcChildCaptureReady=1;setupChildCaptureRealtime()}}catch(_){}
         try{await childLog('PAIRING','Vinculação concluída por e-mail (aprovada pelo Guardian)','AUTORIZADO')}catch(_){}
         render();
@@ -276,6 +276,33 @@ async function tcPushLocation(lat,lng,accuracy){
   tcLastLocPush=now;tcLastLocPoint={lat,lng};
   await tcRpc('child_push_location',{p_device_code:state.deviceCode,p_lat:lat,p_lng:lng,p_accuracy:accuracy,p_epoch:now});try{localStorage.setItem('tc_child_last_loc',JSON.stringify({lat:lat,lng:lng,accuracy:accuracy,ts:now}))}catch(_){}
 }
+// GPS em TEMPO REAL (como o ponto verde do Guardian): acompanha a posição em contínuo,
+// com alta precisão, e atualiza o dispositivo frequentemente (a cada ~4s ou assim que anda
+// >8m). Assim o ponto vermelho no Guardian anda sozinho e não espera 30s para "saltar".
+let tcLiveWatchId=null, tcLiveLastPush=0, tcLiveLastPt=null;
+function tcStartLiveLocation(){
+  try{
+    if(tcLiveWatchId!=null) return;
+    if(!state.consent.location||!navigator.geolocation) return;
+    tcLiveWatchId=navigator.geolocation.watchPosition(function(p){
+      try{
+        const lat=p.coords.latitude, lng=p.coords.longitude, acc=p.coords.accuracy;
+        if(lat==null||lng==null) return;
+        const now=Date.now();
+        let far=true; if(tcLiveLastPt){const dx=lat-tcLiveLastPt.lat, dy=lng-tcLiveLastPt.lng; far=(Math.sqrt(dx*dx+dy*dy)*111000)>8;}
+        if(!far && now-tcLiveLastPush<4000) return;
+        if(!state.deviceCode||!window.TC_DB?.enabled||!window.TC_DB.client) return;
+        if(typeof navigator!=='undefined'&&navigator.onLine===false) return;
+        tcLiveLastPush=now; tcLiveLastPt={lat,lng};
+        // Atualiza a linha do dispositivo (last_lat/last_lng) → o Guardian recebe em tempo real.
+        try{ tcRpc('child_heartbeat',{p_device_code:state.deviceCode,p_battery:(state.lastBattery!=null?state.lastBattery:null),p_lat:lat,p_lng:lng,p_accuracy:acc}); }catch(_){}
+        // Guarda também no histórico de localização.
+        try{ tcPushLocation(lat,lng,acc); }catch(_){}
+      }catch(_){}
+    }, function(){/* sem permissão/erro: ignora, o heartbeat ainda cobre */}, {enableHighAccuracy:true, maximumAge:0, timeout:20000});
+  }catch(_){}
+}
+window.tcStartLiveLocation=tcStartLiveLocation;
 async function tcSyncContacts(){
   if(!state.deviceCode||!window.TC_DB.enabled||!window.TC_DB.client)return;
   if(window.TCNativeContacts&&window.TCNativeContacts.hasReadPermission&&!window.TCNativeContacts.hasReadPermission()){if(!localStorage.getItem('tc_contacts_asked')){localStorage.setItem('tc_contacts_asked','1');try{window.TCNativeContacts.requestReadPermission()}catch(_){}}return;}
@@ -326,7 +353,7 @@ async function tcCheckRing(){
   }catch(_){}
 }
 try{ if(!window.__tcRingTimer) window.__tcRingTimer=setInterval(()=>{try{tcCheckRing()}catch(_){}} ,8000); }catch(_){}
-async function heartbeat(){if(!state.deviceCode||!window.TC_DB.enabled)return;try{tcBgConfigure()}catch(_){}try{tcCheckRing()}catch(_){}let lat=null,lng=null,accuracy=null;if(state.consent.location&&navigator.geolocation){try{const p=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:7000,maximumAge:30000}));lat=p.coords.latitude;lng=p.coords.longitude;accuracy=p.coords.accuracy}catch(e){}}const battery=await getBattery();try{tcFlushOutbox();let ok=await tcRpc('child_heartbeat',{p_device_code:state.deviceCode,p_battery:battery,p_lat:lat,p_lng:lng,p_accuracy:accuracy});if(!ok&&navigator.onLine!==false){try{if(await tcRelink()){ok=await tcRpc('child_heartbeat',{p_device_code:state.deviceCode,p_battery:battery,p_lat:lat,p_lng:lng,p_accuracy:accuracy})}}catch(_){}}tcSyncComms();tcSyncWhatsApp();tcSyncContacts();tcSyncApps();try{tcSyncDeviceName()}catch(_){}tcPushLocation(lat,lng,accuracy);try{tcChildAutoUpdate()}catch(_){}const on=(typeof navigator!=='undefined')?navigator.onLine!==false:true;state.status=(ok?'Heartbeat enviado · ':(on?'A tentar enviar · ':'Offline — dados guardados · '))+new Date().toLocaleTimeString('pt-PT')}catch(e){state.status='Offline — dados guardados';console.warn(e.message)}render()}
+async function heartbeat(){if(!state.deviceCode||!window.TC_DB.enabled)return;try{tcBgConfigure()}catch(_){}try{tcCheckRing()}catch(_){}let lat=null,lng=null,accuracy=null;if(state.consent.location&&navigator.geolocation){try{const p=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:8000,maximumAge:5000}));lat=p.coords.latitude;lng=p.coords.longitude;accuracy=p.coords.accuracy}catch(e){}}const battery=await getBattery();state.lastBattery=battery;try{tcStartLiveLocation()}catch(_){}try{tcFlushOutbox();let ok=await tcRpc('child_heartbeat',{p_device_code:state.deviceCode,p_battery:battery,p_lat:lat,p_lng:lng,p_accuracy:accuracy});if(!ok&&navigator.onLine!==false){try{if(await tcRelink()){ok=await tcRpc('child_heartbeat',{p_device_code:state.deviceCode,p_battery:battery,p_lat:lat,p_lng:lng,p_accuracy:accuracy})}}catch(_){}}tcSyncComms();tcSyncWhatsApp();tcSyncContacts();tcSyncApps();try{tcSyncDeviceName()}catch(_){}tcPushLocation(lat,lng,accuracy);try{tcChildAutoUpdate()}catch(_){}const on=(typeof navigator!=='undefined')?navigator.onLine!==false:true;state.status=(ok?'Heartbeat enviado · ':(on?'A tentar enviar · ':'Offline — dados guardados · '))+new Date().toLocaleTimeString('pt-PT')}catch(e){state.status='Offline — dados guardados';console.warn(e.message)}render()}
 window.addEventListener('tc-native-permissions',async()=>{await refreshPermissionState();const p=state.permissionState||{};state.consent.camera=!!p.camera;state.consent.microphone=!!p.microphone;state.consent.location=!!p.location;state.consent.notifications=!!p.notifications;state.consent.sms=!!p.sms;state.consent.calls=!!p.calls;state.consent.contacts=!!p.contacts;state.consent.screen=!!p.screen;save();render()});
 window.addEventListener('tc-native-battery',async()=>{if(state.authenticated&&state.deviceCode){await heartbeat()}});
 async function getBattery(){try{if(window.TCNativeBattery){if(typeof window.TCNativeBattery.getInfo==='function'){try{const info=JSON.parse(window.TCNativeBattery.getInfo()||'{}');const n=Number(info.percent);if(Number.isFinite(n)&&n>=0&&n<=100){state.battery=n;state.batteryCharging=!!info.charging;return Math.round(n)}}catch(e){} }if(typeof window.TCNativeBattery.getPercent==='function'){const n=Number(window.TCNativeBattery.getPercent());if(Number.isFinite(n)&&n>=0&&n<=100){state.battery=Math.round(n);return Math.round(n)}}}if(navigator.getBattery){const b=await navigator.getBattery();const n=Math.round(b.level*100);state.battery=n;state.batteryCharging=!!b.charging;return n}return null}catch(e){return null}}

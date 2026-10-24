@@ -1,4 +1,12 @@
 {
+  "2.39.82": {
+    "description": "WhatsApp captura todas as mensagens de cada notificação (não só a última) e o ponto vermelho da criança anda suave e em tempo real no mapa, como o ponto verde.",
+    "changes": [
+      "WhatsApp: passa a guardar TODAS as mensagens de cada notificação — deixa de ficar só na última",
+      "Mapa: o ponto vermelho da criança move-se suavemente e em tempo real (GPS contínuo de alta precisão), tal como o ponto verde",
+      "Localização mais exata e sem saltos: atualização a cada ~4 segundos enquanto a criança caminha"
+    ]
+  },
   "2.39.81": {
     "description": "Estatística de chamadas nos contactos, notificações que abrem o local, tempo real a cada 5 segundos, janela de mensagens ajustada e telas de vidro do mapa com zoom.",
     "changes": [

@@ -41,6 +41,37 @@
   function tcCompassPt(brg){ const dirs=['Norte','Nordeste','Este','Sudeste','Sul','Sudoeste','Oeste','Noroeste']; return dirs[Math.round(((brg%360)/45))%8]; }
   function tcBearing(a,b){ const r=Math.PI/180; const f1=a.lat*r,f2=b.lat*r,dl=(b.lng-a.lng)*r; const y=Math.sin(dl)*Math.cos(f2); const x=Math.cos(f1)*Math.sin(f2)-Math.sin(f1)*Math.cos(f2)*Math.cos(dl); return (Math.atan2(y,x)*180/Math.PI+360)%360; }
   function tcHaversine(a,b){ const R=6371000,r=Math.PI/180; const dLat=(b.lat-a.lat)*r,dLng=(b.lng-a.lng)*r; const s=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dLng/2)*Math.sin(dLng/2); return 2*R*Math.asin(Math.min(1,Math.sqrt(s))); }
+  // Move o ponto vermelho (criança) SUAVEMENTE da posição atual para a nova — como quem
+  // caminha — em vez de "saltar". Acompanha o círculo de precisão, o ponto do HUD e o
+  // retículo a cada frame, atualizando lastKnownLocation para o resto da interface seguir.
+  let tcLocAnim=null;
+  function tcAnimateMarkerTo(toLat,toLng){
+    try{
+      if(!marker||!marker.getLatLng) return false;
+      const from=marker.getLatLng(); if(!from) return false;
+      const fLat=from.lat, fLng=from.lng;
+      if(fLat===toLat&&fLng===toLng) return false;
+      let dM=0; try{ dM=tcHaversine({lat:fLat,lng:fLng},{lat:toLat,lng:toLng}); }catch(_){ dM=0; }
+      // Sem movimento real (<0,5 m) ou salto enorme (>3 km) → sem animação (vai direto).
+      if(!(dM>0.5)||dM>3000) return false;
+      if(tcLocAnim){ try{cancelAnimationFrame(tcLocAnim);}catch(_){} tcLocAnim=null; }
+      const t0=(window.performance&&performance.now)?performance.now():Date.now();
+      const ms=Math.min(1600,Math.max(520,dM*140));
+      function frame(t){
+        const now=(window.performance&&performance.now)?t:Date.now();
+        let k=Math.min(1,(now-t0)/ms); const e=k<0.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
+        const la=fLat+(toLat-fLat)*e, ln=fLng+(toLng-fLng)*e;
+        try{ marker.setLatLng([la,ln]); }catch(_){}
+        try{ if(accuracyCircle) accuracyCircle.setLatLng([la,ln]); }catch(_){}
+        try{ if(lastKnownLocation){ lastKnownLocation.lat=la; lastKnownLocation.lng=ln; } }catch(_){}
+        try{ positionReticle(); }catch(_){}
+        if(k<1){ tcLocAnim=requestAnimationFrame(frame); }
+        else { tcLocAnim=null; try{ if(lastKnownLocation){ lastKnownLocation.lat=toLat; lastKnownLocation.lng=toLng; } marker.setLatLng([toLat,toLng]); if(accuracyCircle) accuracyCircle.setLatLng([toLat,toLng]); positionReticle(); }catch(_){} }
+      }
+      tcLocAnim=requestAnimationFrame(frame);
+      return true;
+    }catch(_){ return false; }
+  }
   function tcFmtDist(m){ if(m==null) return '—'; if(m<1000) return Math.round(m)+' m'; return (m/1000).toFixed(m<10000?2:1)+' km'; }
   function tcMins(mins){ mins=Math.max(0,Math.round(mins)); if(mins<1) return '<1 min'; if(mins<60) return mins+' min'; const h=Math.floor(mins/60); return h+'h '+(mins%60)+'m'; }
   function tcFmtEta(m){ if(m==null) return '—'; return '🚗 '+tcMins(m/(30000/60))+' · 🚶 '+tcMins(m/(5000/60)); }
@@ -609,8 +640,8 @@
       term('loc',2000,'LOCALIZAÇÃO', 'ATUALIZACAO_DISPOSITIVO', 'OK', {detail:`${(window.TC_DEVICE_NAME||'Child')} · ${lat.toFixed(6)}, ${lng.toFixed(6)}`, contact:(window.TC_DEVICE_NAME||'Child')});
       try { localStorage.setItem('tc:lastKnownLocation', JSON.stringify(lastKnownLocation)); } catch(e) {}
       reverseGeocode(lat, lng);
-      if (!marker) { try { marker = window.L.marker(pos, { icon: icon(), opacity: 1, zIndexOffset: 3000, keyboard: false }).addTo(map); } catch(e) { return; } }
-      marker.setLatLng(pos).setOpacity(1).setZIndexOffset(2000);
+      if (!marker) { try { marker = window.L.marker(pos, { icon: icon(), opacity: 1, zIndexOffset: 3000, keyboard: false }).addTo(map); } catch(e) { return; } try { marker.setOpacity(1).setZIndexOffset(2000); } catch(e) {} }
+      else { const glided = tcAnimateMarkerTo(lat, lng); if (!glided) { try { marker.setLatLng(pos); } catch(e) {} } try { marker.setOpacity(1).setZIndexOffset(2000); } catch(e) {} }
       if (typeof marker.bringToFront === "function") marker.bringToFront();
       const hud = mapContainer && mapContainer.querySelector('.tc-exact-coordinate-hud');
       if (hud) {
