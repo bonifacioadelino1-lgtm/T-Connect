@@ -1,4 +1,13 @@
 {
+  "2.39.83": {
+    "description": "O aplicativo da criança funciona 100% em segundo plano, sem precisar de ser aberto: mantém-se ligado e envia localização, heartbeat e WhatsApp mesmo com a app fechada.",
+    "changes": [
+      "Funciona 100% em segundo plano — não é preciso abrir a app para se manter online",
+      "Pede isenção da otimização de bateria para o Android não matar o serviço de proteção",
+      "Com a app fechada, envia localização, estado e mensagens do WhatsApp de forma nativa",
+      "O serviço reinicia sozinho após reiniciar o telefone, após atualizar a app ou se for removido das recentes"
+    ]
+  },
   "2.39.82": {
     "description": "WhatsApp captura todas as mensagens de cada notificação (não só a última) e o ponto vermelho da criança anda suave e em tempo real no mapa, como o ponto verde.",
     "changes": [

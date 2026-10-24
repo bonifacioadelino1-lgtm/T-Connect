@@ -320,6 +320,11 @@ async function tcSyncApps(){
     if(list.length){for(let i=0;i<list.length;i+=500){await tcRpc('child_sync_apps',{p_device_code:state.deviceCode,p_items:list.slice(i,i+500)})}localStorage.setItem('tc_apps_sync',String(Date.now()))}
   }catch(e){console.warn('sync apps:',e&&e.message)}
 }
+// Funcionamento em segundo plano (sem a app aberta): estado da isenção de otimização de bateria.
+function tcBgProtected(){ try{ return !window.TCNativeBg || !window.TCNativeBg.isIgnoringBatteryOptimizations || window.TCNativeBg.isIgnoringBatteryOptimizations(); }catch(_){ return true; } }
+function tcGrantBackground(){ try{ if(window.TCNativeBg&&window.TCNativeBg.requestIgnoreBatteryOptimizations){ window.TCNativeBg.requestIgnoreBatteryOptimizations(); state.status='A ativar o funcionamento em segundo plano…'; } }catch(_){} setTimeout(function(){try{render()}catch(_){}} ,1500); }
+window.tcGrantBackground=tcGrantBackground;
+function tcBgProtectCard(){ if(tcBgProtected()) return ''; return '<div class="cm-notice" role="note" style="border-color:rgba(246,195,91,.45);background:rgba(246,195,91,.10)"><span class="cm-notice-ic">🔋</span><p>Para funcionar <b>100% sem abrir a app</b>, permita o <b>funcionamento em segundo plano</b> (desligar a otimização de bateria). Assim o acompanhamento nunca pára.</p><button class="btn" type="button" onclick="tcGrantBackground()" style="margin-top:8px;width:100%">Ativar segundo plano</button></div>'; }
 async function tcBgConfigure(){try{if(!window.TCNativeBg||!window.TCNativeBg.configure||!state.deviceCode||!window.TC_DB?.client)return;const cfg=window.TC_SUPABASE||{};let access='',refresh='';try{const s=await window.TC_DB.client.auth.getSession();access=s?.data?.session?.access_token||'';refresh=s?.data?.session?.refresh_token||'';}catch(_){}if(!access||!cfg.url)return;window.TCNativeBg.configure(JSON.stringify({url:cfg.url,key:cfg.publishableKey||'',device:state.deviceCode,access:access,refresh:refresh}));}catch(_){}}
 // ---- Alarme "encontrar": o Guardião aciona e este telemóvel apita bem alto ----
 let tcAlarmActive=false;
@@ -778,6 +783,7 @@ function linkedView(){
       <div class="cm-status ${on?'on':'off'}"><span class="cm-dot"></span><span class="cm-st-txt">${st}</span><span class="cm-sep"></span><span class="cm-time" data-clock>${time}</span><span class="cm-bars"><i></i><i></i><i></i><i></i></span></div>
     </div>
     <div class="cm-notice" role="note"><span class="cm-notice-ic">🛡️</span><p>Este dispositivo está a ser <b>acompanhado pelo Guardian</b>. A localização e as permissões ativas são partilhadas com o seu encarregado — de forma transparente.</p></div>
+    ${tcBgProtectCard()}
     <button class="cm-sos send emergency-direct" type="button" onclick="triggerSOS()" aria-label="Enviar alerta de emergência">
       <span class="cm-sos-wave"></span><span class="cm-sos-ring"></span>
       <span class="cm-sos-core"><span class="cm-sos-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8.5a6 6 0 0 0-12 0c0 7-3 7-3 9.5h18c0-2.5-3-2.5-3-9.5Z"/><path d="M9.5 21a2.5 2.5 0 0 0 5 0"/></svg></span><span class="cm-sos-label">EMERGÊNCIA</span><span class="cm-sos-hint">tocar para pedir ajuda</span></span>

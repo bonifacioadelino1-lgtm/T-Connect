@@ -24,6 +24,7 @@ import kotlin.math.roundToInt
 import android.speech.tts.TextToSpeech
 import java.util.Locale
 import android.os.Build
+import android.os.PowerManager
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.os.VibrationEffect
@@ -142,6 +143,26 @@ class MainActivity : Activity() {
             try {
                 val svc = Intent(this, KeepAliveService::class.java)
                 if (Build.VERSION.SDK_INT >= 26) startForegroundService(svc) else startService(svc)
+            } catch (_: Exception) {}
+            // Pede UMA vez a isenção da otimização de bateria, para o serviço não ser morto
+            // pelo Android e a app funcionar 100% em segundo plano, sem precisar de ser aberta.
+            try {
+                val sp = getSharedPreferences("tc_bg", MODE_PRIVATE)
+                if (Build.VERSION.SDK_INT >= 23 && !sp.getBoolean("bat_opt_asked", false)) {
+                    val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+                    if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+                        sp.edit().putBoolean("bat_opt_asked", true).apply()
+                        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                            try {
+                                val i = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                                i.data = Uri.parse("package:$packageName")
+                                startActivity(i)
+                            } catch (_: Exception) {}
+                        }, 2500)
+                    } else {
+                        sp.edit().putBoolean("bat_opt_asked", true).apply()
+                    }
+                }
             } catch (_: Exception) {}
         }
         batteryReceiver = object : BroadcastReceiver() {
@@ -279,6 +300,35 @@ class MainActivity : Activity() {
                 val i = Intent(this@MainActivity, KeepAliveService::class.java)
                 if (Build.VERSION.SDK_INT >= 26) startForegroundService(i) else startService(i)
             } catch (_: Exception) {}
+        }
+
+        // A app ignora a otimização de bateria? (necessário para funcionar 100% em segundo plano)
+        @JavascriptInterface
+        fun isIgnoringBatteryOptimizations(): Boolean {
+            return try {
+                val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+                if (Build.VERSION.SDK_INT >= 23) pm.isIgnoringBatteryOptimizations(packageName) else true
+            } catch (_: Exception) { true }
+        }
+
+        // Pede ao Android para isentar a app da otimização de bateria (abre o diálogo do sistema).
+        @JavascriptInterface
+        fun requestIgnoreBatteryOptimizations() {
+            try {
+                if (Build.VERSION.SDK_INT < 23) return
+                val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+                if (pm.isIgnoringBatteryOptimizations(packageName)) return
+                val i = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                i.data = Uri.parse("package:$packageName")
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(i)
+            } catch (_: Exception) {
+                try {
+                    val i = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                    i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    startActivity(i)
+                } catch (_: Exception) {}
+            }
         }
     }
 
