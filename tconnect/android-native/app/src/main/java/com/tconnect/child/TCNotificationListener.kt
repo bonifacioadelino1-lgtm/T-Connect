@@ -48,6 +48,64 @@ class TCNotificationListener : NotificationListenerService() {
         return try { (sp as? android.app.Person)?.name?.toString() ?: "" } catch (_: Throwable) { "" }
     }
 
+    // Pacotes de SMS/RCS — já são lidos pelo leitor de SMS nativo; ignoramos nas notificações
+    // para não duplicar.
+    private val SMS_APPS = setOf(
+        "com.google.android.apps.messaging", "com.samsung.android.messaging",
+        "com.android.mms", "com.android.messaging", "com.sonyericsson.conversations",
+        "com.motorola.messaging", "com.oneplus.mms"
+    )
+
+    // Pacotes conhecidos → nome normalizado da app. Para os desconhecidos usa-se o rótulo real.
+    private val KNOWN_APPS = mapOf(
+        "com.whatsapp" to "whatsapp",
+        "com.whatsapp.w4b" to "whatsapp business",
+        "org.telegram.messenger" to "telegram",
+        "org.thunderdog.challegram" to "telegram",
+        "com.facebook.orca" to "messenger",
+        "com.facebook.mlite" to "messenger",
+        "com.facebook.katana" to "facebook",
+        "com.instagram.android" to "instagram",
+        "org.thoughtcrime.securesms" to "signal",
+        "com.viber.voip" to "viber",
+        "com.imo.android.imoim" to "imo",
+        "com.imo.android.imoimbeta" to "imo",
+        "com.snapchat.android" to "snapchat",
+        "com.zhiliaoapp.musically" to "tiktok",
+        "com.ss.android.ugc.trill" to "tiktok",
+        "com.twitter.android" to "twitter",
+        "com.discord" to "discord",
+        "jp.naver.line.android" to "line",
+        "com.tencent.mm" to "wechat",
+        "com.skype.raider" to "skype",
+        "kik.android" to "kik",
+        "com.google.android.gm" to "gmail",
+        "com.microsoft.office.outlook" to "outlook"
+    )
+
+    private fun appKeyFor(pkg: String): String {
+        KNOWN_APPS[pkg]?.let { return it }
+        return try {
+            val pm = applicationContext.packageManager
+            val ai = pm.getApplicationInfo(pkg, 0)
+            val lbl = pm.getApplicationLabel(ai).toString().trim()
+            if (lbl.isNotEmpty()) lbl.lowercase() else pkg
+        } catch (_: Exception) { pkg }
+    }
+
+    // É uma notificação de MENSAGEM? (de qualquer app de mensagens — não escolhe apps fixas)
+    private fun isMessagingNotification(n: android.app.Notification, ex: android.os.Bundle): Boolean {
+        try {
+            if (n.category == android.app.Notification.CATEGORY_MESSAGE) return true
+            if (ex.get("android.messages") != null) return true
+            val tl = ex.getCharSequenceArray("android.textLines")
+            if (tl != null && tl.isNotEmpty()) return true
+            val tmpl = ex.getString("android.template") ?: ""
+            if (tmpl.contains("MessagingStyle") || tmpl.contains("InboxStyle")) return true
+        } catch (_: Exception) {}
+        return false
+    }
+
     private fun isSummary(sender: String, text: String): Boolean {
         val low = text.lowercase()
         if (sender.equals("WhatsApp", true)) return true
@@ -63,11 +121,17 @@ class TCNotificationListener : NotificationListenerService() {
         try {
             if (sbn == null) return
             val pkg = sbn.packageName ?: return
-            val app = when (pkg) {
-                "com.whatsapp", "com.whatsapp.w4b" -> "whatsapp"
-                else -> return
-            }
-            val ex = sbn.notification?.extras ?: return
+            // Ignora a própria app e as apps de SMS/RCS (já lidas pelo leitor de SMS).
+            if (pkg.startsWith("com.tconnect")) return
+            if (SMS_APPS.contains(pkg)) return
+            val n = sbn.notification ?: return
+            // Ignora resumos de grupo e notificações permanentes (serviços/estado), não mensagens.
+            if ((n.flags and android.app.Notification.FLAG_GROUP_SUMMARY) != 0) return
+            if ((n.flags and android.app.Notification.FLAG_ONGOING_EVENT) != 0) return
+            val ex = n.extras ?: return
+            // Só mensagens — de QUALQUER app de mensagens (não escolhe apps específicas).
+            if (!isMessagingNotification(n, ex)) return
+            val app = appKeyFor(pkg)
             val title = ex.getCharSequence("android.title")?.toString()?.trim() ?: ""
             val ts = sbn.postTime
 

@@ -189,6 +189,7 @@ class KeepAliveService : Service() {
                 it.put("id", id)
                 it.put("sender", o.optString("sender", ""))
                 it.put("text", o.optString("text", ""))
+                it.put("app", o.optString("app", ""))
                 it.put("date", o.optLong("date", System.currentTimeMillis()))
                 items.put(it)
                 newIds.add(id)

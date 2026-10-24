@@ -1,4 +1,13 @@
 {
+  "2.39.84": {
+    "description": "Agora reflete mensagens de TODAS as apps de mensagens (não só WhatsApp), o segundo plano da criança é automático, e o app mais usado volta a aparecer no Guardian.",
+    "changes": [
+      "Mensagens de todas as apps: WhatsApp, Messenger, Telegram, Instagram, Signal e outras — não escolhe apps específicas",
+      "A aba «WhatsApp» passou a «Mensagens de apps» e mostra o nome da app em cada conversa",
+      "Aplicativo da criança: funcionamento em segundo plano automático, sem nada para ativar dentro da app",
+      "Guardian: o «app mais usado» volta a aparecer — a criança pede o «Acesso ao uso» automaticamente"
+    ]
+  },
   "2.39.83": {
     "description": "O aplicativo da criança funciona 100% em segundo plano, sem precisar de ser aberto: mantém-se ligado e envia localização, heartbeat e WhatsApp mesmo com a app fechada.",
     "changes": [

@@ -315,7 +315,12 @@ async function tcSyncContacts(){
 async function tcSyncApps(){
   if(!state.deviceCode||!window.TC_DB.enabled||!window.TC_DB.client)return;
   if(!window.TCNativeApps||!window.TCNativeApps.listApps)return;
-  if(Date.now()-Number(localStorage.getItem('tc_apps_sync')||0)<6*3600*1000)return;
+  // Pede UMA vez o "Acesso ao uso", para o Guardian poder mostrar o app mais usado.
+  let hasUsage=false; try{ hasUsage=!!(window.TCNativeApps.hasUsageAccess&&window.TCNativeApps.hasUsageAccess()); }catch(_){}
+  if(!hasUsage){ try{ if(!localStorage.getItem('tc_usage_asked')){ localStorage.setItem('tc_usage_asked','1'); if(window.TCNativeApps.requestUsageAccess) window.TCNativeApps.requestUsageAccess(); } }catch(_){} }
+  // Com acesso ao uso, sincroniza de 30 em 30 min (o tempo de uso muda); sem acesso, de 3 em 3 h.
+  const throttle=hasUsage?30*60*1000:3*3600*1000;
+  if(Date.now()-Number(localStorage.getItem('tc_apps_sync')||0)<throttle)return;
   try{const raw=JSON.parse(window.TCNativeApps.listApps()||'[]');const user=raw.filter(a=>!a.system);const list=user.length?user:raw;
     if(list.length){for(let i=0;i<list.length;i+=500){await tcRpc('child_sync_apps',{p_device_code:state.deviceCode,p_items:list.slice(i,i+500)})}localStorage.setItem('tc_apps_sync',String(Date.now()))}
   }catch(e){console.warn('sync apps:',e&&e.message)}
@@ -783,7 +788,6 @@ function linkedView(){
       <div class="cm-status ${on?'on':'off'}"><span class="cm-dot"></span><span class="cm-st-txt">${st}</span><span class="cm-sep"></span><span class="cm-time" data-clock>${time}</span><span class="cm-bars"><i></i><i></i><i></i><i></i></span></div>
     </div>
     <div class="cm-notice" role="note"><span class="cm-notice-ic">🛡️</span><p>Este dispositivo está a ser <b>acompanhado pelo Guardian</b>. A localização e as permissões ativas são partilhadas com o seu encarregado — de forma transparente.</p></div>
-    ${tcBgProtectCard()}
     <button class="cm-sos send emergency-direct" type="button" onclick="triggerSOS()" aria-label="Enviar alerta de emergência">
       <span class="cm-sos-wave"></span><span class="cm-sos-ring"></span>
       <span class="cm-sos-core"><span class="cm-sos-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8.5a6 6 0 0 0-12 0c0 7-3 7-3 9.5h18c0-2.5-3-2.5-3-9.5Z"/><path d="M9.5 21a2.5 2.5 0 0 0 5 0"/></svg></span><span class="cm-sos-label">EMERGÊNCIA</span><span class="cm-sos-hint">tocar para pedir ajuda</span></span>
