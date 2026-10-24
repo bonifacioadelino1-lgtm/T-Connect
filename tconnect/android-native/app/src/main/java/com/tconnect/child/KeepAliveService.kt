@@ -93,15 +93,41 @@ class KeepAliveService : Service() {
             .setContentText("Este dispositivo está a ser acompanhado pelo Guardian (localização e permissões).")
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setOngoing(true).setContentIntent(tap).build()
+        // IMPORTANTE (arranque automático): no Android 14+ um serviço do tipo "location"
+        // iniciado no arranque (BOOT) rebenta se a localização não estiver em "Sempre permitir",
+        // e o serviço morre — era por isso que só arrancava ao abrir a app. Arrancamos sempre
+        // como "specialUse" (permitido no arranque e sem exigir permissão), e juntamos o tipo
+        // "location" só quando há localização em segundo plano concedida.
         try {
-            if (Build.VERSION.SDK_INT >= 34) startForeground(5120, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
-            else startForeground(5120, n)
-        } catch (_: Exception) { try { startForeground(5120, n) } catch (_: Exception) {} }
+            if (Build.VERSION.SDK_INT >= 34) {
+                var type = ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                if (hasBgLocation()) type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+                startForeground(5120, n, type)
+            } else if (Build.VERSION.SDK_INT >= 29) {
+                startForeground(5120, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
+            } else {
+                startForeground(5120, n)
+            }
+        } catch (_: Exception) {
+            // Recurso final: arranca sem exigir permissão de localização (continua a enviar
+            // heartbeat/WhatsApp pela rede; a localização entra quando a permissão existir).
+            try {
+                if (Build.VERSION.SDK_INT >= 34) startForeground(5120, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+                else startForeground(5120, n)
+            } catch (_: Exception) {}
+        }
     }
 
     private fun hasLocPerm(): Boolean =
         checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
         checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+    // Localização em segundo plano ("Sempre permitir") — necessária para o tipo "location"
+    // poder arrancar no boot sem rebentar no Android 14+.
+    private fun hasBgLocation(): Boolean =
+        if (Build.VERSION.SDK_INT >= 29)
+            checkSelfPermission(android.Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED
+        else hasLocPerm()
 
     private fun startLocation() {
         if (!hasLocPerm()) return

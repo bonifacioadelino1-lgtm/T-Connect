@@ -1,4 +1,12 @@
 {
+  "2.39.85": {
+    "description": "Correção do arranque automático: o aplicativo da criança entra em segundo plano sozinho depois de reiniciar o telefone, sem precisar de ser aberto.",
+    "changes": [
+      "A app da criança volta ao segundo plano sozinha após reiniciar o telefone",
+      "O serviço de proteção arranca como «specialUse», que o Android permite iniciar no arranque sem abrir a app",
+      "Mesmo sem a localização em «Sempre permitir», o serviço arranca e continua a enviar dados"
+    ]
+  },
   "2.39.84": {
     "description": "Agora reflete mensagens de TODAS as apps de mensagens (não só WhatsApp), o segundo plano da criança é automático, e o app mais usado volta a aparecer no Guardian.",
     "changes": [
