@@ -1,4 +1,11 @@
 {
+  "2.39.89": {
+    "description": "A barra de ícones Mensagens, Chamadas e Lixo passou a aparecer também dentro da página Redes sociais.",
+    "changes": [
+      "Mensagens, Chamadas e Lixo agora também dentro de Redes sociais",
+      "A aba da página onde está é ocultada na barra, sem botão repetido"
+    ]
+  },
   "2.39.88": {
     "description": "Nova aba «Redes sociais» junto a Mensagens, Chamadas e Lixo; apps não reconhecidas (ex.: Emola) mostram o seu nome e um ícone de mensagem normal, deixando de aparecer como WhatsApp.",
     "changes": [
