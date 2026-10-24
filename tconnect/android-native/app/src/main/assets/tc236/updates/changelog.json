@@ -1,4 +1,11 @@
 {
+  "2.39.94": {
+    "description": "Na página Mensagens foram removidos os cartões «Mensagens recebidas» e «Mensagens enviadas» — fica só o terminal com tudo — e o terminal deixa de rolar sozinho (rolamento manual).",
+    "changes": [
+      "Removidos os cartões «Mensagens recebidas» e «Mensagens enviadas»; fica só o terminal com todas as mensagens",
+      "O terminal de Mensagens (e Chamadas) deixa de rolar sozinho — o rolamento passa a ser manual"
+    ]
+  },
   "2.39.93": {
     "description": "Correção importante: Emola, bancos e serviços deixam de ir para Redes sociais e passam a aparecer em Mensagens recebidas. A app de cada mensagem é decidida pela origem real (pacote), mesmo sem a migração SQL.",
     "changes": [
