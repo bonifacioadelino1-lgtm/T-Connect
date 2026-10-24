@@ -1,4 +1,12 @@
 {
+  "2.39.96": {
+    "description": "Correção: as chamadas voltam a sincronizar. Deixaram de depender de READ_PHONE_STATE (que bloqueava a sincronização) — basta a permissão de registo de chamadas, que a criança passa a pedir automaticamente se faltar.",
+    "changes": [
+      "Chamadas voltam a sincronizar — basta a permissão de registo de chamadas (READ_CALL_LOG)",
+      "A criança pede automaticamente a permissão de chamadas se ainda não tiver sido concedida",
+      "Deixou de exigir READ_PHONE_STATE, que impedia a sincronização mesmo com o registo de chamadas autorizado"
+    ]
+  },
   "2.39.95": {
     "description": "Correção de bugs: ao abrir uma conversa, deixa de se fechar sozinha na atualização automática, e a posição de leitura (scroll) deixa de saltar para o topo a cada 5 segundos.",
     "changes": [

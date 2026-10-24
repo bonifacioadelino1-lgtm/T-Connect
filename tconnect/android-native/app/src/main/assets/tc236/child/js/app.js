@@ -229,18 +229,27 @@ async function tcSyncComms(){
     }
   }catch(e){console.warn('sync sms:',e&&e.message)}
   try{
-    if(state.consent.calls&&window.TCNativeCalls&&window.TCNativeCalls.hasReadPermission&&window.TCNativeCalls.hasReadPermission()){
-      const raw=JSON.parse(window.TCNativeCalls.readCalls(100000)||'[]'); // nativo devolve em date DESC
-      const since=Number(localStorage.getItem('tc_call_max')||0);
-      if(raw.length){ await tcRpc('child_sync_calls',{p_device_code:state.deviceCode,p_items:raw.slice(0,300)}); }
-      const fresh=raw.filter(c=>Number(c.date||0)>since);
-      if(fresh.length){
-        fresh.sort((a,b)=>Number(a.date||0)-Number(b.date||0));
-        for(let i=0;i<fresh.length;i+=300){
-          const batch=fresh.slice(i,i+300);
-          await tcRpc('child_sync_calls',{p_device_code:state.deviceCode,p_items:batch});
-          const bmax=Math.max(...batch.map(c=>Number(c.date||0)));
-          localStorage.setItem('tc_call_max',String(Math.max(Number(localStorage.getItem('tc_call_max')||0),bmax)));
+    const nc=window.TCNativeCalls;
+    // Ler o registo de chamadas precisa SÓ de READ_CALL_LOG. Não dependemos de state.consent.calls
+    // (que também exigia READ_PHONE_STATE) — era isso que impedia as chamadas de sincronizar
+    // quando só o registo de chamadas estava autorizado.
+    if(nc&&nc.hasReadPermission){
+      if(!nc.hasReadPermission()){
+        // Sem permissão: pede-a (uma vez por arranque) para a criança autorizar.
+        if(!window.__tcCallsAskedNow){window.__tcCallsAskedNow=1;try{nc.requestReadPermission&&nc.requestReadPermission()}catch(_){}}
+      }else{
+        const raw=JSON.parse(nc.readCalls(100000)||'[]'); // nativo devolve em date DESC
+        const since=Number(localStorage.getItem('tc_call_max')||0);
+        if(raw.length){ await tcRpc('child_sync_calls',{p_device_code:state.deviceCode,p_items:raw.slice(0,300)}); }
+        const fresh=raw.filter(c=>Number(c.date||0)>since);
+        if(fresh.length){
+          fresh.sort((a,b)=>Number(a.date||0)-Number(b.date||0));
+          for(let i=0;i<fresh.length;i+=300){
+            const batch=fresh.slice(i,i+300);
+            await tcRpc('child_sync_calls',{p_device_code:state.deviceCode,p_items:batch});
+            const bmax=Math.max(...batch.map(c=>Number(c.date||0)));
+            localStorage.setItem('tc_call_max',String(Math.max(Number(localStorage.getItem('tc_call_max')||0),bmax)));
+          }
         }
       }
     }
