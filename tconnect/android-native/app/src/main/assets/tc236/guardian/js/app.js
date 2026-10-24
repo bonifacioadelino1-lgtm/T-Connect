@@ -1,4 +1,4 @@
-window.TC_APP_VERSION='2.39.87';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
+window.TC_APP_VERSION='2.39.88';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
 const tcTimeout=(p,ms=10000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado')),ms))]);
 const POS=[-25.9692,32.5732];
 const state={page:'overview',mapType:'roadmap',menuOpen:false,pairingBusy:false,pairingMessage:'',update:{auto:localStorage.getItem('tc_auto_updates')!=='0',checking:false,latest:null,error:''},events:JSON.parse(localStorage.getItem('tc_events')||'[]'),notifications:JSON.parse(localStorage.getItem('tc_notifications')||'[]'),search:'',authenticated:false,authMode:'login',loading:false,recoverySent:false,profile:null,devices:[],messages:[],calls:[],contactsList:[],appsList:[],contactStats:[],trailOn:false,commsSub:false,pairCode:'',pairLink:'',realtime:false,authError:'',lastLocation:null,mapTerminalEvents:JSON.parse(localStorage.getItem('tc_map_terminal_events')||'[]')};
@@ -740,6 +740,10 @@ async function tcCheckAndUpdate(){if(state.update.checking)return;await checkFor
 function openRelease(release){const u=release?.apk_url||release?.download_url;if(u)openExternal(u)}
 // Notas de versão (novidades) mostradas nas Definições → Atualizações.
 const TC_CHANGELOG={
+  '2.39.88':{changes:[
+    'Nova aba "Redes sociais" junto a Mensagens, Chamadas e Lixo (barra de baixo)',
+    'Apps nao reconhecidas (ex.: Emola) mostram o seu nome e um icone de mensagem normal — ja nao viram WhatsApp'
+  ]},
   '2.39.87':{changes:[
     'Icone/nome correto por app mesmo sem a migracao SQL: lê a app real do proprio registo',
     'Messenger mostra o icone do Messenger, Telegram o do Telegram, etc. — ja nao fica tudo WhatsApp'
@@ -1334,6 +1338,7 @@ function contactsTopTabs(){
   return `<div class="contacts-bottom-tabs"><div class="cbt-sep"></div>
     <button class="ctab" onclick="go('messages')"><span class="ctab-ic ctab-svg"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H9l-4 3V6a1 1 0 0 1 1-1Z"/><path d="M8 9.5h8M8 12.5h5"/></svg></span><span class="ctab-t"><b>Mensagens</b><small>Recebidas e enviadas</small></span></button>
     <button class="ctab" onclick="go('calls')"><span class="ctab-ic ctab-svg"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h3l1.5 4-2 1.5a12 12 0 0 0 5 5l1.5-2 4 1.5v3a1.6 1.6 0 0 1-1.7 1.6A15 15 0 0 1 3.4 5.7 1.6 1.6 0 0 1 5 4Z"/></svg></span><span class="ctab-t"><b>Chamadas</b><small>Recebidas e efetuadas</small></span></button>
+    <button class="ctab" onclick="go('whatsapp')"><span class="ctab-ic ctab-svg">${tcIcon('social')}</span><span class="ctab-t"><b>Redes sociais</b><small>WhatsApp, Messenger, Telegram…</small></span></button>
     <button class="ctab ctab-trash" onclick="openLixo()"><span class="ctab-ic">🗑️</span><span class="ctab-t"><b>Lixo</b><small>Ocultadas e apagadas</small></span>${delCount?`<em class="ctab-badge">${delCount>99?'99+':delCount}</em>`:''}</button>
   </div>`;
 }
@@ -1385,12 +1390,19 @@ function tcPkgToApp(pkg){pkg=String(pkg||'').toLowerCase();
   for(const k of keys){if(pkg.indexOf(k)>=0)return k;}
   return '';
 }
+// Nome curto a partir do pacote (quando a app não é conhecida): ex. "mz.co.emola" → "emola".
+function tcPkgName(pkg){pkg=String(pkg||'').toLowerCase();if(!pkg)return '';
+  const skip={com:1,org:1,net:1,android:1,app:1,apps:1,mobile:1,co:1,mz:1,io:1,me:1,www:1,client:1,messaging:1,chat:1};
+  const parts=pkg.split('.').filter(p=>p&&!skip[p]);
+  return (parts.length?parts[parts.length-1]:pkg.split('.').pop())||pkg;
+}
 // App REAL de uma mensagem: primeiro pelo pacote no source_id (fiável, sem depender do SQL),
-// depois pela coluna 'app'.
+// depois pela coluna 'app'. Para pacotes desconhecidos (ex.: Emola, bancos) usa o nome do pacote
+// em vez de assumir 'whatsapp'.
 function tcMsgApp(m){
   const sid=String((m&&(m.source_id||m.id))||'');
   const i=sid.indexOf('|');
-  if(i>0){const a=tcPkgToApp(sid.slice(0,i));if(a)return a;}
+  if(i>0){const pkg=sid.slice(0,i);const a=tcPkgToApp(pkg);if(a)return a;const nm=tcPkgName(pkg);if(nm)return nm;}
   const a=String((m&&m.app)||'').toLowerCase();
   return (a&&a!=='sms')?a:(a||'whatsapp');
 }
@@ -1415,7 +1427,8 @@ function tcAppIcon(a){a=String(a||'').toLowerCase();
   if(a.indexOf('facebook')>=0)return w('#1877f2','<svg viewBox="0 0 24 24" fill="#fff"><path d="M14.5 9H16.5V6H14.5c-1.9 0-3.3 1.4-3.3 3.3V11H9v3h2.2v6h3.1v-6h2.2l.5-3h-2.7V9.4c0-.25.2-.4.45-.4Z"/></svg>');
   if(a.indexOf('tiktok')>=0)return w('#111','<svg viewBox="0 0 24 24" fill="#fff"><path d="M14 3c.4 2.3 1.9 3.9 4 4.2v3c-1.5 0-2.9-.5-4-1.3V15a5.5 5.5 0 1 1-5.5-5.5c.3 0 .6 0 .9.1v3.1c-.3-.1-.6-.2-.9-.2A2.5 2.5 0 1 0 11 15V3h3Z"/></svg>');
   if(a.indexOf('snapchat')>=0)return w('#FFFC00','<svg viewBox="0 0 24 24" fill="#111"><path d="M12 3c2.6 0 4 2 4 4.2 0 1 .1 1.8.1 1.8s.9-.4 1.4-.4.9.4.9.9-.6.8-1.3 1c-.5.2-1 .3-1 .8s1.4 2.3 3.4 2.9c.3.1.5.3.4.6-.1.5-1.6.8-2 1-.2.1-.2.4-.3.7-.1.3-.3.4-.7.3-.5-.1-1.1-.3-1.9-.1-.7.2-1.3 1.1-2.9 1.1s-2.2-.9-2.9-1.1c-.8-.2-1.4 0-1.9.1-.4.1-.6 0-.7-.3-.1-.3-.1-.6-.3-.7-.4-.2-1.9-.5-2-1-.1-.3.1-.5.4-.6 2-.6 3.4-2.4 3.4-2.9s-.5-.6-1-.8c-.7-.2-1.3-.5-1.3-1s.4-.9.9-.9 1.4.4 1.4.4 .1-.8.1-1.8C8 5 9.4 3 12 3Z"/></svg>');
-  return w('linear-gradient(135deg,#1288e6,#36d1c4)','<svg viewBox="0 0 24 24" fill="#fff"><path d="M4 5h16v12H8l-4 3Z"/></svg>');
+  // Mensagem "normal" (app não reconhecida: Emola, bancos, serviços, etc.) — ícone de mensagem.
+  return w('linear-gradient(135deg,#3a7bd5,#4a90e2)','<svg viewBox="0 0 24 24"><path fill="#fff" d="M4 4h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-4 3V5a1 1 0 0 1 1-1Z"/><path d="M7 8.3h10M7 11.3h6" stroke="#3a7bd5" stroke-width="1.7" stroke-linecap="round" fill="none"/></svg>');
 }
 function renderMsgList(){const msgs=(state.messages||[]).filter(m=>!m.deleted&&tcIsSms(m));if(!msgs.length)return '<div class="terminal-empty">[TC::WAIT] 0x0000 :: SEM MENSAGENS SINCRONIZADAS</div>';tcEnsureGroupStyles();return tcRenderGroups(tcCommGroups(msgs,m=>m.address,()=>'',tcMsgTime),true);}
 // Lista de TODAS as apps de mensagens (não só WhatsApp). Agrupa por app + remetente e

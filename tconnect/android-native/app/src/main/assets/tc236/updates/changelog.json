@@ -1,4 +1,12 @@
 {
+  "2.39.88": {
+    "description": "Nova aba «Redes sociais» junto a Mensagens, Chamadas e Lixo; apps não reconhecidas (ex.: Emola) mostram o seu nome e um ícone de mensagem normal, deixando de aparecer como WhatsApp.",
+    "changes": [
+      "Aba «Redes sociais» acrescentada à barra do fundo (Mensagens, Chamadas, Lixo)",
+      "Apps não reconhecidas (Emola, bancos, serviços) mostram o próprio nome e um ícone de mensagem normal",
+      "Deixa de assumir WhatsApp quando a app não é reconhecida"
+    ]
+  },
   "2.39.87": {
     "description": "Cada mensagem passa a mostrar o ícone e o nome da app REAL (Messenger, Telegram, Instagram…), mesmo que o servidor tenha gravado tudo como WhatsApp — a app é lida do próprio registo.",
     "changes": [
