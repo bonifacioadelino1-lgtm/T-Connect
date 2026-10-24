@@ -1,4 +1,12 @@
 {
+  "2.39.87": {
+    "description": "Cada mensagem passa a mostrar o ícone e o nome da app REAL (Messenger, Telegram, Instagram…), mesmo que o servidor tenha gravado tudo como WhatsApp — a app é lida do próprio registo.",
+    "changes": [
+      "Ícone e nome corretos por app, mesmo sem a migração SQL aplicada",
+      "Messenger mostra o ícone do Messenger, Telegram o do Telegram, e assim por diante",
+      "Deixa de aparecer tudo como WhatsApp"
+    ]
+  },
   "2.39.86": {
     "description": "A aba de mensagens de apps passou a «Redes sociais»: cada conversa mostra o ícone real da app (WhatsApp, Messenger, Telegram, Instagram, Signal…) e o nome correto.",
     "changes": [

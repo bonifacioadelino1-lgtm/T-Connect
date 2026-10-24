@@ -1,4 +1,4 @@
-window.TC_APP_VERSION='2.39.86';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
+window.TC_APP_VERSION='2.39.87';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
 const tcTimeout=(p,ms=10000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado')),ms))]);
 const POS=[-25.9692,32.5732];
 const state={page:'overview',mapType:'roadmap',menuOpen:false,pairingBusy:false,pairingMessage:'',update:{auto:localStorage.getItem('tc_auto_updates')!=='0',checking:false,latest:null,error:''},events:JSON.parse(localStorage.getItem('tc_events')||'[]'),notifications:JSON.parse(localStorage.getItem('tc_notifications')||'[]'),search:'',authenticated:false,authMode:'login',loading:false,recoverySent:false,profile:null,devices:[],messages:[],calls:[],contactsList:[],appsList:[],contactStats:[],trailOn:false,commsSub:false,pairCode:'',pairLink:'',realtime:false,authError:'',lastLocation:null,mapTerminalEvents:JSON.parse(localStorage.getItem('tc_map_terminal_events')||'[]')};
@@ -740,6 +740,10 @@ async function tcCheckAndUpdate(){if(state.update.checking)return;await checkFor
 function openRelease(release){const u=release?.apk_url||release?.download_url;if(u)openExternal(u)}
 // Notas de versão (novidades) mostradas nas Definições → Atualizações.
 const TC_CHANGELOG={
+  '2.39.87':{changes:[
+    'Icone/nome correto por app mesmo sem a migracao SQL: lê a app real do proprio registo',
+    'Messenger mostra o icone do Messenger, Telegram o do Telegram, etc. — ja nao fica tudo WhatsApp'
+  ]},
   '2.39.86':{changes:[
     'Aba renomeada para "Redes sociais" com icone proprio',
     'Cada conversa mostra o ICONE real da app (WhatsApp, Messenger, Telegram, Instagram, Signal…) e o nome correto',
@@ -1372,9 +1376,32 @@ function tcCommGroups(list,getNum,getName,getTime){const groups={};(list||[]).fo
 function tcGroupRows(items,isMsg){return items.map(it=>{if(isMsg){const sent=String(it.direction)==='ENVIADA';return `<div class="comm-seq-row comm-msg-row ${sent?'out':'in'}"><div class="comm-seq-head"><span class="comm-seq-dir">${sent?'▲ Enviada':'▼ Recebida'}</span><span class="comm-seq-time">${esc(tcFmtWhen(it.epoch_ms))}</span></div><div class="comm-seq-main"><p>${esc(it.body||'')}</p></div></div>`;}const out=String(it.direction)==='EFETUADA';return `<div class="comm-seq-row ${out?'out':'in'}"><span class="comm-seq-dir">${out?'▲ Efetuada':'▼ Recebida'}</span><div class="comm-seq-main"><p>Duração: ${esc(typeof tcFmtDur==='function'?tcFmtDur(it.duration_s):(it.duration_s||0)+'s')}</p></div><span class="comm-seq-time">${esc(tcFmtWhen(it.epoch_ms))}</span></div>`;}).join('');}
 function tcRenderGroups(groups,isMsg,red){if(!groups.length)return '<div class="terminal-empty" style="padding:18px">Nenhum registo encontrado.</div>';return '<div class="comm-groups">'+groups.map(g=>{const title=esc(g.name||g.number||'—');const ini=esc((g.name||g.number||'?').trim().slice(0,1).toUpperCase()||'?');const prev=isMsg?esc((g.last.body||'').slice(0,64)):(g.items.length+' chamada'+(g.items.length===1?'':'s'));const badge=isMsg?(g.items.length+' msg'):(g.items.length+' ☎');return `<details class="comm-group"><summary><span class="comm-group-ava"${red?' style="background:linear-gradient(135deg,#c0152b,#7a0f1e)"':''}>${ini}</span><div class="comm-group-main"><b>${title}</b>${g.name?`<small>${esc(g.number)}</small>`:''}<small class="comm-group-prev">${prev}</small></div><div class="comm-group-meta"><span class="comm-count"${red?' style="background:#c0152b"':''}>${red?(g.items.length+' 🗑'):badge}</span><small>${esc(tcFmtWhen(g.last.epoch_ms))}</small></div></summary><div class="comm-group-body">${tcGroupRows(g.items,isMsg)}</div></details>`;}).join('')+'</div>';}
 function renderDeletedMsgList(){const del=(state.messages||[]).filter(m=>m.deleted&&m.app!=='whatsapp');if(!del.length)return '';tcEnsureGroupStyles();const groups=tcCommGroups(del,m=>m.address,()=>'',tcMsgTime);return `<div class="card" style="margin-top:14px"><div class="section-head"><div><div class="section-kicker" style="color:#ff7a7a">APAGADAS</div><h3>Mensagens apagadas <span style="background:#c0152b;color:#fff;border-radius:999px;font-size:12px;padding:2px 9px;margin-left:6px">${del.length}</span></h3><p class="muted">SMS que foram apagadas do telemóvel da criança ficam guardadas aqui.</p></div></div><div class="msg-seq-terminal" style="margin-top:8px">${tcRenderGroups(groups,true,true)}</div></div>`;}
-// Uma mensagem é SMS quando não tem app marcada ou app==='sms'. Tudo o resto (whatsapp,
-// telegram, messenger, instagram, signal, …) é de uma app de mensagens (IM).
-function tcIsSms(m){return !m.app||m.app==='sms';}
+// Pacote (ex.: org.telegram.messenger) → chave da app. Robusto: funciona mesmo que a base
+// de dados grave tudo como 'whatsapp', porque lemos o pacote REAL do source_id.
+function tcPkgToApp(pkg){pkg=String(pkg||'').toLowerCase();
+  const map={'com.whatsapp':'whatsapp','com.whatsapp.w4b':'whatsapp business','org.telegram.messenger':'telegram','org.thunderdog.challegram':'telegram','com.facebook.orca':'messenger','com.facebook.mlite':'messenger','com.facebook.katana':'facebook','com.instagram.android':'instagram','org.thoughtcrime.securesms':'signal','com.viber.voip':'viber','com.imo.android.imoim':'imo','com.imo.android.imoimbeta':'imo','com.snapchat.android':'snapchat','com.zhiliaoapp.musically':'tiktok','com.ss.android.ugc.trill':'tiktok','com.twitter.android':'twitter','com.discord':'discord','jp.naver.line.android':'line','com.tencent.mm':'wechat','com.skype.raider':'skype','kik.android':'kik','com.google.android.gm':'gmail','com.microsoft.office.outlook':'outlook'};
+  if(map[pkg])return map[pkg];
+  const keys=['whatsapp','telegram','messenger','instagram','signal','viber','snapchat','tiktok','discord','wechat','skype','facebook','line'];
+  for(const k of keys){if(pkg.indexOf(k)>=0)return k;}
+  return '';
+}
+// App REAL de uma mensagem: primeiro pelo pacote no source_id (fiável, sem depender do SQL),
+// depois pela coluna 'app'.
+function tcMsgApp(m){
+  const sid=String((m&&(m.source_id||m.id))||'');
+  const i=sid.indexOf('|');
+  if(i>0){const a=tcPkgToApp(sid.slice(0,i));if(a)return a;}
+  const a=String((m&&m.app)||'').toLowerCase();
+  return (a&&a!=='sms')?a:(a||'whatsapp');
+}
+// Uma mensagem é SMS quando NÃO tem pacote de app no source_id e a app é 'sms'/vazia.
+// (As mensagens de apps têm source_id a começar por "pacote|…".)
+function tcIsSms(m){
+  const sid=String((m&&(m.source_id||m.id))||'');
+  if(sid.indexOf('|')>0)return false;
+  const a=String((m&&m.app)||'').toLowerCase();
+  return !a||a==='sms';
+}
 function tcImAppName(a){a=String(a||'').toLowerCase();const m={whatsapp:'WhatsApp','whatsapp business':'WhatsApp Business',telegram:'Telegram',messenger:'Messenger',instagram:'Instagram',signal:'Signal',imo:'imo',viber:'Viber',snapchat:'Snapchat',tiktok:'TikTok',twitter:'X',x:'X',discord:'Discord',line:'LINE',wechat:'WeChat',skype:'Skype',kik:'Kik',botim:'Botim',hangouts:'Hangouts',gmail:'Gmail',outlook:'Outlook',facebook:'Facebook'};return m[a]||(a?a.charAt(0).toUpperCase()+a.slice(1):'App');}
 // Ícone real (marca) de cada rede social / app de mensagens.
 function tcAppIcon(a){a=String(a||'').toLowerCase();
@@ -1398,7 +1425,7 @@ function renderWhatsAppList(){
   if(!msgs.length)return '<div class="terminal-empty">Sem mensagens de apps ainda. No aplicativo da criança, ative o «Acesso às notificações» para ler todas as apps de mensagens.</div>';
   tcEnsureGroupStyles();
   const groups={};
-  msgs.forEach(m=>{const app=(m.app||'app');const who=(m.address||'—');const k=app+'|'+who;(groups[k]=groups[k]||{app:app,who:who,items:[]}).items.push(m);});
+  msgs.forEach(m=>{const app=tcMsgApp(m);const who=(m.address||'—');const k=app+'|'+who;(groups[k]=groups[k]||{app:app,who:who,items:[]}).items.push(m);});
   const arr=Object.values(groups).map(g=>{g.items.sort((a,b)=>tcMsgTime(b)-tcMsgTime(a));g.last=g.items[0];return g;});
   arr.sort((a,b)=>tcMsgTime(b.last)-tcMsgTime(a.last));
   return '<div class="comm-groups">'+arr.map(g=>{const appName=esc(tcImAppName(g.app));const prev=esc((g.last.body||'').slice(0,64));return `<details class="comm-group im-group"><summary>${tcAppIcon(g.app)}<div class="comm-group-main"><b>${esc(g.who)}</b><small class="im-app-tag">${appName}</small><small class="comm-group-prev">${prev}</small></div><div class="comm-group-meta"><span class="comm-count">${g.items.length} msg</span><small>${esc(tcFmtWhen(g.last.epoch_ms))}</small></div></summary><div class="comm-group-body">${tcGroupRows(g.items,true)}</div></details>`;}).join('')+'</div>';
