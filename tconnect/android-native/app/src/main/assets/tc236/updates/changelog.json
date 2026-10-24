@@ -1,4 +1,11 @@
 {
+  "2.39.98": {
+    "description": "Nas Mensagens, as conversas passam a mostrar o nome do contacto (da agenda sincronizada), com o número por baixo. Sem nome guardado, mostra o próprio número.",
+    "changes": [
+      "Mensagens mostram o NOME do contacto em vez de só o número",
+      "O número aparece por baixo do nome; sem nome guardado, mostra só o número"
+    ]
+  },
   "2.39.97": {
     "description": "Histórico de chamadas a registar de forma fiável: a sincronização de chamadas passa a correr também nativamente em segundo plano, e a criança mostra um aviso para autorizar o acesso às chamadas quando falta a permissão.",
     "changes": [
