@@ -1,4 +1,14 @@
 {
+  "2.40.5": {
+    "description": "Correções no terminal de mensagens (deixa de saltar para a primeira conversa ao ler), no deslizar para remover (agora funciona em Mensagens, Chamadas e Redes sociais), na eliminação de conta (apaga mesmo na base de dados), nas notificações (botão «Limpar» que zera o contador) e nas atividades do terminal (leitura real em código, com estado ONLINE/OFFLINE da Shield).",
+    "changes": [
+      "Mensagens: ao abrir uma conversa e rolar para ler, deixa de saltar para a primeira conversa (posição preservada e sem atualizar enquanto se lê)",
+      "Deslizar para remover corrigido em Mensagens, Chamadas e Redes sociais (gesto robusto, com confirmação)",
+      "Eliminar conta: passa a APAGAR mesmo o registo na base de dados (não apenas esconder da lista)",
+      "Notificações: botão «Limpar» que apaga tudo o que está nas notificações e põe o contador a zero",
+      "Atividades do terminal: leitura real de localização, novas notificações, redes sociais, mensagens e chamadas — mostradas só em código — e estado ONLINE/OFFLINE da Shield"
+    ]
+  },
   "2.40.4": {
     "description": "As contas passam a mostrar a fotografia de perfil (Gravatar) de cada e-mail ao lado do nome. O deslizar para remover agora também apaga mensagens e chamadas individuais dentro de cada conversa. O terminal de atividades ganha digitação infinita com rolagem suave para cima. A Shield mantém GPS de alta precisão contínuo em segundo plano, com o ponto a mover-se em tempo real sem abrir a app. A tradução deixa de prender texto ao alternar idiomas e volta ao português na perfeição.",
     "changes": [
