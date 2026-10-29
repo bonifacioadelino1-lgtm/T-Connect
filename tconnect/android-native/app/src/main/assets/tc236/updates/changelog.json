@@ -1,4 +1,11 @@
 {
+  "2.40.3": {
+    "description": "Tradução reforçada: o dicionário PT/EN/FR/ZH foi alargado às novas áreas (sino, redes sociais, planos, eliminar). A interface traduz-se por completo ao mudar de idioma, combinando o dicionário com tradução automática em cache.",
+    "changes": [
+      "Dicionário de tradução alargado (Português, Inglês, Francês, Chinês) para as áreas novas",
+      "A interface traduz-se por completo ao mudar de idioma, com cache para funcionar depressa"
+    ]
+  },
   "2.40.2": {
     "description": "Os planos pagos deixam de dar acesso automático: o acesso só é libertado depois de o Super Admin validar o comprovante e ativar manualmente. Surge o botão «Pedir ativação do plano» e o ecrã «Aguarde em 24h», e o comprovante por WhatsApp já inclui o e-mail da conta.",
     "changes": [

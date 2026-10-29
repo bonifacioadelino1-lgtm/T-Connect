@@ -261,7 +261,41 @@
     "Senha boa": { en: "Good password", fr: "Bon mot de passe", zh: "密码良好" },
     "Senha forte": { en: "Strong password", fr: "Mot de passe fort", zh: "密码很强" },
     "✓ As senhas coincidem": { en: "✓ Passwords match", fr: "✓ Les mots de passe correspondent", zh: "✓ 密码一致" },
-    "✗ As senhas não coincidem": { en: "✗ Passwords do not match", fr: "✗ Les mots de passe ne correspondent pas", zh: "✗ 密码不一致" }
+    "✗ As senhas não coincidem": { en: "✗ Passwords do not match", fr: "✗ Les mots de passe ne correspondent pas", zh: "✗ 密码不一致" },
+    // ---- Notificações / sino ----
+    "Notificações": { en: "Notifications", fr: "Notifications", zh: "通知" },
+    "Alertas": { en: "Alerts", fr: "Alertes", zh: "提醒" },
+    "Marcar todas como lidas": { en: "Mark all as read", fr: "Tout marquer comme lu", zh: "全部标为已读" },
+    "Nenhuma notificação recebida.": { en: "No notifications received.", fr: "Aucune notification reçue.", zh: "没有收到通知。" },
+    "Nenhuma notificação": { en: "No notifications", fr: "Aucune notification", zh: "没有通知" },
+    "Toque para abrir": { en: "Tap to open", fr: "Appuyez pour ouvrir", zh: "点击打开" },
+    "Mensagem": { en: "Message", fr: "Message", zh: "短信" },
+    // ---- Eliminar (deslizar) ----
+    "Eliminar?": { en: "Delete?", fr: "Supprimer ?", zh: "删除？" },
+    "Eliminar": { en: "Delete", fr: "Supprimer", zh: "删除" },
+    "Cancelar": { en: "Cancel", fr: "Annuler", zh: "取消" },
+    // ---- Redes sociais / mensagens ----
+    "Redes sociais": { en: "Social networks", fr: "Réseaux sociaux", zh: "社交网络" },
+    "Mensagens de apps": { en: "App messages", fr: "Messages d'applis", zh: "应用消息" },
+    "Captura de mensagens": { en: "Message capture", fr: "Capture de messages", zh: "消息捕获" },
+    "Somente fontes autorizadas pelo Android.": { en: "Only Android-authorized sources.", fr: "Uniquement les sources autorisées par Android.", zh: "仅限 Android 授权的来源。" },
+    "Mensagens recebidas": { en: "Received messages", fr: "Messages reçus", zh: "收到的消息" },
+    "Mensagens enviadas": { en: "Sent messages", fr: "Messages envoyés", zh: "发送的消息" },
+    "Chamadas recebidas": { en: "Received calls", fr: "Appels reçus", zh: "接到的来电" },
+    "Chamadas efetuadas": { en: "Made calls", fr: "Appels passés", zh: "拨出的电话" },
+    "Lixo": { en: "Trash", fr: "Corbeille", zh: "回收站" },
+    "Atividades do terminal": { en: "Terminal activity", fr: "Activité du terminal", zh: "终端活动" },
+    // ---- Planos / ativação ----
+    "Pedido enviado": { en: "Request sent", fr: "Demande envoyée", zh: "请求已发送" },
+    "Pedir ativação do plano": { en: "Request plan activation", fr: "Demander l'activation du forfait", zh: "申请套餐激活" },
+    "Já fui ativado — verificar": { en: "I've been activated — check", fr: "J'ai été activé — vérifier", zh: "我已被激活 — 检查" },
+    "Escolher outro plano": { en: "Choose another plan", fr: "Choisir un autre forfait", zh: "选择其他套餐" },
+    "Enviar comprovante via WhatsApp": { en: "Send receipt via WhatsApp", fr: "Envoyer le reçu via WhatsApp", zh: "通过 WhatsApp 发送凭证" },
+    "Pedidos de ativação": { en: "Activation requests", fr: "Demandes d'activation", zh: "激活请求" },
+    "Escolha o seu plano": { en: "Choose your plan", fr: "Choisissez votre forfait", zh: "选择您的套餐" },
+    "Plano expirado": { en: "Plan expired", fr: "Forfait expiré", zh: "套餐已过期" },
+    "Gestão de planos e contas": { en: "Plans and accounts management", fr: "Gestion des forfaits et comptes", zh: "套餐和账户管理" },
+    "Super Administrador": { en: "Super Administrator", fr: "Super administrateur", zh: "超级管理员" }
   };
 
   function lang() { return (window.TC_I18N && window.TC_I18N.lang) || "pt"; }
