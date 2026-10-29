@@ -1,4 +1,12 @@
 {
+  "2.40.6": {
+    "description": "A aplicação passa a traduzir-se por completo (PT/EN/FR/ZH) — todas as páginas, títulos, descrições, botões e estados, não apenas o menu. Foi adicionado um motor de tradução nativo que contorna o bloqueio de CORS do WebView (que impedia a tradução automática do conteúdo), com cache para ser rápido. Apenas os dados em si (conversas, coordenadas e códigos) permanecem no original.",
+    "changes": [
+      "Tradução completa de toda a interface: todas as páginas, descrições, botões e estados — não só o menu",
+      "Novo motor de tradução nativo (sem o limite de CORS do WebView) que traduz tudo para PT/EN/FR/ZH, com cache",
+      "Apenas os DADOS (conversas, coordenadas, códigos) ficam no original; os textos da interface são todos traduzidos"
+    ]
+  },
   "2.40.5": {
     "description": "Correções no terminal de mensagens (deixa de saltar para a primeira conversa ao ler), no deslizar para remover (agora funciona em Mensagens, Chamadas e Redes sociais), na eliminação de conta (apaga mesmo na base de dados), nas notificações (botão «Limpar» que zera o contador) e nas atividades do terminal (leitura real em código, com estado ONLINE/OFFLINE da Shield).",
     "changes": [

@@ -295,7 +295,13 @@
     "Escolha o seu plano": { en: "Choose your plan", fr: "Choisissez votre forfait", zh: "选择您的套餐" },
     "Plano expirado": { en: "Plan expired", fr: "Forfait expiré", zh: "套餐已过期" },
     "Gestão de planos e contas": { en: "Plans and accounts management", fr: "Gestion des forfaits et comptes", zh: "套餐和账户管理" },
-    "Super Administrador": { en: "Super Administrator", fr: "Super administrateur", zh: "超级管理员" }
+    "Super Administrador": { en: "Super Administrator", fr: "Super administrateur", zh: "超级管理员" },
+    // ---- Rótulos de direção (dentro das conversas) ----
+    "▲ Enviada": { en: "▲ Sent", fr: "▲ Envoyé", zh: "▲ 已发送" },
+    "▼ Recebida": { en: "▼ Received", fr: "▼ Reçu", zh: "▼ 已接收" },
+    "▲ Efetuada": { en: "▲ Outgoing", fr: "▲ Sortant", zh: "▲ 拨出" },
+    "Nenhum registo encontrado.": { en: "No record found.", fr: "Aucun enregistrement trouvé.", zh: "未找到记录。" },
+    "Sem mensagens de apps ainda. No aplicativo da criança, ative o «Acesso às notificações» para ler todas as apps de mensagens.": { en: "No app messages yet. In the child's app, enable “Notification access” to read all messaging apps.", fr: "Aucun message d'applis pour l'instant. Dans l'app de l'enfant, activez « Accès aux notifications » pour lire toutes les applis de messagerie.", zh: "暂无应用消息。请在孩子的应用中启用“通知访问权限”以读取所有消息应用。" }
   };
 
   function lang() { return (window.TC_I18N && window.TC_I18N.lang) || "pt"; }
@@ -318,7 +324,12 @@
   // Zonas de alta rotação / dados técnicos: o dicionário ainda se aplica,
   // mas NÃO se envia este texto para tradução dinâmica (evita inundar a rede
   // com carimbos de hora, coordenadas e códigos que mudam a cada segundo).
-  var DYN_SKIP_SEL = ".terminal,.auto-terminal,.activity-terminal,.msg-seq-terminal,.call-terminal,.screen-terminal,.tc-scifi-hud,.tc-glass-panel,.tc-exact-coordinate-hud,.mapkey,.invite-link,.manual-pair-code,.pair-code,code,pre,.version-pill";
+  // Só se protege da tradução automática o que é DADO (não interface): as conversas em si
+  // (nomes/números/mensagens), as linhas de código do terminal de atividade, as coordenadas,
+  // os códigos de vinculação e a versão. Todo o resto — títulos, descrições, botões, estados
+  // vazios, definições, planos, guia — é traduzido. Palavras de interface conhecidas (ex.:
+  // "Enviada") ainda são traduzidas pelo dicionário mesmo dentro destas zonas.
+  var DYN_SKIP_SEL = ".comm-groups,.comm-group-prev,.code-line,.tc-type-rest,.location-code-terminal,.tc-scifi-hud,.tc-glass-panel,.tc-exact-coordinate-hud,.mapkey,.invite-link,.manual-pair-code,.pair-code,code,pre,.version-pill";
 
   function ensureMem(L) {
     if (MEM[L]) return MEM[L];
@@ -365,6 +376,23 @@
       .catch(function () { return text; });
   }
 
+  // Ponte NATIVA de tradução (sem CORS). Quando o APK disponibiliza TCNativeI18n, enviamos
+  // lotes de texto e recebemos o resultado por __tcI18nResolve. Assim traduz-se TUDO, não só
+  // o dicionário offline. Em navegador normal (sem a ponte) recai no fetch (gtrans).
+  function nativeAvailable() { try { return !!(window.TCNativeI18n && window.TCNativeI18n.translate); } catch (_) { return false; } }
+  window.__tcI18nPending = window.__tcI18nPending || {};
+  window.__tcI18nResolve = function (reqId, map) { try { var fn = window.__tcI18nPending[reqId]; if (fn) fn(map || {}); } catch (_) {} };
+  function nativeTranslateBatch(L, texts) {
+    return new Promise(function (resolve) {
+      try {
+        var reqId = "r" + Date.now() + "_" + Math.floor(Math.random() * 1e6);
+        var to = setTimeout(function () { try { delete window.__tcI18nPending[reqId]; } catch (_) {} resolve({}); }, 20000);
+        window.__tcI18nPending[reqId] = function (map) { clearTimeout(to); try { delete window.__tcI18nPending[reqId]; } catch (_) {} resolve(map || {}); };
+        window.TCNativeI18n.translate(JSON.stringify(texts), L, reqId);
+      } catch (e) { resolve({}); }
+    });
+  }
+
   function flushQueue() {
     if (INFLIGHT || !QUEUE.length) return;
     var L = lang();
@@ -375,32 +403,44 @@
     var groups = {};
     batch.forEach(function (it) { (groups[it.t] = groups[it.t] || []).push(it.apply); });
     var texts = Object.keys(groups);
-    var i = 0, POOL = 4, active = 0;
-    function done() {
+    var pendingApply = [];
+    function applyAll() {
       INFLIGHT = false;
-      // aplica as traduções recolhidas sem disparar o próprio observador
       if (obs) obs.disconnect();
       pendingApply.forEach(function (fnArgs) { try { fnArgs[0](fnArgs[1]); } catch (_) {} });
       pendingApply = [];
       if (obs && document.body) obs.observe(document.body, { childList: true, subtree: true, characterData: true });
       if (QUEUE.length) flushQueue();
     }
-    var pendingApply = [];
-    function next() {
-      if (i >= texts.length) { if (active === 0) done(); return; }
-      while (active < POOL && i < texts.length) {
-        var txt = texts[i++]; active++;
-        (function (txt) {
-          var cached = cacheGet(L, txt);
-          var p = (cached != null) ? Promise.resolve(cached) : gtrans(L, txt).then(function (tr) { cacheSet(L, txt, tr); return tr; });
-          p.then(function (tr) {
-            (groups[txt] || []).forEach(function (fn) { pendingApply.push([fn, tr]); });
-          }).catch(function () { /* falhou: fica em pt, tenta de novo noutro ciclo */ })
-            .then(function () { active--; next(); });
-        })(txt);
+    // Separa o que já está em cache do que falta traduzir.
+    var missing = [];
+    texts.forEach(function (txt) { var c = cacheGet(L, txt); if (c != null) { (groups[txt] || []).forEach(function (fn) { pendingApply.push([fn, c]); }); } else missing.push(txt); });
+    if (!missing.length) { applyAll(); return; }
+    if (nativeAvailable()) {
+      var CH = 50, chunks = [];
+      for (var k = 0; k < missing.length; k += CH) chunks.push(missing.slice(k, k + CH));
+      var remaining = chunks.length;
+      chunks.forEach(function (chunk) {
+        nativeTranslateBatch(L, chunk).then(function (map) {
+          try { Object.keys(map || {}).forEach(function (txt) { var tr = map[txt]; if (tr) { cacheSet(L, txt, tr); (groups[txt] || []).forEach(function (fn) { pendingApply.push([fn, tr]); }); } }); } catch (_) {}
+          remaining--; if (remaining <= 0) applyAll();
+        });
+      });
+    } else {
+      var i = 0, POOL = 4, active = 0;
+      function next() {
+        if (i >= missing.length) { if (active === 0) applyAll(); return; }
+        while (active < POOL && i < missing.length) {
+          var txt = missing[i++]; active++;
+          (function (txt) {
+            gtrans(L, txt).then(function (tr) { if (tr) { cacheSet(L, txt, tr); (groups[txt] || []).forEach(function (fn) { pendingApply.push([fn, tr]); }); } })
+              .catch(function () {})
+              .then(function () { active--; next(); });
+          })(txt);
+        }
       }
+      next();
     }
-    next();
   }
 
   function walk(node) {

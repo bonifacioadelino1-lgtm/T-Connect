@@ -1,4 +1,4 @@
-window.TC_APP_VERSION='2.40.5';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
+window.TC_APP_VERSION='2.40.6';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
 const tcTimeout=(p,ms=10000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado')),ms))]);
 const POS=[-25.9692,32.5732];
 const state={page:'overview',mapType:'roadmap',menuOpen:false,pairingBusy:false,pairingMessage:'',update:{auto:localStorage.getItem('tc_auto_updates')!=='0',checking:false,latest:null,error:''},events:JSON.parse(localStorage.getItem('tc_events')||'[]'),notifications:JSON.parse(localStorage.getItem('tc_notifications')||'[]'),search:'',authenticated:false,authMode:'login',loading:false,recoverySent:false,profile:null,devices:[],messages:[],calls:[],contactsList:[],appsList:[],contactStats:[],trailOn:false,commsSub:false,pairCode:'',pairLink:'',realtime:false,authError:'',lastLocation:null,mapTerminalEvents:JSON.parse(localStorage.getItem('tc_map_terminal_events')||'[]')};
@@ -777,6 +777,11 @@ async function tcCheckAndUpdate(){if(state.update.checking)return;await checkFor
 function openRelease(release){const u=release?.apk_url||release?.download_url;if(u)openExternal(u)}
 // Notas de versão (novidades) mostradas nas Definições → Atualizações.
 const TC_CHANGELOG={
+  '2.40.6':{changes:[
+    'Tradução COMPLETA de toda a app: agora traduz todas as páginas, descrições, botões e estados — não só o menu',
+    'Motor de tradução nativo (sem limite de CORS do WebView): a interface inteira passa a traduzir-se para PT/EN/FR/ZH, com cache',
+    'Só ficam no original os DADOS (conversas, coordenadas, códigos) — nunca os textos da interface'
+  ]},
   '2.40.5':{changes:[
     'Mensagens: ao abrir uma conversa e rolar para ler, deixa de saltar para a primeira conversa (posição preservada; não atualiza enquanto está a ler)',
     'Deslizar para remover corrigido em Mensagens, Chamadas e Redes sociais (gesto robusto, com confirmação)',

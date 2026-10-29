@@ -134,6 +134,7 @@ class MainActivity : Activity() {
         web.addJavascriptInterface(NativeFiles(), "TCNativeFiles")
         web.addJavascriptInterface(NativeBg(), "TCNativeBg")
         web.addJavascriptInterface(NativeNotif(), "TCNativeNotif")
+        web.addJavascriptInterface(NativeI18n(), "TCNativeI18n")
         // For a production APK, bundle the tc236 web root into app/src/main/assets/tc236.
         web.loadUrl(BuildConfig.START_URL)
         setContentView(web)
@@ -276,6 +277,79 @@ class MainActivity : Activity() {
                     @Suppress("DEPRECATION") vib.vibrate(pattern, -1)
                 }
             } catch (_: Exception) {}
+        }
+    }
+
+    // Tradução NATIVA: a WebView não pode chamar o serviço de tradução por causa do CORS,
+    // por isso a parte nativa (sem CORS) faz o pedido HTTP, guarda em cache e devolve ao JS.
+    // Assim a interface inteira é traduzida, não só o que está no dicionário offline.
+    inner class NativeI18n {
+        @JavascriptInterface
+        fun available(): Boolean = true
+        @JavascriptInterface
+        fun translate(textsJson: String, targetLang: String, reqId: String) {
+            Thread {
+                val out = org.json.JSONObject()
+                try {
+                    val arr = org.json.JSONArray(textsJson)
+                    val tl = if (targetLang == "zh") "zh-CN" else targetLang
+                    val sp = getSharedPreferences("tc_i18n_" + targetLang, MODE_PRIVATE)
+                    val editor = sp.edit(); var dirty = false
+                    for (i in 0 until arr.length()) {
+                        val text = arr.optString(i, "")
+                        if (text.isEmpty()) continue
+                        val cached = sp.getString(text, null)
+                        if (cached != null) { out.put(text, cached); continue }
+                        val tr = i18nFetch(text, tl)
+                        if (!tr.isNullOrEmpty()) { out.put(text, tr); editor.putString(text, tr); dirty = true }
+                    }
+                    if (dirty) editor.apply()
+                } catch (_: Exception) {}
+                val payload = out.toString()
+                runOnUiThread {
+                    try { web.evaluateJavascript("window.__tcI18nResolve&&window.__tcI18nResolve(" + org.json.JSONObject.quote(reqId) + "," + payload + ")", null) } catch (_: Exception) {}
+                }
+            }.start()
+        }
+        private fun i18nFetch(text: String, tl: String): String? {
+            val enc = { s: String -> java.net.URLEncoder.encode(s, "UTF-8") }
+            val urls = arrayOf(
+                "https://translate.googleapis.com/translate_a/single?client=gtx&sl=pt&tl=" + enc(tl) + "&dt=t&q=" + enc(text),
+                "https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=pt&tl=" + enc(tl) + "&q=" + enc(text)
+            )
+            for (idx in urls.indices) {
+                var conn: java.net.HttpURLConnection? = null
+                try {
+                    conn = java.net.URL(urls[idx]).openConnection() as java.net.HttpURLConnection
+                    conn.connectTimeout = 10000; conn.readTimeout = 10000
+                    conn.setRequestProperty("User-Agent", "Mozilla/5.0")
+                    if (conn.responseCode in 200..299) {
+                        val body = conn.inputStream.bufferedReader().use { it.readText() }
+                        val parsed = if (idx == 0) i18nParseGtx(body) else i18nParseClients5(body)
+                        if (!parsed.isNullOrEmpty()) return parsed
+                    }
+                } catch (_: Exception) {} finally { try { conn?.disconnect() } catch (_: Exception) {} }
+            }
+            return null
+        }
+        private fun i18nParseGtx(body: String): String? {
+            return try {
+                val arr = org.json.JSONArray(body)
+                val seg = arr.optJSONArray(0) ?: return null
+                val sb = StringBuilder()
+                for (i in 0 until seg.length()) { val s = seg.optJSONArray(i); if (s != null) sb.append(s.optString(0, "")) }
+                sb.toString()
+            } catch (_: Exception) { null }
+        }
+        private fun i18nParseClients5(body: String): String? {
+            return try {
+                val arr = org.json.JSONArray(body)
+                when (val first = arr.opt(0)) {
+                    is org.json.JSONArray -> first.optString(0, "")
+                    is String -> first
+                    else -> null
+                }
+            } catch (_: Exception) { null }
         }
     }
 
