@@ -1,4 +1,12 @@
 {
+  "2.39.99": {
+    "description": "Deslizar para eliminar (com animação e confirmação) em Mensagens, Chamadas, Redes sociais e Lixo; e as Atividades do terminal ganham animação de digitação com cursor e rolagem suave.",
+    "changes": [
+      "Deslize uma conversa para o lado para a eliminar do painel, com confirmação e animação (Mensagens, Chamadas, Redes sociais, Lixo)",
+      "Atividades do terminal: efeito de digitação com cursor a piscar e rolagem suave",
+      "As conversas mantêm-se abertas entre atualizações também nas Chamadas"
+    ]
+  },
   "2.39.98": {
     "description": "Nas Mensagens, as conversas passam a mostrar o nome do contacto (da agenda sincronizada), com o número por baixo. Sem nome guardado, mostra o próprio número.",
     "changes": [

@@ -22,6 +22,8 @@
 .dashboard-map-card .actions .btn{white-space:nowrap}
 .side-status{display:none!important}
 @keyframes codeIn{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:none}}@keyframes cursorBlink{50%{opacity:0}}
+.tc-term-cursor{grid-template-columns:78px 42px auto!important;color:#4ef0a3;border-bottom:0;animation:none!important}
+.tc-term-caret{font-weight:900;color:#4ef0a3;animation:cursorBlink 1s steps(1) infinite;margin-left:2px}
 @media(max-width:1050px){.dashboard-layout{grid-template-columns:1fr}.dashboard-terminal-card .code-terminal{max-height:360px;min-height:280px}}
 @media(max-width:760px){.code-line{grid-template-columns:64px 34px 1fr 70px 70px 8px;font-size:9px}.dashboard-map-card .actions{width:100%}.dashboard-map-card .actions .btn{flex:1}}
 @media(max-width:520px){.code-line{grid-template-columns:1fr 1fr;gap:4px}.code-cursor{display:none}.code-time{grid-column:1/-1}.dashboard-terminal-card .code-terminal{max-height:300px}}
