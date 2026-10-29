@@ -1,4 +1,4 @@
-window.TC_APP_VERSION='2.40.1';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
+window.TC_APP_VERSION='2.40.2';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
 const tcTimeout=(p,ms=10000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado')),ms))]);
 const POS=[-25.9692,32.5732];
 const state={page:'overview',mapType:'roadmap',menuOpen:false,pairingBusy:false,pairingMessage:'',update:{auto:localStorage.getItem('tc_auto_updates')!=='0',checking:false,latest:null,error:''},events:JSON.parse(localStorage.getItem('tc_events')||'[]'),notifications:JSON.parse(localStorage.getItem('tc_notifications')||'[]'),search:'',authenticated:false,authMode:'login',loading:false,recoverySent:false,profile:null,devices:[],messages:[],calls:[],contactsList:[],appsList:[],contactStats:[],trailOn:false,commsSub:false,pairCode:'',pairLink:'',realtime:false,authError:'',lastLocation:null,mapTerminalEvents:JSON.parse(localStorage.getItem('tc_map_terminal_events')||'[]')};
@@ -278,7 +278,12 @@ function tcNotifGo(id){const n=(state.notifications||[]).find(x=>String(x.id)===
 async function boot(){try{if(window.TC_DB_READY) await window.TC_DB_READY;}catch(e){console.warn('Database initialization:',e)}window.TC_DB=window.TC_DB||{enabled:false,user:null,client:null};const demo=sessionStorage.getItem('tc_demo')==='1';const recoveryHash=/#.*(?:type=recovery|access_token=)/i.test(location.hash);if(window.TC_DB.user||demo){state.authenticated=!recoveryHash;state.authMode=recoveryHash?'recoverUpdate':'login';if(window.TC_DB.user&&window.TC_DB.enabled){try{state.profile=await tcProfile();state.devices=await tcDevices();applyActiveOrder();const dbEvents=await tcLoadEvents();if(dbEvents.length){state.events=dbEvents;save()}try{if(window.__tcGuardianRealtimeChannel&&window.TC_DB.client?.removeChannel)await window.TC_DB.client.removeChannel(window.__tcGuardianRealtimeChannel)}catch(_){}window.__tcGuardianRealtimeChannel=await tcRealtime(handleRealtimeEvent,handleDeviceUpdate);state.realtime=true}catch(e){console.warn('Backend:',e.message)}
     // Supabase como fonte de verdade: carrega planos, a subscrição da conta e o perfil.
     try{ if(window.tcLoadPlans){const plans=await window.tcLoadPlans();if(Array.isArray(plans)&&plans.length)adminSavePlans(plans);} }catch(e){console.warn('Planos:',e.message);}
-    try{ if(window.tcMySubscription){const sub=await window.tcMySubscription();if(sub&&sub.plan){localStorage.setItem(userPlanKey(),JSON.stringify({plan:sub.plan,days:sub.days,paidAt:sub.paidAt}));} } }catch(e){console.warn('Subscrição:',e.message);}
+    try{ if(window.tcMySubscription){const sub=await window.tcMySubscription();
+      if(sub){ state.subStatus=sub.status||'none'; state.pendingPlan=sub.plan||'';
+        if(sub.status==='active'&&sub.plan){ localStorage.setItem(userPlanKey(),JSON.stringify({plan:sub.plan,days:sub.days,paidAt:sub.paidAt})); state.subPending=false; }
+        else if(sub.status==='pending'){ state.subPending=true; try{localStorage.removeItem(userPlanKey())}catch(_){} }
+        else if(sub.status==='expired'){ try{localStorage.removeItem(userPlanKey())}catch(_){} state.subPending=false; }
+      } } }catch(e){console.warn('Subscrição:',e.message);}
     try{ if(window.tcLoadMyProfile){const prof=await window.tcLoadMyProfile();if(prof&&(prof.name||prof.photo)){const cur=loadProfile();if(prof.name)cur.name=prof.name;if(prof.photo)cur.photo=prof.photo;saveProfile(cur);} } }catch(e){console.warn('Perfil:',e.message);}
     if(isSuperAdmin()){let ok=false;try{ if(window.tcAdminListUsers){const all=await window.tcAdminListUsers();if(Array.isArray(all)){adminSaveUsers(all);ok=true;}} }catch(e){console.warn('Lista de contas:',e.message);} if(!ok){try{ if(window.tcLoadSubscriptions){const subs=await window.tcLoadSubscriptions();if(Array.isArray(subs)&&subs.length)adminSaveUsers(subs);} }catch(e){console.warn('Subscrições admin:',e.message);}}}
   }}render()}
@@ -767,6 +772,12 @@ async function tcCheckAndUpdate(){if(state.update.checking)return;await checkFor
 function openRelease(release){const u=release?.apk_url||release?.download_url;if(u)openExternal(u)}
 // Notas de versão (novidades) mostradas nas Definições → Atualizações.
 const TC_CHANGELOG={
+  '2.40.2':{changes:[
+    'Planos pagos: acesso só é libertado após ativação MANUAL pelo Super Admin (fim do acesso automático)',
+    'Novo botão "Pedir ativação do plano" + ecrã "Aguarde em 24h" enquanto o Super Admin verifica',
+    'O comprovante enviado por WhatsApp inclui automaticamente o e-mail da conta',
+    'Super Admin: lista de "Pedidos de ativação" pendentes para validar e ativar'
+  ]},
   '2.40.1':{changes:[
     'Sino: conta cada alerta; abrir ou remover um alerta faz o numero descer (leitura por alerta)',
     'Botao "Marcar todas como lidas" no sino',
@@ -1050,6 +1061,7 @@ function userHasPlan(){if(isSuperAdmin())return true;try{return !!localStorage.g
 // Com um plano ativo (não expirado), NUNCA mostra. O Super Admin nunca vê planos.
 function needsPlanChoice(){
   if(isSuperAdmin())return false;
+  if(state.subPending)return true;  // pedido enviado, a aguardar ativação manual do Super Admin
   if(isPlanExpired())return true;   // plano expirado → mostra no login
   return !userHasPlan();            // nunca escolheu → mostra; plano ativo → não mostra
 }
@@ -1122,15 +1134,9 @@ function choosePlanAccount(id){
   showPaymentScreen(id);
 }
 window.choosePlanAccount=choosePlanAccount;
-function confirmPayment(id,period){
-  setUserPlan(id,period);
-  state.planExpired=null;
-  const ov=document.getElementById('tc-plan-overlay'); if(ov)ov.remove();
-  const pay=document.getElementById('tc-pay-overlay'); if(pay)pay.remove();
-  const nm=planLabel(id);
-  addEvent('PLANO','Pagamento confirmado — plano '+nm+' ativado.',{status:'PAGO',source:'Conta'});
-  render();
-}
+// Já NÃO ativa automaticamente: regista o pedido como PENDENTE e espera a validação manual
+// do Super Admin (após verificação do comprovante enviado por WhatsApp).
+function confirmPayment(id,period){ requestPlanActivation(id); }
 window.confirmPayment=confirmPayment;
 function planLabel(id){return {free:'Grátis',familiar:'Familiar',premium:'Premium',anual:'Anual'}[id]||id}
 function allPlans(){
@@ -1155,7 +1161,38 @@ function planChooserInner(){
 }
 // PORTÃO de ecrã inteiro: é o conteúdo REAL da app quando não há plano ativo.
 // Não há nada por trás, por isso o botão "Voltar" do Android não dá acesso à app.
-function planGateView(){ return `<div class="tc-plan-overlay tc-plan-gate">${planChooserInner()}</div>`; }
+function planGateView(){ if(state.subPending)return tcPendingView(); return `<div class="tc-plan-overlay tc-plan-gate">${planChooserInner()}</div>`; }
+// Ecrã de ESPERA após o pedido de ativação: bloqueia a app até o Super Admin validar.
+function tcPendingView(){
+  const id=state.pendingPlan||userPlanId()||'';const nm=planLabel(id)||'';const p=allPlans().find(x=>x.id===id);
+  const email=(window.TC_DB?.user?.email||'').toLowerCase();
+  return `<div class="tc-plan-overlay tc-plan-gate"><div class="tc-plan-card"><div class="tc-plan-brand">T<span>-CONNECT</span></div><h2>Pedido enviado</h2>
+    <div class="plan-expired-banner" style="background:linear-gradient(135deg,#1c7a3f,#0f4f28);color:#fff;border-radius:12px;padding:14px 16px;margin:4px 0 14px;font-weight:700">⏳ Aguarde em 24h. O pedido de ativação do plano <b>${esc(nm)}</b> foi enviado e está a ser verificado pelo Super Admin.</div>
+    <p class="tc-plan-sub">Envie o comprovante de pagamento pelo WhatsApp (a mensagem já inclui o seu e-mail). O acesso é libertado assim que o Super Admin confirmar o pagamento.</p>
+    <div class="pay-actions" style="margin-top:8px">
+      <button class="btn wa-btn wide" onclick="waProof('${esc(nm)}','${p?p.price:''}')"><span class="wa-ico">${waIcon}</span> Enviar comprovante via WhatsApp</button>
+      <button class="btn primary wide" onclick="tcCheckActivation()">Já fui ativado — verificar</button>
+      <button class="btn wide" onclick="tcChangePendingPlan()">Escolher outro plano</button>
+    </div>
+    <div class="plan-note">Conta: ${esc(email||'—')}</div></div></div>`;
+}
+window.tcPendingView=tcPendingView;
+async function requestPlanActivation(id){
+  const p=allPlans().find(x=>x.id===id);const days=p?p.days:30;
+  try{ if(supaReady()&&window.tcRequestActivation){ await window.tcRequestActivation(id,days); } }catch(e){console.warn('Pedido de ativação:',e&&e.message);}
+  state.subPending=true;state.pendingPlan=id;state.subStatus='pending';
+  try{localStorage.removeItem(userPlanKey())}catch(_){}
+  const email=(window.TC_DB?.user?.email||'').toLowerCase();
+  try{addEvent('PLANO','Pedido de ativação do plano '+planLabel(id)+' enviado. A aguardar validação do Super Admin.',{status:'PENDENTE',source:'Conta',contact:email});}catch(_){}
+  const pay=document.getElementById('tc-pay-overlay');if(pay)pay.remove();
+  const ov=document.getElementById('tc-plan-overlay');if(ov)ov.remove();
+  render();
+}
+window.requestPlanActivation=requestPlanActivation;
+async function tcCheckActivation(){try{ if(window.tcMySubscription){const sub=await window.tcMySubscription(); if(sub&&sub.status==='active'&&sub.plan){localStorage.setItem(userPlanKey(),JSON.stringify({plan:sub.plan,days:sub.days,paidAt:sub.paidAt}));state.subPending=false;state.subStatus='active';state.planExpired=null;render();return;} } }catch(e){} try{alert('Ainda a aguardar a ativação pelo Super Admin. Assim que o comprovante for verificado, o acesso é libertado.')}catch(_){} }
+window.tcCheckActivation=tcCheckActivation;
+function tcChangePendingPlan(){state.subPending=false;render();}
+window.tcChangePendingPlan=tcChangePendingPlan;
 function showPlanChooser(){
   if(!state.authenticated||isSuperAdmin()) return;
   // Sem plano (1.ª vez / expirado): o portão de ecrã inteiro trata disto no render().
@@ -1177,7 +1214,8 @@ function openExternal(url){
 }
 window.openExternal=openExternal;
 function waProof(planName,price){
-  const msg=encodeURIComponent('Olá, acabei de pagar o plano '+planName+' ('+price+' MT) do T-Connect. Segue o comprovante do pagamento.');
+  const email=(window.TC_DB?.user?.email||'').toLowerCase();
+  const msg=encodeURIComponent('Olá, acabei de pagar o plano '+planName+(price?(' ('+price+' MT)'):'')+' do T-Connect.\nE-mail da conta: '+(email||'(sem e-mail)')+'\nSegue o comprovante. Peço a ativação manual do meu plano.');
   const url=TC_WHATSAPP_URL+(TC_WHATSAPP_URL.includes('?')?'&':'?')+'text='+msg;
   openExternal(url);
 }
@@ -1235,10 +1273,10 @@ function showPaymentScreen(id){
     </div>
     <div class="pay-divider"><span>ou pague manualmente</span></div>
     <div class="pay-actions">
-      <button class="btn wide" onclick="confirmPayment('${p.id}')">Já paguei (confirmação manual)</button>
       <button class="btn wa-btn wide" onclick="waProof('${esc(p.name)}','${p.price}')"><span class="wa-ico">${waIcon}</span> Enviar comprovante via WhatsApp</button>
+      <button class="btn primary wide" onclick="requestPlanActivation('${p.id}')">Pedir ativação do plano</button>
     </div>
-    <p class="plan-note">O pagamento automático precisa da integração configurada no Supabase. Caso ainda não esteja, transfira ${p.price} MT para ${esc(TC_PAYMENT.name)} e use a confirmação manual.</p>
+    <p class="plan-note">Depois de pagar, envie o comprovante pelo WhatsApp (já leva o seu e-mail) e toque em <b>Pedir ativação do plano</b>. <b>Aguarde em 24h</b>: o acesso é libertado após o Super Admin verificar o comprovante e ativar o plano.</p>
   </div>`;
   document.body.appendChild(el);
 }
@@ -1256,7 +1294,7 @@ async function tcPayNow(planId,amount,days){
   btn.disabled=true;statusEl.className='pay-auto-status';statusEl.textContent='A enviar pedido… confirme o PIN no seu telemóvel.';
   try{
     const res=await window.tcCharge({method:tcPayMethod,plan:planId,amount,days,phone});
-    if(res&&res.status==='paid'){statusEl.className='pay-auto-status ok';statusEl.textContent='Pagamento confirmado! A ativar o plano…';setTimeout(()=>confirmPayment(planId),800);}
+    if(res&&res.status==='paid'){statusEl.className='pay-auto-status ok';statusEl.textContent='Pagamento recebido! A enviar pedido de ativação — aguarde 24h pela validação.';setTimeout(()=>confirmPayment(planId),900);}
     else if(res&&res.status==='pending'){statusEl.className='pay-auto-status';statusEl.textContent='Pagamento em processamento. Aguarde a confirmação no telemóvel.';if(res.reference)tcPollPayment(res.reference,planId,days,statusEl);}
     else{statusEl.className='pay-auto-status err';statusEl.textContent='Pagamento não concluído ('+(res?.error||res?.status||'falhou')+'). Tente de novo ou pague manualmente.';btn.disabled=false;}
   }catch(e){statusEl.className='pay-auto-status err';statusEl.textContent='Erro: '+(e.message||'falha')+'. Use a confirmação manual.';btn.disabled=false;}
@@ -1265,7 +1303,7 @@ window.tcPayNow=tcPayNow;
 function tcPollPayment(reference,planId,days,statusEl){
   let tries=0;const timer=setInterval(async()=>{
     tries++;if(tries>20){clearInterval(timer);return;}
-    try{const r=await window.tcChargeStatus({reference,plan:planId,days});if(r&&r.status==='paid'){clearInterval(timer);statusEl.className='pay-auto-status ok';statusEl.textContent='Pagamento confirmado! A ativar…';setTimeout(()=>confirmPayment(planId),800);}else if(r&&r.status==='failed'){clearInterval(timer);statusEl.className='pay-auto-status err';statusEl.textContent='Pagamento falhou. Tente novamente.';}}catch(_){}
+    try{const r=await window.tcChargeStatus({reference,plan:planId,days});if(r&&r.status==='paid'){clearInterval(timer);statusEl.className='pay-auto-status ok';statusEl.textContent='Pagamento recebido! A enviar pedido de ativação — aguarde 24h.';setTimeout(()=>confirmPayment(planId),900);}else if(r&&r.status==='failed'){clearInterval(timer);statusEl.className='pay-auto-status err';statusEl.textContent='Pagamento falhou. Tente novamente.';}}catch(_){}
   },4000);
 }
 window.tcPollPayment=tcPollPayment;
@@ -1854,11 +1892,12 @@ function adminPage(){
   const users=adminLoadUsers();
   const plansHtml=plans.filter(p=>p.id==='familiar'||p.id==='premium').map(p=>`<section class="plan-card ${p.id==='familiar'?'plan-featured':''}">${p.id==='familiar'?'<span class="plan-tag">Mais popular</span>':''}<button class="plan-gear" title="Editar plano" aria-label="Editar plano" onclick="adminEditPlan('${p.id}')">${gearSvg}</button><h3>${esc(p.name)}</h3><div class="plan-price"><b>${esc(String(p.price))} MT</b><span>/mês</span></div><div class="muted" style="font-size:12px;margin:-6px 0 8px">ou ${esc(String(planAnnual(p.price)))} MT / ano</div><ul class="plan-features">${p.features.map(f=>`<li>✓ ${esc(f)}</li>`).join('')}</ul></section>`).join('');
   tcEnsureGroupStyles();
-  const userBtn=u=>{const active=!!u.plan;const expired=active&&isUserExpired(u);return `<button class="admin-user as-link ${active?'is-active':''}" onclick="openAdminUser('${esc(u.email)}')"><div class="admin-user-head"><div class="tc-profile-avatar sm"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg></div><div class="admin-user-id"><b>${esc(u.email)}</b><small>${active?('Plano '+esc(planName(u.plan))+(u.period?' · '+(u.period==='anual'?'Anual':'Mensal'):'')+' · expira '+esc(fmtDateTime(planExpiryIso(u)))):'Sem plano ativo'}</small></div>${expired?'<span style="background:#c0152b;color:#fff;font-size:10px;font-weight:800;border-radius:999px;padding:3px 8px;margin-right:6px">EXPIRADO</span>':''}<span class="admin-user-chevron">›</span></div></button>`};
-  const paid=users.filter(u=>u.plan==='familiar'||u.plan==='premium');
-  const free=users.filter(u=>!(u.plan==='familiar'||u.plan==='premium'));
+  const userBtn=u=>{const active=!!u.plan&&u.status!=='pending';const expired=active&&isUserExpired(u);const pend=u.status==='pending';return `<button class="admin-user as-link ${active?'is-active':''}" onclick="openAdminUser('${esc(u.email)}')"><div class="admin-user-head"><div class="tc-profile-avatar sm"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg></div><div class="admin-user-id"><b>${esc(u.email)}</b><small>${pend?('⏳ Pediu ativação do plano '+esc(planName(u.plan)||'—')+' — a aguardar'):(active?('Plano '+esc(planName(u.plan))+(u.period?' · '+(u.period==='anual'?'Anual':'Mensal'):'')+' · expira '+esc(fmtDateTime(planExpiryIso(u)))):'Sem plano ativo')}</small></div>${pend?'<span style="background:#f6c35b;color:#1a1200;font-size:10px;font-weight:800;border-radius:999px;padding:3px 8px;margin-right:6px">PENDENTE</span>':''}${expired?'<span style="background:#c0152b;color:#fff;font-size:10px;font-weight:800;border-radius:999px;padding:3px 8px;margin-right:6px">EXPIRADO</span>':''}<span class="admin-user-chevron">›</span></div></button>`};
+  const pending=users.filter(u=>u.status==='pending');
+  const paid=users.filter(u=>(u.plan==='familiar'||u.plan==='premium')&&u.status!=='pending');
+  const free=users.filter(u=>!(u.plan==='familiar'||u.plan==='premium')&&u.status!=='pending');
   const folder=(label,arr,color)=>`<details class="comm-group" ${arr.length?'open':''} style="margin-bottom:10px"><summary><span class="comm-group-ava" style="background:${color}">${arr.length}</span><div class="comm-group-main"><b>${label}</b><small class="comm-group-prev">${arr.length} conta${arr.length===1?'':'s'}</small></div></summary><div style="padding:8px 6px 6px;display:flex;flex-direction:column;gap:6px">${arr.length?arr.map(userBtn).join(''):'<div class="terminal-empty">Nenhuma.</div>'}</div></details>`;
-  const usersHtml=users.length?(folder('Contas pagas',paid,'linear-gradient(135deg,#1aa978,#0e7a56)')+folder('Contas grátis / sem plano',free,'linear-gradient(135deg,#1288e6,#36d1c4)')):'<div class="terminal-empty">Nenhum utilizador cadastrado.</div>';
+  const usersHtml=users.length?((pending.length?folder('⏳ Pedidos de ativação',pending,'linear-gradient(135deg,#f6c35b,#d99a1a)'):'')+folder('Contas pagas',paid,'linear-gradient(135deg,#1aa978,#0e7a56)')+folder('Contas grátis / sem plano',free,'linear-gradient(135deg,#1288e6,#36d1c4)')):'<div class="terminal-empty">Nenhum utilizador cadastrado.</div>';
   return `<div class="admin-page"><section class="card admin-head-card"><div class="section-kicker">SUPER ADMIN</div><h2>Gestão de planos e contas</h2><p class="muted">Edite os planos, veja as pessoas cadastradas, ative planos, ajuste os dias e faça a gestão das contas.</p><div class="admin-account"><div class="tc-profile-avatar"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg></div><div><b>${esc(email)}</b><small>Super Administrador</small></div></div></section>
   <section class="card"><div class="section-head"><div><h3>Planos de pagamento</h3><p class="muted">Toque na engrenagem para editar preço e dias.</p></div></div><div class="plans-grid">${plansHtml}</div><div class="pay-methods"><span class="pay-chip">M-Pesa</span><span class="pay-chip">e-Mola</span><span class="pay-chip">Cartão</span></div></section>
   <section class="card"><div class="section-head"><div><h3>Pessoas / emails cadastrados</h3><p class="muted">Ative o plano Familiar ou Premium, edite os dias (engrenagem) ou elimine a conta (🗑).</p></div><button class="btn primary small" onclick="adminAddUser()">＋ Cadastrar email</button></div><div class="admin-users">${usersHtml}</div></section></div>`;

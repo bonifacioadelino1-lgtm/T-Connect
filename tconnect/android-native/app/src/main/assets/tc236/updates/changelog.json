@@ -1,4 +1,14 @@
 {
+  "2.40.2": {
+    "description": "Os planos pagos deixam de dar acesso automático: o acesso só é libertado depois de o Super Admin validar o comprovante e ativar manualmente. Surge o botão «Pedir ativação do plano» e o ecrã «Aguarde em 24h», e o comprovante por WhatsApp já inclui o e-mail da conta.",
+    "changes": [
+      "Planos pagos: acesso só após ativação manual pelo Super Admin (fim do acesso automático após pagamento)",
+      "Botão «Pedir ativação do plano» e ecrã «Aguarde em 24h» enquanto se aguarda a validação",
+      "O comprovante enviado por WhatsApp inclui automaticamente o e-mail da conta",
+      "Super Admin: secção «Pedidos de ativação» com as contas pendentes para validar e ativar",
+      "Bloqueio mantém-se mesmo com o botão Voltar do Android"
+    ]
+  },
   "2.40.1": {
     "description": "O sino passa a contar cada alerta: abrir ou remover um alerta faz o número descer (leitura por alerta), com botão para marcar todas como lidas. Nas Mensagens, o rótulo «Cmail» foi substituído pela foto/avatar do contacto ao lado do nome.",
     "changes": [
