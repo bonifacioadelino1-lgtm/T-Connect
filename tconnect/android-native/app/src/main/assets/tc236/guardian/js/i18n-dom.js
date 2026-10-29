@@ -309,7 +309,11 @@
   // repetir pedidos. Assim nada fica em português quando se muda o idioma.
   // ----------------------------------------------------------------------
   var GT = { en: "en", fr: "fr", zh: "zh-CN" };
-  var DONE = (typeof WeakSet !== "undefined") ? new WeakSet() : null; // nós já tratados
+  // Guardamos o ORIGINAL (pt) de cada nó e a língua já aplicada nele. Assim é possível
+  // mudar de idioma várias vezes (pt→en→fr→pt) sem texto preso: traduz-se SEMPRE a partir
+  // do português original, e ao voltar a 'pt' restaura-se o texto original exacto.
+  var ORIG = (typeof WeakMap !== "undefined") ? new WeakMap() : null;    // nó texto -> pt original
+  var APPLIED = (typeof WeakMap !== "undefined") ? new WeakMap() : null; // nó texto -> língua aplicada
   var MEM = {}; // MEM[L] = { ptOriginal: traduzido }
   // Zonas de alta rotação / dados técnicos: o dicionário ainda se aplica,
   // mas NÃO se envia este texto para tradução dinâmica (evita inundar a rede
@@ -348,12 +352,17 @@
 
   function gtrans(L, text) {
     var tl = GT[L] || L;
-    var url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=pt&tl=" + encodeURIComponent(tl) + "&dt=t&q=" + encodeURIComponent(text);
-    return fetch(url).then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); }).then(function (j) {
-      var out = "";
-      try { (j[0] || []).forEach(function (seg) { if (seg && seg[0]) out += seg[0]; }); } catch (_) {}
-      return out || text;
-    });
+    var u1 = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=pt&tl=" + encodeURIComponent(tl) + "&dt=t&q=" + encodeURIComponent(text);
+    // Endpoint alternativo (reforço de fiabilidade quando o primeiro falha/é limitado).
+    var u2 = "https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=pt&tl=" + encodeURIComponent(tl) + "&q=" + encodeURIComponent(text);
+    function parse1(j) { var out = ""; try { (j[0] || []).forEach(function (seg) { if (seg && seg[0]) out += seg[0]; }); } catch (_) {} return out; }
+    function parse2(j) { try { if (Array.isArray(j)) { if (typeof j[0] === "string") return j[0]; if (Array.isArray(j[0])) return String(j[0][0] || ""); } } catch (_) {} return ""; }
+    return fetch(u1).then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(function (j) { var o = parse1(j); if (o) return o; throw 0; })
+      .catch(function () {
+        return fetch(u2).then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); }).then(function (j) { return parse2(j) || text; });
+      })
+      .catch(function () { return text; });
   }
 
   function flushQueue() {
@@ -396,21 +405,26 @@
 
   function walk(node) {
     var L = lang();
-    if (L === "pt") return;
     if (node.nodeType === 3) {
-      if (DONE && DONE.has(node)) return;
-      var raw = node.nodeValue;
+      // Já está na língua certa? Nada a fazer.
+      if (APPLIED && APPLIED.get(node) === L) return;
+      // Captura (uma vez) o português original deste nó.
+      var raw;
+      if (ORIG && ORIG.has(node)) raw = ORIG.get(node);
+      else { raw = node.nodeValue; if (ORIG) ORIG.set(node, raw); }
       if (!raw) return;
       var t = raw.trim();
       if (!t) return;
+      // Voltar ao português: restaura o texto original exacto.
+      if (L === "pt") { if (node.nodeValue !== raw) node.nodeValue = raw; if (APPLIED) APPLIED.set(node, "pt"); return; }
       var e = UI[t];
-      if (e && e[L]) { node.nodeValue = raw.replace(t, e[L]); if (DONE) DONE.add(node); return; }
+      if (e && e[L]) { node.nodeValue = raw.replace(t, e[L]); if (APPLIED) APPLIED.set(node, L); return; }
       // Caminho dinâmico (tudo o resto)
       if (inDynSkip(node.parentNode)) return;
       if (!translatable(t)) return;
       var cached = cacheGet(L, t);
-      if (cached != null) { node.nodeValue = raw.replace(t, cached); if (DONE) DONE.add(node); return; }
-      if (DONE) DONE.add(node); // otimista: evita re-enfileirar o mesmo nó
+      if (cached != null) { node.nodeValue = raw.replace(t, cached); if (APPLIED) APPLIED.set(node, L); return; }
+      if (APPLIED) APPLIED.set(node, L); // otimista: evita re-enfileirar o mesmo nó
       (function (n, r, tt) { QUEUE.push({ t: tt, apply: function (tr) { try { n.nodeValue = r.replace(tt, tr); } catch (_) {} } }); })(node, raw, t);
       return;
     }
@@ -421,17 +435,21 @@
     for (var i = 0; i < ATTRS.length; i++) {
       var a = ATTRS[i];
       if (node.hasAttribute && node.hasAttribute(a)) {
-        var v = (node.getAttribute(a) || "").trim();
+        var origAttr = "data-xlo-" + a;      // guarda o pt original do atributo
+        var langAttr = "data-xla-" + a;      // língua já aplicada ao atributo
+        var orig = node.getAttribute(origAttr);
+        if (orig == null) { orig = (node.getAttribute(a) || ""); node.setAttribute(origAttr, orig); }
+        var v = (orig || "").trim();
         if (!v) continue;
+        if (node.getAttribute(langAttr) === L) continue;
+        if (L === "pt") { node.setAttribute(a, orig); node.setAttribute(langAttr, "pt"); continue; }
         var e2 = UI[v];
-        if (e2 && e2[L]) { node.setAttribute(a, e2[L]); continue; }
+        if (e2 && e2[L]) { node.setAttribute(a, e2[L]); node.setAttribute(langAttr, L); continue; }
         if (inDynSkip(node) || !translatable(v)) continue;
-        var flag = "data-xl-" + a;
-        if (node.getAttribute(flag) === "1") continue;
         var c2 = cacheGet(L, v);
-        if (c2 != null) { node.setAttribute(a, c2); node.setAttribute(flag, "1"); continue; }
-        node.setAttribute(flag, "1");
-        (function (el, attr, orig) { QUEUE.push({ t: orig, apply: function (tr) { try { el.setAttribute(attr, tr); } catch (_) {} } }); })(node, a, v);
+        if (c2 != null) { node.setAttribute(a, c2); node.setAttribute(langAttr, L); continue; }
+        node.setAttribute(langAttr, L);
+        (function (el, attr, origv) { QUEUE.push({ t: origv, apply: function (tr) { try { el.setAttribute(attr, tr); } catch (_) {} } }); })(node, a, v);
       }
     }
     // Não desce ao conteúdo de script/style/textarea/select/option/input.
@@ -440,8 +458,12 @@
   }
 
   var obs = null;
+  var everNonPt = false; // só percorre o DOM em 'pt' depois de alguma vez ter traduzido (para restaurar)
   function translateAll() {
-    if (lang() === "pt" || !document.body) return;
+    if (!document.body) return;
+    var L = lang();
+    if (L === "pt" && !everNonPt) return; // arranque em pt: caminho rápido, nada a fazer
+    if (L !== "pt") everNonPt = true;
     // Enquanto a pessoa escreve, não traduzimos (evita fechar o teclado).
     if (editingNow()) return;
     if (obs) obs.disconnect();

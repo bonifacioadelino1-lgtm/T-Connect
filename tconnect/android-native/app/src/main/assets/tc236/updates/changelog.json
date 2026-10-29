@@ -1,4 +1,14 @@
 {
+  "2.40.4": {
+    "description": "As contas passam a mostrar a fotografia de perfil (Gravatar) de cada e-mail ao lado do nome. O deslizar para remover agora também apaga mensagens e chamadas individuais dentro de cada conversa. O terminal de atividades ganha digitação infinita com rolagem suave para cima. A Shield mantém GPS de alta precisão contínuo em segundo plano, com o ponto a mover-se em tempo real sem abrir a app. A tradução deixa de prender texto ao alternar idiomas e volta ao português na perfeição.",
+    "changes": [
+      "Fotos de perfil: cada e-mail na lista de contas mostra a sua fotografia (Gravatar) ao lado do nome",
+      "Deslizar para remover apaga também mensagens e chamadas individuais dentro de cada conversa (com confirmação)",
+      "Terminal de atividades: digitação infinita linha a linha, com rolagem suave para cima para ver sempre os dados novos",
+      "Shield: GPS de alta precisão contínuo em segundo plano — o ponto move-se em tempo real sem precisar de abrir a Shield",
+      "Tradução: alternar idiomas várias vezes e voltar ao português sem texto preso; tradutor com 2.º servidor de reforço"
+    ]
+  },
   "2.40.3": {
     "description": "Tradução reforçada: o dicionário PT/EN/FR/ZH foi alargado às novas áreas (sino, redes sociais, planos, eliminar). A interface traduz-se por completo ao mudar de idioma, combinando o dicionário com tradução automática em cache.",
     "changes": [

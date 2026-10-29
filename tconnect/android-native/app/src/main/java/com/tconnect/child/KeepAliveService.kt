@@ -40,9 +40,21 @@ class KeepAliveService : Service() {
     private var lastLocation: Location? = null
     private val handler = Handler(Looper.getMainLooper())
     private var ticking = false
+    @Volatile private var lastPushMs = 0L
 
     private val locListener = object : LocationListener {
-        override fun onLocationChanged(location: Location) { lastLocation = location }
+        override fun onLocationChanged(location: Location) {
+            // Mantém sempre a melhor leitura (prefere GPS/maior precisão quando recente).
+            val prev = lastLocation
+            if (prev == null || location.time >= prev.time || location.accuracy <= prev.accuracy) lastLocation = location
+            // Envio imediato (GPS contínuo): empurra cada leitura ao Supabase, limitado a ~4s,
+            // para o ponto vermelho do Guardião se mover em tempo real mesmo com a app fechada.
+            val now = System.currentTimeMillis()
+            if (now - lastPushMs >= 4_000L) {
+                lastPushMs = now
+                try { Thread { pushLocationNow(location) }.start() } catch (_: Exception) {}
+            }
+        }
         @Deprecated("Deprecated in Java")
         override fun onStatusChanged(provider: String?, status: Int, extras: android.os.Bundle?) {}
         override fun onProviderEnabled(provider: String) {}
@@ -133,12 +145,62 @@ class KeepAliveService : Service() {
         if (!hasLocPerm()) return
         try {
             val lm = getSystemService(LOCATION_SERVICE) as LocationManager
-            val providers = lm.getProviders(true)
-            for (p in providers) {
-                try { lm.requestLocationUpdates(p, 10_000L, 0f, locListener, Looper.getMainLooper()) } catch (_: Exception) {}
+            // Remove pedidos anteriores para não duplicar ao reiniciar o serviço.
+            try { lm.removeUpdates(locListener) } catch (_: Exception) {}
+            // Alta precisão contínua: pede explicitamente o GPS a cada ~4s e 0m de distância,
+            // para seguir o movimento em tempo real. A rede (NETWORK) entra como apoio para um
+            // primeiro ponto rápido dentro de casa / sem sinal de GPS.
+            val hasGps = checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            if (hasGps) {
+                try { lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 4_000L, 0f, locListener, Looper.getMainLooper()) } catch (_: Exception) {}
+            }
+            try { lm.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5_000L, 0f, locListener, Looper.getMainLooper()) } catch (_: Exception) {}
+            // Caso algum fabricante exponha outros fornecedores ativos, também os usamos.
+            for (p in lm.getProviders(true)) {
+                if (p == LocationManager.GPS_PROVIDER || p == LocationManager.NETWORK_PROVIDER) continue
+                try { lm.requestLocationUpdates(p, 5_000L, 0f, locListener, Looper.getMainLooper()) } catch (_: Exception) {}
+            }
+            // Semente inicial: último ponto conhecido mais recente.
+            for (p in lm.getProviders(true)) {
                 try { val l = lm.getLastKnownLocation(p); if (l != null && (lastLocation == null || l.time > lastLocation!!.time)) lastLocation = l } catch (_: Exception) {}
             }
         } catch (_: Exception) {}
+    }
+
+    /** Empurra uma leitura de localização isolada ao Supabase (chamado a cada fix do GPS). */
+    private fun pushLocationNow(loc: Location) {
+        var wl: PowerManager.WakeLock? = null
+        try {
+            try {
+                val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+                wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "tconnect:locpush")
+                wl.setReferenceCounted(false); wl.acquire(8_000L)
+            } catch (_: Exception) {}
+            val sp = prefs()
+            val url = sp.getString("url", null) ?: return
+            val key = sp.getString("key", null) ?: return
+            val device = sp.getString("device", null) ?: return
+            var token = sp.getString("access", null) ?: return
+            if (url.isBlank() || key.isBlank() || device.isBlank() || token.isBlank()) return
+            val bat = batteryPct()
+            // Atualiza a posição "ao vivo" (devices) para o ponto se mover de imediato…
+            val hb = JSONObject()
+            hb.put("p_device_code", device)
+            hb.put("p_battery", if (bat >= 0) bat else JSONObject.NULL)
+            hb.put("p_lat", loc.latitude); hb.put("p_lng", loc.longitude)
+            hb.put("p_accuracy", loc.accuracy.toDouble())
+            var code = rpc(url, key, token, "child_heartbeat", hb.toString())
+            if (code == 401) { token = refreshToken(url, key, sp) ?: return; code = rpc(url, key, token, "child_heartbeat", hb.toString()) }
+            // …e guarda também no histórico de localização.
+            if (code in 200..299) {
+                val lb = JSONObject()
+                lb.put("p_device_code", device)
+                lb.put("p_lat", loc.latitude); lb.put("p_lng", loc.longitude)
+                lb.put("p_accuracy", loc.accuracy.toDouble())
+                lb.put("p_epoch", System.currentTimeMillis())
+                rpc(url, key, token, "child_push_location", lb.toString())
+            }
+        } catch (_: Exception) {} finally { try { if (wl != null && wl.isHeld) wl.release() } catch (_: Exception) {} }
     }
 
     private fun batteryPct(): Int {
