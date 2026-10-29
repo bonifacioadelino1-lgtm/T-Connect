@@ -1,4 +1,12 @@
 {
+  "2.40.1": {
+    "description": "O sino passa a contar cada alerta: abrir ou remover um alerta faz o número descer (leitura por alerta), com botão para marcar todas como lidas. Nas Mensagens, o rótulo «Cmail» foi substituído pela foto/avatar do contacto ao lado do nome.",
+    "changes": [
+      "Sino: cada alerta conta; abrir (tocar) ou remover um alerta faz o número do sino descer",
+      "Novo botão «Marcar todas como lidas» no sino",
+      "Mensagens: «Cmail» substituído pela foto/avatar do contacto ao lado do nome"
+    ]
+  },
   "2.40.0": {
     "description": "O sino de notificações passa a mostrar alertas de TODAS as apps (WhatsApp, Telegram, SMS…) com ícone da app, remetente, mensagem completa e data/hora, e permite tocar para abrir a conversa. Mais: deslizar para eliminar em Mensagens/Chamadas/Redes sociais/Lixo e animação de digitação no terminal de atividades.",
     "changes": [
