@@ -1,4 +1,12 @@
 {
+  "2.40.7": {
+    "description": "O sino de notificações passa a guardar no máximo 20: ao chegar às 20, as mais antigas são removidas e o contador acompanha. Do lado do servidor, a base de dados ganha limitadores automáticos (localização 7 dias, mensagens/chamadas 1000 por dispositivo, sinais de captura 1h, atividades 300) e uma limpeza única para libertar já o espaço — assim deixa de encher e de interromper. O mapa e o trajeto continuam exatamente iguais.",
+    "changes": [
+      "Sino de notificações limitado a 20: ao passar das 20, as mais antigas são removidas e o contador acompanha",
+      "Base de dados com limitadores automáticos: localização 7 dias, mensagens/chamadas 1000 por dispositivo, sinais de captura 1h, atividades 300",
+      "Limpeza única da base de dados para libertar já o espaço acumulado (sem afetar o mapa nem o trajeto)"
+    ]
+  },
   "2.40.6": {
     "description": "A aplicação passa a traduzir-se por completo (PT/EN/FR/ZH) — todas as páginas, títulos, descrições, botões e estados, não apenas o menu. Foi adicionado um motor de tradução nativo que contorna o bloqueio de CORS do WebView (que impedia a tradução automática do conteúdo), com cache para ser rápido. Apenas os dados em si (conversas, coordenadas e códigos) permanecem no original.",
     "changes": [
