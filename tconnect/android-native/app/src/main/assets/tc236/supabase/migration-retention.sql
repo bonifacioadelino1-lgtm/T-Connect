@@ -160,15 +160,19 @@ delete from public.activity_events
   );
 
 -- ---------------------------------------------------------------------
--- 3) VACUUM — liberta o espaço para reutilização (o crescimento para já).
---    IMPORTANTE: o VACUUM não corre dentro de uma transação. Se o editor
---    der o erro "VACUUM cannot run inside a transaction block", selecione e
---    corra APENAS estas 5 linhas em separado.
---    Para encolher mesmo o ficheiro em disco (devolver espaço ao sistema),
---    pode correr, com algum espaço livre: VACUUM FULL public.location_history;
+-- 3) VACUUM — NÃO está aqui de propósito.
+--    O VACUUM NÃO pode correr dentro de uma transação, e o SQL Editor corre
+--    todo o script numa transação (daria o erro 25001 e reverteria tudo).
+--    Depois de correr ESTE ficheiro com sucesso, abra uma consulta NOVA e
+--    corra o VACUUM à parte (ver o ficheiro "vacuum-apos-limpeza.sql", ou
+--    cole estas linhas uma a uma numa consulta separada):
+--
+--      vacuum (analyze) public.location_history;
+--      vacuum (analyze) public.messages;
+--      vacuum (analyze) public.calls;
+--      vacuum (analyze) public.capture_signals;
+--      vacuum (analyze) public.activity_events;
+--
+--    Para devolver mesmo o espaço ao disco (com algum espaço livre):
+--      vacuum full public.location_history;
 -- ---------------------------------------------------------------------
-vacuum (analyze) public.location_history;
-vacuum (analyze) public.messages;
-vacuum (analyze) public.calls;
-vacuum (analyze) public.capture_signals;
-vacuum (analyze) public.activity_events;
