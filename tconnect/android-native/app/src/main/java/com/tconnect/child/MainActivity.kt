@@ -431,6 +431,11 @@ class MainActivity : Activity() {
         // ou após uma atualização). Só surte efeito se a permissão estiver concedida.
         @JavascriptInterface
         fun rebind(): Boolean = try { TCNotificationListener.rebind(applicationContext); true } catch (_: Exception) { false }
+
+        // Estado REAL: o serviço está LIGADO ao sistema (a receber notificações)? Permite à Shield
+        // mostrar "Ativo" só quando captura mesmo, e avisar quando a permissão existe mas o serviço caiu.
+        @JavascriptInterface
+        fun isConnected(): Boolean = try { TCNotificationListener.connected } catch (_: Exception) { false }
     }
 
     inner class NativeApp {

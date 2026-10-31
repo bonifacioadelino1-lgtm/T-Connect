@@ -1,4 +1,12 @@
 {
+  "2.40.9": {
+    "description": "Reforça a captura de mensagens de apps na Shield. Quando o serviço de notificações liga, passa a ler imediatamente as notificações já presentes no ecrã (captura o WhatsApp/Telegram no momento, sem esperar por uma mensagem nova). E a Shield passa a mostrar o estado REAL da captura: só diz «Ativo» quando o serviço está mesmo ligado ao sistema, e avisa quando a permissão existe mas o serviço caiu (bastando desligar e voltar a ligar o Acesso às notificações).",
+    "changes": [
+      "Ao ligar, o serviço lê já as notificações presentes no ecrã — captura o WhatsApp/Telegram no momento, sem esperar mensagem nova",
+      "A Shield mostra o estado REAL da captura: «Ativo» só quando está mesmo a capturar; avisa se a permissão existe mas o serviço caiu",
+      "Reforça a v2.40.8 (SMS em segundo plano e religação automática do serviço de notificações)"
+    ]
+  },
   "2.40.8": {
     "description": "Corrige a captura de mensagens na Shield. As SMS passam a sincronizar em segundo plano, nativamente, mesmo com a Shield fechada (antes só entravam com a app aberta). E o serviço que lê as notificações do WhatsApp/Telegram passa a religar-se sozinho — depois de atualizar ou reinstalar, o Android mantém a permissão mas deixa o serviço inativo, e agora a Shield volta a ligá-lo no arranque, ao abrir a app, a cada ciclo do serviço e automaticamente se o Android o desligar.",
     "changes": [

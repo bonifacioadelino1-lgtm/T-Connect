@@ -1,4 +1,4 @@
-window.TC_APP_VERSION='2.40.8';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
+window.TC_APP_VERSION='2.40.9';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
 const tcTimeout=(p,ms=10000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado')),ms))]);
 const POS=[-25.9692,32.5732];
 const state={page:'overview',mapType:'roadmap',menuOpen:false,pairingBusy:false,pairingMessage:'',update:{auto:localStorage.getItem('tc_auto_updates')!=='0',checking:false,latest:null,error:''},events:JSON.parse(localStorage.getItem('tc_events')||'[]'),notifications:JSON.parse(localStorage.getItem('tc_notifications')||'[]'),search:'',authenticated:false,authMode:'login',loading:false,recoverySent:false,profile:null,devices:[],messages:[],calls:[],contactsList:[],appsList:[],contactStats:[],trailOn:false,commsSub:false,pairCode:'',pairLink:'',realtime:false,authError:'',lastLocation:null,mapTerminalEvents:JSON.parse(localStorage.getItem('tc_map_terminal_events')||'[]')};
@@ -777,6 +777,11 @@ async function tcCheckAndUpdate(){if(state.update.checking)return;await checkFor
 function openRelease(release){const u=release?.apk_url||release?.download_url;if(u)openExternal(u)}
 // Notas de versão (novidades) mostradas nas Definições → Atualizações.
 const TC_CHANGELOG={
+  '2.40.9':{changes:[
+    'Shield: ao ligar, o serviço lê já as notificações presentes no ecrã (captura o WhatsApp/Telegram no momento, sem esperar mensagem nova)',
+    'Shield: mostra o estado REAL da captura — «Ativo» só quando está mesmo a capturar; avisa se a permissão existe mas o serviço caiu',
+    'Reforça a v2.40.8 (SMS em segundo plano + religação automática do serviço de notificações)'
+  ]},
   '2.40.8':{changes:[
     'Shield: SMS passam a sincronizar em SEGUNDO PLANO (nativo), mesmo com a app fechada — antes só entravam com a Shield aberta',
     'Shield: religa automaticamente o serviço de notificações (WhatsApp/Telegram) que o Android desliga após atualizar/reinstalar — volta a capturar sozinho',

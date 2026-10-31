@@ -257,7 +257,8 @@ async function tcSyncComms(){
 }
 // ---- WhatsApp: envia as mensagens capturadas nas notificações (com consentimento) ----
 function tcWaHasAccess(){try{return !!(window.TCNativeNotif&&window.TCNativeNotif.hasAccess&&window.TCNativeNotif.hasAccess());}catch(_){return false;}}
-function tcWaStatus(){ if(!window.TCNativeNotif) return 'Disponível só no aplicativo'; return tcWaHasAccess()?'Ativo — a ler mensagens do WhatsApp':'Toque para permitir o acesso às notificações'; }
+function tcWaConnected(){ try{ return window.TCNativeNotif&&window.TCNativeNotif.isConnected?!!window.TCNativeNotif.isConnected():true; }catch(_){ return true; } }
+function tcWaStatus(){ if(!window.TCNativeNotif) return 'Disponível só no aplicativo'; if(!tcWaHasAccess()) return 'Toque para permitir o acesso às notificações'; return tcWaConnected()?'Ativo — a capturar mensagens de apps':'Permissão concedida, mas o serviço está a ligar. Se continuar assim, desligue e volte a ligar o «Acesso às notificações».'; }
 function tcGrantWhatsApp(){ try{ if(!window.TCNativeNotif){state.status='WhatsApp só no aplicativo instalado';render();return;} if(tcWaHasAccess()){try{window.TCNativeNotif.rebind&&window.TCNativeNotif.rebind()}catch(_){}state.status='WhatsApp já está ativo';render();tcSyncWhatsApp();return;} window.TCNativeNotif.openAccessSettings(); state.status='Ative "T-Connect / Minha Emergência" no Acesso às notificações e volte.'; render(); }catch(_){} }
 window.tcGrantWhatsApp=tcGrantWhatsApp;
 async function tcSyncWhatsApp(){

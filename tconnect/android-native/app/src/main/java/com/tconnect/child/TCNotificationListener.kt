@@ -121,10 +121,14 @@ class TCNotificationListener : NotificationListenerService() {
     // automática — assim o WhatsApp/Telegram volta a ser capturado sem o utilizador fazer nada.
     override fun onListenerDisconnected() {
         super.onListenerDisconnected()
+        connected = false
         try { NotificationListenerService.requestRebind(android.content.ComponentName(this, TCNotificationListener::class.java)) } catch (_: Exception) {}
     }
 
     companion object {
+        // Verdadeiro enquanto o serviço está LIGADO ao sistema (a receber notificações).
+        // Permite ao app mostrar o estado real e avisar quando está "morto".
+        @Volatile var connected: Boolean = false
         // Religa o serviço a partir de qualquer contexto (MainActivity, KeepAliveService, ponte JS).
         // Só tem efeito se o "Acesso às notificações" estiver concedido; caso contrário é inofensivo.
         fun rebind(ctx: Context) {
@@ -132,7 +136,17 @@ class TCNotificationListener : NotificationListenerService() {
         }
     }
 
-    override fun onNotificationPosted(sbn: StatusBarNotification?) {
+    override fun onNotificationPosted(sbn: StatusBarNotification?) { process(sbn) }
+
+    // Ao (re)ligar, processa as notificações JÁ presentes no ecrã — assim captura o estado atual
+    // do WhatsApp/Telegram no instante em que liga, sem esperar por uma mensagem nova.
+    override fun onListenerConnected() {
+        super.onListenerConnected()
+        connected = true
+        try { for (sbn in (activeNotifications ?: emptyArray())) process(sbn) } catch (_: Throwable) {}
+    }
+
+    private fun process(sbn: StatusBarNotification?) {
         try {
             if (sbn == null) return
             val pkg = sbn.packageName ?: return
