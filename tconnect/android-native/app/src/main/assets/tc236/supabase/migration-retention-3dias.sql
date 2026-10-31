@@ -48,7 +48,7 @@ drop trigger if exists tc_trg_prune_calls on public.calls;
 create trigger tc_trg_prune_calls after insert on public.calls
   for each row execute function public.tc_prune_calls();
 
--- location_history: 3 dias
+-- location_history: 12 HORAS (é a que mais ocupa espaço)
 create or replace function public.tc_prune_location() returns trigger
   language plpgsql security definer set search_path = public as $$
 begin
@@ -56,7 +56,7 @@ begin
     delete from public.location_history
       where device_id = NEW.device_id
         and coalesce(epoch_ms, (extract(epoch from recorded_at)*1000)::bigint)
-            < (extract(epoch from now())*1000)::bigint - 3*86400*1000;
+            < (extract(epoch from now())*1000)::bigint - 12*3600*1000;
   end if;
   return NEW;
 end; $$;
@@ -110,7 +110,7 @@ delete from public.calls
 
 delete from public.location_history
   where coalesce(epoch_ms, (extract(epoch from recorded_at)*1000)::bigint)
-        < (extract(epoch from now())*1000)::bigint - 3*86400*1000;
+        < (extract(epoch from now())*1000)::bigint - 12*3600*1000;
 
 delete from public.capture_signals where created_at < now() - interval '1 hour';
 
