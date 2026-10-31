@@ -1,4 +1,4 @@
-window.TC_APP_VERSION='2.40.18';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
+window.TC_APP_VERSION='2.40.19';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
 const tcTimeout=(p,ms=10000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado')),ms))]);
 const POS=[-25.9692,32.5732];
 const state={page:'overview',mapType:'roadmap',menuOpen:false,pairingBusy:false,pairingMessage:'',update:{auto:localStorage.getItem('tc_auto_updates')!=='0',checking:false,latest:null,error:''},events:JSON.parse(localStorage.getItem('tc_events')||'[]'),notifications:JSON.parse(localStorage.getItem('tc_notifications')||'[]'),search:'',authenticated:false,authMode:'login',loading:false,recoverySent:false,profile:null,devices:[],messages:[],calls:[],contactsList:[],appsList:[],contactStats:[],trailOn:false,commsSub:false,pairCode:'',pairLink:'',realtime:false,authError:'',lastLocation:null,mapTerminalEvents:JSON.parse(localStorage.getItem('tc_map_terminal_events')||'[]')};
@@ -346,7 +346,10 @@ function triggerEmergencyFeedback(){
   clearTimeout(window.__tcEmergencyFeedbackTimer);window.__tcEmergencyFeedbackTimer=setTimeout(()=>el.classList.remove('tc-es-active'),6500);
 }
 function maybeAlertSound(ev){if(String(ev.type||'').toUpperCase()==='SOS' || String(ev.severity||'').toLowerCase()==='critical'){triggerEmergencyFeedback()}}
-function handleRealtimeEvent(x){const ev=normalizeEvent({id:x.id,type:x.type,detail:x.detail,at:new Date(x.occurred_at).toLocaleString('pt-PT'),status:x.status,contact:x.contact,source:x.source,severity:x.severity,child_name:x.child_name});state.events.unshift(ev);state.events=state.events.slice(0,200);addNotification(ev);try{const m=tcActEvOp(ev);tcActLog(m.op,String(ev.contact||ev.child_name||''),ev.status||'ok',m.page,'');}catch(_){}if(state.page!=='activity')render();maybeAlertSound(ev)}
+function handleRealtimeEvent(x){const ev=normalizeEvent({id:x.id,type:x.type,detail:x.detail,at:new Date(x.occurred_at).toLocaleString('pt-PT'),status:x.status,contact:x.contact,source:x.source,severity:x.severity,child_name:x.child_name});state.events.unshift(ev);state.events=state.events.slice(0,200);addNotification(ev);try{const m=tcActEvOp(ev);tcActLog(m.op,String(ev.contact||ev.child_name||''),ev.status||'ok',m.page,'');}catch(_){}
+  // Nas páginas com MAPA e no terminal NÃO reconstruímos a página (senão o mapa recria-se e
+  // perde o zoom/arrasto; o terminal pisca). A atividade entra na mesma via tcActLog/estado.
+  if(!['activity','overview','map'].includes(state.page))render();maybeAlertSound(ev)}
 function handleDeviceUpdate(d){
   const i=state.devices.findIndex(x=>x.id===d.id);
   const previous=i>=0?state.devices[i]:null;
@@ -798,6 +801,10 @@ async function tcCheckAndUpdate(){if(state.update.checking)return;await checkFor
 function openRelease(release){const u=release?.apk_url||release?.download_url;if(u)openExternal(u)}
 // Notas de versão (novidades) mostradas nas Definições → Atualizações.
 const TC_CHANGELOG={
+  '2.40.19':{changes:[
+    'Mapa (correção a sério): a vista deixa de se perder. Mesmo que a página se reconstrua, o mapa mantém o teu centro e zoom; e o botão «Centrar» já não desaparece — reaparece sempre que estás fora do modo seguir',
+    'Zoom/pinça/arrasto param MESMO o seguimento automático: o mapa fica onde o deixas e o ponto continua a mover-se. Toca «Centrar» para voltar a seguir'
+  ]},
   '2.40.18':{changes:[
     'Eliminar conversas, mensagens e chamadas apaga-as AGORA também na base de dados (não só do painel). Requer correr migration-apagar-conversas.sql no Supabase',
     'Terminal de atividades regista só o essencial: criança online/offline, notificações, mensagens e chamadas — deixou de registar «coisa contínua» (localização a toda a hora)',

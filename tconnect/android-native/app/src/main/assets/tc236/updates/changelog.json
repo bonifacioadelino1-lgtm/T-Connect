@@ -1,4 +1,12 @@
 {
+  "2.40.19": {
+    "description": "Correção a sério do mapa. A causa do problema era a página reconstruir-se e recriar o mapa do zero — o que repunha o zoom e fazia o botão «Centrar» desaparecer. Agora, mesmo que isso aconteça, o mapa guarda e repõe EXATAMENTE o teu centro e zoom, e reduzimos as reconstruções desnecessárias na página do mapa. Além disso, assim que mexes no mapa (arrastar, roda do rato ou pinça com dois dedos), o seguimento automático desliga mesmo: a vista fica onde a deixas e o ponto da criança continua a mover-se em tempo real. O botão redondo «Centrar» reaparece sempre que estás fora do modo seguir e volta a seguir a criança quando lhe tocas.",
+    "changes": [
+      "Mapa já não perde o zoom: a vista (centro+zoom) é preservada mesmo quando a página se reconstrói",
+      "Botão «Centrar» deixa de desaparecer — reaparece sempre que o seguimento está desligado",
+      "Arrastar/pinça/roda desligam MESMO o seguimento automático; o ponto continua a mover-se"
+    ]
+  },
   "2.40.18": {
     "description": "Agora, quando eliminas uma conversa, uma mensagem ou uma chamada no Guardian, ela é apagada TAMBÉM da base de dados (Supabase), e não só escondida do painel — para isso é preciso correr uma vez o migration-apagar-conversas.sql. O terminal de atividades passa a registar só o essencial: a criança online/offline, as notificações, as mensagens e as chamadas; deixou de encher com «coisa contínua» como a localização a toda a hora. E o mapa deixa de atrapalhar: assim que mexes nele (arrastar ou zoom), para de recentrar sozinho e fica onde o deixas — o ponto da criança continua a mover-se em tempo real — e um botão «Centrar» volta a seguir a criança quando quiseres.",
     "changes": [

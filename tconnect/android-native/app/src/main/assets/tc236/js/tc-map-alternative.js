@@ -389,7 +389,12 @@
     // Guardian re-renders the page when switching tabs/settings. That replaces
     // #map with a new DOM node. A Leaflet instance cannot remain attached to
     // the old node, otherwise the map appears once and then disappears.
+    // IMPORTANTE: ao reconstruir, GUARDAMOS a vista atual (centro + zoom) para a repor no
+    // mapa novo. Assim, mesmo que a página se reconstrua, o zoom/arrasto do utilizador NÃO
+    // se perde (era isto que fazia o mapa "saltar" e atrapalhar o zoom).
+    let _preserved = null;
     if (map && mapContainer !== el) {
+      try { const c = map.getCenter(); _preserved = { center: [c.lat, c.lng], zoom: map.getZoom() }; } catch(_){}
       destroyMap();
     }
     if (map) {
@@ -405,8 +410,11 @@
       const _sv = lastKnownLocation || JSON.parse(localStorage.getItem('tc:lastKnownLocation') || 'null');
       if (_sv && Number.isFinite(Number(_sv.lat)) && Number.isFinite(Number(_sv.lng))) lastKnownLocation = { lat:Number(_sv.lat), lng:Number(_sv.lng), accuracy:Number(_sv.accuracy)||60 };
     } catch(_){}
-    const _startCenter = lastKnownLocation ? [lastKnownLocation.lat, lastKnownLocation.lng] : DEFAULT;
-    const _startZoom = lastKnownLocation ? 17 : 13;
+    // Se havia uma vista preservada (reconstrução da página), repõe EXATAMENTE essa vista;
+    // só na 1.ª abertura é que centra na criança/local predefinido.
+    let _startCenter, _startZoom;
+    if (_preserved) { _startCenter = _preserved.center; _startZoom = _preserved.zoom; }
+    else { _startCenter = lastKnownLocation ? [lastKnownLocation.lat, lastKnownLocation.lng] : DEFAULT; _startZoom = lastKnownLocation ? 17 : 13; tcFollow = true; }
     // maxZoom 21: com tiles Google o satélite tem a MESMA qualidade/aproximação do Google Maps.
     map = window.L.map(el, { zoomControl: true, attributionControl: false, preferCanvas: true, minZoom: 3, maxZoom: 21, zoomSnap: 1, zoomDelta: 1, wheelDebounceTime: 40, wheelPxPerZoomLevel: 120 }).setView(_startCenter, _startZoom);
     const BLANK_TILE0 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
@@ -483,7 +491,7 @@
     map.on('zoomstart', () => { if (Date.now() - tcProgrammaticAt > 1500) tcUserTookControl(); });
     try { el.addEventListener('wheel', tcUserTookControl, { passive: true }); } catch(_){}
     try { el.addEventListener('touchstart', (e) => { if (e.touches && e.touches.length >= 2) tcUserTookControl(); }, { passive: true }); } catch(_){}
-    try { tcEnsureRecenterBtn(el); } catch(_){}
+    try { tcEnsureRecenterBtn(el); if (!tcFollow) tcShowRecenter(true); } catch(_){}
     map.whenReady(() => {
       if (token !== initToken || !map) return;
       [60,180,400,800].forEach(ms => setTimeout(() => { try { if (token === initToken && map && mapContainer === el) map.invalidateSize(false); } catch (_) {} }, ms));
