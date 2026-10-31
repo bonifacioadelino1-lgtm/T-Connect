@@ -13,6 +13,8 @@
   let map, marker, accuracyCircle, pulseMarker = null, trail = [], currentType = 'roadmap';
   let selfMarker = null, lastSelfLocation = null;
   let tcUserMovedAt = 0; // quando o utilizador mexeu no mapa com os dedos (para não recentrar por cima)
+  let tcFollow = true;   // o mapa acompanha a criança? Desliga assim que o utilizador mexe; o botão "Centrar" religa.
+  let tcProgrammaticAt = 0; // marca os movimentos feitos PELO código, para não os confundir com gestos do utilizador
   let lastKnownLocation = null, gridLayer = null;
   // Desenha/atualiza o ponto AZUL do Guardião com a MESMA animação do ponto vermelho (em azul).
   function drawSelfMarker(lat, lng) {
@@ -295,7 +297,7 @@
       deck.appendChild(fig);
       tcFillTiles(fig.querySelector('.pf-tiles'), lat, lng, s.z, 104, 72);
       const open=function(){ // Tocar na tela de vidro: abre o LOCAL no mapa (satélite, bem aproximado) e a tela ampliável.
-        try{ if(map&&lastKnownLocation){ try{ if(satelliteLayer&&roadLayer&&map.hasLayer&&!map.hasLayer(satelliteLayer)){ map.removeLayer(roadLayer); satelliteLayer.addTo(map); } }catch(_){} const mz=(map.getMaxZoom?map.getMaxZoom():20); map.setView([lastKnownLocation.lat,lastKnownLocation.lng], Math.min(mz,19), {animate:true}); try{ map.invalidateSize(false); }catch(_){} } }catch(_){}
+        try{ if(map&&lastKnownLocation){ try{ if(satelliteLayer&&roadLayer&&map.hasLayer&&!map.hasLayer(satelliteLayer)){ map.removeLayer(roadLayer); satelliteLayer.addTo(map); } }catch(_){} const mz=(map.getMaxZoom?map.getMaxZoom():20); tcProgrammaticAt = Date.now(); map.setView([lastKnownLocation.lat,lastKnownLocation.lng], Math.min(mz,19), {animate:true}); try{ map.invalidateSize(false); }catch(_){} } }catch(_){}
         openPhotoLightbox(lat, lng, s.big, 'ÁREA DO ALVO'); };
       fig.addEventListener('click', open); fig.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open(); } });
     });
@@ -343,6 +345,21 @@
     const sset=function(k,v){ const el=p.querySelector('[data-k='+k+']'); if(el) el.textContent=v; }; sset('mov',info.mov); sset('zona',info.zona); sset('cidade',info.cidade); sset('pais',info.pais);
     const bat=p.querySelector('[data-k=bat]'); if(bat) bat.textContent=info.bat; const st=p.querySelector('[data-k=st]'); if(st) st.textContent=info.st; const upd=p.querySelector('[data-k=upd]'); if(upd) upd.textContent=info.upd; const dd=p.querySelector('[data-k=dist]'); if(dd) dd.textContent=info.dist; const ee=p.querySelector('[data-k=eta]'); if(ee) ee.textContent=info.eta; }
   window.TC_MAP_SCIFI.panel = openGlassPanel; window.TC_MAP_SCIFI.updatePanel = updateGlassPanel;
+
+  // Botão flutuante "Centrar": aparece quando o utilizador assumiu o controlo do mapa.
+  // Ao tocar, volta a seguir a criança e recentra uma vez (sem mudar o zoom atual).
+  function tcEnsureRecenterBtn(el){
+    try{
+      if(!el || el.querySelector('.tc-recenter-btn')) return;
+      const b=document.createElement('button');
+      b.type='button'; b.className='tc-recenter-btn'; b.title='Centrar na criança'; b.setAttribute('aria-label','Centrar na criança');
+      b.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>';
+      b.style.cssText='position:absolute;right:12px;bottom:88px;z-index:1200;width:46px;height:46px;border-radius:50%;border:1px solid #1f4a66;background:rgba(11,28,46,.92);color:#7fd4ff;display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.45);backdrop-filter:blur(4px)';
+      b.onclick=function(){ try{ tcFollow=true; tcShowRecenter(false); if(map&&lastKnownLocation){ tcProgrammaticAt=Date.now(); map.setView([lastKnownLocation.lat,lastKnownLocation.lng], map.getZoom(), {animate:true,duration:.6}); } }catch(_){} };
+      el.appendChild(b);
+    }catch(_){}
+  }
+  function tcShowRecenter(show){ try{ const el=mapContainer||document; const b=el.querySelector&&el.querySelector('.tc-recenter-btn'); if(b) b.style.display=show?'flex':'none'; }catch(_){} }
 
   function init() {
     if (!window.L) {
@@ -456,9 +473,17 @@
     map.on('zoomend', () => { updateGrid(); restoreLastKnownLocation(); term('zoom',1500,'ZOOM', `ZOOM_${map.getZoom().toFixed(2)}`, 'OK', {detail:`Zoom ${map.getZoom().toFixed(2)}`}); });
     map.on('moveend', () => { updateGrid(); restoreLastKnownLocation(); term('move',1500,'MAPA', 'MOVIMENTO_CONCLUÍDO', 'OK', {detail:`Centro ${map.getCenter().lat.toFixed(6)}, ${map.getCenter().lng.toFixed(6)}`}); });
     map.on('click', (e) => { term('click',400,'CLICK', 'CLIQUE_NO_MAPA', 'OK', {detail:`${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}`}); });
-    // O utilizador pode mover/aproximar o mapa com os dedos. Quando o faz, deixamos de
-    // recentrar automaticamente durante uns segundos, para o mapa não "fugir" da mão.
-    map.on('dragstart zoomstart', () => { tcUserMovedAt = Date.now(); });
+    // Assim que o utilizador mexe no mapa (arrastar, roda do rato ou pinça com dois dedos), o
+    // mapa DEIXA de acompanhar sozinho: fica exatamente onde ele o deixou e o ponto da criança
+    // continua a mover-se em tempo real. Para voltar a seguir a criança, toca no botão "Centrar".
+    function tcUserTookControl(){ tcUserMovedAt = Date.now(); if (tcFollow) { tcFollow = false; try { tcShowRecenter(true); } catch(_){} } }
+    map.on('dragstart', tcUserTookControl);
+    // zoomstart dispara também em zooms feitos pelo código (cinemática/recentrar); só conta como
+    // gesto do utilizador se não houve um movimento programático há pouco.
+    map.on('zoomstart', () => { if (Date.now() - tcProgrammaticAt > 1500) tcUserTookControl(); });
+    try { el.addEventListener('wheel', tcUserTookControl, { passive: true }); } catch(_){}
+    try { el.addEventListener('touchstart', (e) => { if (e.touches && e.touches.length >= 2) tcUserTookControl(); }, { passive: true }); } catch(_){}
+    try { tcEnsureRecenterBtn(el); } catch(_){}
     map.whenReady(() => {
       if (token !== initToken || !map) return;
       [60,180,400,800].forEach(ms => setTimeout(() => { try { if (token === initToken && map && mapContainer === el) map.invalidateSize(false); } catch (_) {} }, ms));
@@ -620,6 +645,7 @@
       // Centra na ÚLTIMA localização onde a pessoa estava a comunicar e abre o balão.
       try {
         if (lastPos) {
+          tcProgrammaticAt = Date.now();
           map.setView(lastPos, Math.max(map.getZoom() || 0, 16), { animate: true, duration: .7 });
           if (lastMarker) setTimeout(() => { try { lastMarker.openPopup(); } catch (_) {} }, 750);
         }
@@ -658,18 +684,18 @@
       // Se o utilizador mexeu no mapa há pouco (arrastar/zoom com os dedos), respeitamos a
       // vista dele por uns segundos; caso contrário, o mapa fica SEMPRE travado na última
       // localização da criança (não "salta" para fora ao atualizar).
-      const userBusy = (Date.now() - tcUserMovedAt) < 25000;
-      if (follow && !tcAcquired && !tcAcquiring) {
+      if (follow && tcFollow && !tcAcquired && !tcAcquiring) {
+        tcProgrammaticAt = Date.now();
         tcAcquire(lat, lng); // 1.ª aquisição (UMA vez): ponto vermelho + rotação + zoom de ~10s
       } else if (!tcAcquiring) {
-        // Já adquirido uma vez: o marcador move-se em TEMPO REAL, mas o mapa NÃO volta a
-        // recentrar nem a dar zoom a cada atualização (era isso que estava a "saltar" e a
-        // atrapalhar). Só traz o alvo de volta — suavemente e SEM mudar o zoom — se ele sair
-        // da área visível, e nunca enquanto o utilizador está a mexer no mapa.
-        if (!userBusy) {
+        // Já adquirido: o marcador move-se em TEMPO REAL. O mapa só acompanha (apenas um pan
+        // suave, SEM mudar o zoom) se o utilizador NÃO tiver assumido o controlo. Mal ele mexa
+        // no mapa, o modo "seguir" desliga e a vista fica onde ele a deixou — o ponto continua
+        // a mover-se. Volta a seguir quando ele toca no botão "Centrar".
+        if (tcFollow) {
           try {
             const b = map.getBounds && map.getBounds();
-            if (b && !b.pad(-0.18).contains(pos)) { map.panTo(pos, { animate: true, duration: 0.6 }); }
+            if (b && !b.pad(-0.18).contains(pos)) { tcProgrammaticAt = Date.now(); map.panTo(pos, { animate: true, duration: 0.6 }); }
           } catch(_) {}
         }
         // Atualiza apenas o HUD/retículo a acompanhar o marcador, sem repetir a animação cinemática.
@@ -693,7 +719,7 @@
     },
     reset() {
       // Chamado no logout: nenhuma localização do Child fica guardada neste navegador.
-      lastKnownLocation = null; hasLiveLocation = false; areaName = ''; lastGeocodeKey = ''; tcAcquired = false; tcAcquiring = false; tcMoveRef = null; tcMovementStr = '';
+      lastKnownLocation = null; hasLiveLocation = false; areaName = ''; lastGeocodeKey = ''; tcAcquired = false; tcAcquiring = false; tcMoveRef = null; tcMovementStr = ''; tcFollow = true; tcUserMovedAt = 0; try { tcShowRecenter(false); } catch(_){}
       lastSelfLocation = null; try { localStorage.removeItem('tc:selfLocation'); } catch(_){}
       try { if (selfMarker && map) map.removeLayer(selfMarker); } catch(_){} selfMarker = null;
       try { localStorage.removeItem('tc:lastKnownLocation'); } catch (e) {}

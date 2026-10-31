@@ -1,4 +1,4 @@
-window.TC_APP_VERSION='2.40.17';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
+window.TC_APP_VERSION='2.40.18';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
 const tcTimeout=(p,ms=10000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado')),ms))]);
 const POS=[-25.9692,32.5732];
 const state={page:'overview',mapType:'roadmap',menuOpen:false,pairingBusy:false,pairingMessage:'',update:{auto:localStorage.getItem('tc_auto_updates')!=='0',checking:false,latest:null,error:''},events:JSON.parse(localStorage.getItem('tc_events')||'[]'),notifications:JSON.parse(localStorage.getItem('tc_notifications')||'[]'),search:'',authenticated:false,authMode:'login',loading:false,recoverySent:false,profile:null,devices:[],messages:[],calls:[],contactsList:[],appsList:[],contactStats:[],trailOn:false,commsSub:false,pairCode:'',pairLink:'',realtime:false,authError:'',lastLocation:null,mapTerminalEvents:JSON.parse(localStorage.getItem('tc_map_terminal_events')||'[]')};
@@ -361,9 +361,8 @@ function handleDeviceUpdate(d){
   const lat=Number(d?.last_lat), lng=Number(d?.last_lng);
   if(_activeUpd && Number.isFinite(lat) && Number.isFinite(lng)){
     state.lastLocation={lat,lng,accuracy:Number(d?.accuracy_m)||60};
-    // Localização é um evento real, mas chega a cada ~4s: regista no terminal só a cada ~60s
-    // (ou quando a posição muda de forma percetível) para não inundar o registo.
-    try{const sig=lat.toFixed(4)+','+lng.toFixed(4);const now=Date.now();if(sig!==window.__tcActLocSig||(now-(window.__tcActLocT||0))>60000){window.__tcActLocSig=sig;window.__tcActLocT=now;tcActLog('gps_fix','','fixada','map','');}}catch(_){}
+    // A localização NÃO entra no terminal de atividade (era "coisa contínua"): o terminal
+    // regista só criança online, notificações, mensagens e chamadas. O mapa continua a mover-se.
   }
   // Nas páginas com MAPA (overview/map) NÃO reconstruímos a página a cada atualização de GPS
   // (~4s), senão o mapa recria-se e perde o teu zoom/arrasto. Atualizamos só os dados ao vivo
@@ -799,6 +798,11 @@ async function tcCheckAndUpdate(){if(state.update.checking)return;await checkFor
 function openRelease(release){const u=release?.apk_url||release?.download_url;if(u)openExternal(u)}
 // Notas de versão (novidades) mostradas nas Definições → Atualizações.
 const TC_CHANGELOG={
+  '2.40.18':{changes:[
+    'Eliminar conversas, mensagens e chamadas apaga-as AGORA também na base de dados (não só do painel). Requer correr migration-apagar-conversas.sql no Supabase',
+    'Terminal de atividades regista só o essencial: criança online/offline, notificações, mensagens e chamadas — deixou de registar «coisa contínua» (localização a toda a hora)',
+    'Mapa deixa de atrapalhar o zoom/arrasto: quando mexes no mapa, ele para de recentrar sozinho e fica onde o deixas (o ponto continua a mover-se). Um botão «Centrar» volta a seguir a criança'
+  ]},
   '2.40.17':{changes:[
     'Terminal de atividades agora regista só EVENTOS REAIS: sem evento fica parado; a cada mensagem, grupo, chamada, notificação ou localização escreve o código e mostra o resultado, um a seguir ao outro',
     'Cada evento do terminal é clicável — abre diretamente a origem (a conversa, o grupo, as chamadas ou o mapa de onde veio)',
@@ -1698,29 +1702,77 @@ function tcHiddenItems(){try{return JSON.parse(localStorage.getItem('tc_hidden_i
 function tcIsHiddenItem(k){if(!k)return false;return !!tcHiddenItems()[k];}
 function tcHideItem(k){try{const h=tcHiddenItems();h[k]=Date.now();localStorage.setItem('tc_hidden_items',JSON.stringify(h));}catch(_){}}
 function tcItemKey(it,isMsg){return (isMsg?'mi:':'ci:')+String((it&&(it.id||it.source_id))||((it&&(it.body||it.number)||'')+'|'+((it&&(it.epoch_ms||it.duration_s))||'')));}
+// ===== Eliminar TAMBÉM na base de dados (não só do painel) =====
+// Precisa das políticas de DELETE (migration-apagar-conversas.sql). Apaga as linhas
+// correspondentes na Supabase e remove-as do estado local para não reaparecerem.
+async function tcDbDelete(table,ids){
+  if(!ids||!ids.length)return;
+  if(!window.TC_DB?.enabled||!window.TC_DB.client)return;
+  try{ for(let i=0;i<ids.length;i+=100){ await window.TC_DB.client.from(table).delete().in('id',ids.slice(i,i+100)); } }
+  catch(e){ console.warn('tcDbDelete',table,e&&e.message); }
+}
+// Dado o 'data-k' de uma conversa, devolve {table, ids, pred} para apagar na BD e no estado.
+function tcConvoDbTargets(k){
+  const i=String(k||'').indexOf(':'); if(i<0)return null;
+  const type=k.slice(0,i), rest=k.slice(i+1);
+  if(type==='sms'||type==='lixo'){
+    const pred=m=>tcIsSms(m)&&String(m.address||'—')===rest;
+    return {table:'messages',ids:(state.messages||[]).filter(pred).map(m=>m.id).filter(Boolean),pred};
+  }
+  if(type==='soc'){
+    const j=rest.indexOf('|'); const app=j>=0?rest.slice(0,j):rest; const who=j>=0?rest.slice(j+1):'';
+    const pred=m=>tcIsSocialMsg(m)&&tcMsgApp(m)===app&&String(m.address||'—')===who;
+    return {table:'messages',ids:(state.messages||[]).filter(pred).map(m=>m.id).filter(Boolean),pred};
+  }
+  if(type==='call'){
+    const pred=c=>String(c.number||'—')===rest||(tcNormNum(c.number)&&tcNormNum(c.number)===tcNormNum(rest));
+    return {table:'calls',ids:(state.calls||[]).filter(pred).map(c=>c.id).filter(Boolean),pred};
+  }
+  return null;
+}
+async function tcDeleteConvoEverywhere(k){
+  tcHideConvo(k); // feedback imediato, mesmo que a BD demore/falhe
+  const t=tcConvoDbTargets(k); if(!t)return;
+  await tcDbDelete(t.table,t.ids);
+  if(t.table==='messages')state.messages=(state.messages||[]).filter(m=>!t.pred(m));
+  else state.calls=(state.calls||[]).filter(c=>!t.pred(c));
+}
+// Dado o 'data-ik' de uma mensagem/chamada, apaga essa linha na BD e no estado.
+async function tcDeleteRowEverywhere(ik){
+  tcHideItem(ik);
+  const i=String(ik||'').indexOf(':'); if(i<0)return;
+  const type=ik.slice(0,i), ref=ik.slice(i+1);
+  let obj=null,table=null;
+  if(type==='mi'){table='messages';obj=(state.messages||[]).find(x=>tcItemKey(x,true)===ik||String(x.id||x.source_id)===ref);}
+  else if(type==='ci'){table='calls';obj=(state.calls||[]).find(x=>tcItemKey(x,false)===ik||String(x.id||x.source_id)===ref);}
+  if(!obj||!obj.id||!table)return;
+  await tcDbDelete(table,[obj.id]);
+  if(table==='messages')state.messages=(state.messages||[]).filter(m=>m!==obj);
+  else state.calls=(state.calls||[]).filter(c=>c!==obj);
+}
 function tcConfirmDeleteRow(row){
   const k=row.getAttribute('data-ik');
   row.style.transform='translateX(60px)';row.style.opacity='.55';
   const ov=document.createElement('div');ov.className='tc-popup-layer';
-  ov.innerHTML='<div class="tc-popup-card" style="width:min(340px,92vw);padding:18px;text-align:center"><b style="font-size:16px">Eliminar mensagem?</b><p class="muted" style="margin:8px 0 16px">Será removida do painel. Não apaga nada no telefone da criança.</p><div style="display:flex;gap:10px"><button class="btn" style="flex:1" id="tc-dri-cancel">Cancelar</button><button class="btn primary" style="flex:1;background:#c0152b;border-color:#c0152b" id="tc-dri-ok">Eliminar</button></div></div>';
+  ov.innerHTML='<div class="tc-popup-card" style="width:min(340px,92vw);padding:18px;text-align:center"><b style="font-size:16px">Eliminar mensagem?</b><p class="muted" style="margin:8px 0 16px">Será eliminada do painel e da base de dados. Não apaga nada no telefone da criança.</p><div style="display:flex;gap:10px"><button class="btn" style="flex:1" id="tc-dri-cancel">Cancelar</button><button class="btn primary" style="flex:1;background:#c0152b;border-color:#c0152b" id="tc-dri-ok">Eliminar</button></div></div>';
   document.body.appendChild(ov);requestAnimationFrame(()=>ov.classList.add('show'));
   const reset=()=>{row.style.transform='';row.style.opacity='';};
   const close=()=>{try{ov.remove()}catch(_){}};
   ov.querySelector('#tc-dri-cancel').onclick=()=>{reset();close();};
   ov.onclick=e=>{if(e.target===ov){reset();close();}};
-  ov.querySelector('#tc-dri-ok').onclick=()=>{row.style.transition='transform .22s ease,opacity .22s ease';row.style.transform='translateX(120%)';row.style.opacity='0';tcHideItem(k);try{tcSound&&tcSound('tap')}catch(_){}setTimeout(()=>{try{if(row.parentNode)row.parentNode.removeChild(row)}catch(_){}} ,240);close();};
+  ov.querySelector('#tc-dri-ok').onclick=()=>{row.style.transition='transform .22s ease,opacity .22s ease';row.style.transform='translateX(120%)';row.style.opacity='0';try{tcDeleteRowEverywhere(k);}catch(_){tcHideItem(k);}try{tcSound&&tcSound('tap')}catch(_){}setTimeout(()=>{try{if(row.parentNode)row.parentNode.removeChild(row)}catch(_){}} ,240);close();};
 }
 function tcConfirmDeleteConvo(grp){
   const k=grp.getAttribute('data-k');const bEl=grp.querySelector('.comm-group-main b');const name=(bEl&&bEl.textContent)||'este registo';
   grp.style.transform='translateX(64px)';grp.style.opacity='.55';
   const ov=document.createElement('div');ov.className='tc-popup-layer';
-  ov.innerHTML=`<div class="tc-popup-card" style="width:min(360px,92vw);padding:18px;text-align:center"><b style="font-size:16px">Eliminar?</b><p class="muted" style="margin:8px 0 16px">«${esc(name)}» será removido do painel. Não apaga nada no telefone da criança.</p><div style="display:flex;gap:10px"><button class="btn" style="flex:1" id="tc-del-cancel">Cancelar</button><button class="btn primary" style="flex:1;background:#c0152b;border-color:#c0152b" id="tc-del-ok">Eliminar</button></div></div>`;
+  ov.innerHTML=`<div class="tc-popup-card" style="width:min(360px,92vw);padding:18px;text-align:center"><b style="font-size:16px">Eliminar?</b><p class="muted" style="margin:8px 0 16px">«${esc(name)}» será eliminado do painel e da base de dados. Não apaga nada no telefone da criança.</p><div style="display:flex;gap:10px"><button class="btn" style="flex:1" id="tc-del-cancel">Cancelar</button><button class="btn primary" style="flex:1;background:#c0152b;border-color:#c0152b" id="tc-del-ok">Eliminar</button></div></div>`;
   document.body.appendChild(ov);requestAnimationFrame(()=>ov.classList.add('show'));
   const reset=()=>{grp.style.transform='';grp.style.opacity='';};
   const close=()=>{try{ov.remove()}catch(_){}};
   ov.querySelector('#tc-del-cancel').onclick=()=>{reset();close();};
   ov.onclick=e=>{if(e.target===ov){reset();close();}};
-  ov.querySelector('#tc-del-ok').onclick=()=>{grp.style.transition='transform .25s ease,opacity .25s ease';grp.style.transform='translateX(120%)';grp.style.opacity='0';tcHideConvo(k);try{tcSound&&tcSound('tap')}catch(_){}setTimeout(()=>{try{if(grp.parentNode)grp.parentNode.removeChild(grp)}catch(_){};try{render()}catch(_){}} ,260);close();};
+  ov.querySelector('#tc-del-ok').onclick=()=>{grp.style.transition='transform .25s ease,opacity .25s ease';grp.style.transform='translateX(120%)';grp.style.opacity='0';try{tcDeleteConvoEverywhere(k);}catch(_){tcHideConvo(k);}try{tcSound&&tcSound('tap')}catch(_){}setTimeout(()=>{try{if(grp.parentNode)grp.parentNode.removeChild(grp)}catch(_){};try{render()}catch(_){}} ,260);close();};
 }
 function tcWireConvoSwipe(root){
   try{
@@ -2191,9 +2243,15 @@ function tcStreamStamp(){const d=new Date();const p=n=>String(n).padStart(2,'0')
 function tcStreamHex(n){let s='';for(let i=0;i<(n||4);i++)s+='0123456789abcdef'[Math.floor(Math.random()*16)];return s;}
 window.TC_ACT_ENTRIES=window.TC_ACT_ENTRIES||[];
 window.TC_ACT_QUEUE=window.TC_ACT_QUEUE||[];
+// Só estes eventos entram no terminal: criança online/offline, notificações, mensagens,
+// redes sociais, chamadas e emergência. O resto (GPS contínuo, heartbeat, captura…) é
+// ignorado — o terminal não deve registar «coisa contínua».
+const TC_ACT_ALLOW=['shield','notificacao','mensagem','rede_social','chamada','sos'];
 function tcActLog(op,target,status,page,ck){
   try{
-    const e={stamp:tcStreamStamp(),op:String(op||'evento').toLowerCase(),target:String(target||'').toLowerCase().replace(/\s+/g,' ').trim().slice(0,30),status:String(status||'ok').toLowerCase(),code:tcStreamHex(4),page:page||'',ck:ck||''};
+    const o=String(op||'evento').toLowerCase();
+    if(TC_ACT_ALLOW.indexOf(o)<0)return;
+    const e={stamp:tcStreamStamp(),op:o,target:String(target||'').toLowerCase().replace(/\s+/g,' ').trim().slice(0,30),status:String(status||'ok').toLowerCase(),code:tcStreamHex(4),page:page||'',ck:ck||''};
     window.TC_ACT_QUEUE.push(e);
     if(window.TC_ACT_QUEUE.length>80)window.TC_ACT_QUEUE=window.TC_ACT_QUEUE.slice(-80);
   }catch(_){}
@@ -2218,6 +2276,7 @@ function initActivityTerminalAutoScroll(){
     (state.events||[]).slice(0,20).reverse().forEach(ev=>{
       const st=(ev&&ev.at&&(ev.at.match(/\d\d:\d\d(:\d\d)?/)||[])[0])||tcStreamStamp();
       const m=tcActEvOp(ev);
+      if(TC_ACT_ALLOW.indexOf(m.op)<0)return; // só online, notificações, mensagens e chamadas
       window.TC_ACT_ENTRIES.push({stamp:st,op:m.op,target:String(ev.contact||ev.child_name||'').toLowerCase().slice(0,30),status:(ev.status||'ok').toLowerCase(),code:tcStreamHex(4),page:m.page,ck:''});
     });
     if(window.TC_ACT_ENTRIES.length>300)window.TC_ACT_ENTRIES=window.TC_ACT_ENTRIES.slice(-300);

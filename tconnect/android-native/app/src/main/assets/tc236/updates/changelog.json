@@ -1,4 +1,12 @@
 {
+  "2.40.18": {
+    "description": "Agora, quando eliminas uma conversa, uma mensagem ou uma chamada no Guardian, ela é apagada TAMBÉM da base de dados (Supabase), e não só escondida do painel — para isso é preciso correr uma vez o migration-apagar-conversas.sql. O terminal de atividades passa a registar só o essencial: a criança online/offline, as notificações, as mensagens e as chamadas; deixou de encher com «coisa contínua» como a localização a toda a hora. E o mapa deixa de atrapalhar: assim que mexes nele (arrastar ou zoom), para de recentrar sozinho e fica onde o deixas — o ponto da criança continua a mover-se em tempo real — e um botão «Centrar» volta a seguir a criança quando quiseres.",
+    "changes": [
+      "Eliminar conversas/mensagens/chamadas apaga também na base de dados (requer migration-apagar-conversas.sql)",
+      "Terminal regista só: criança online, notificações, mensagens e chamadas (sem localização contínua)",
+      "Mapa já não atrapalha o zoom/arrasto: para de recentrar ao mexeres; botão «Centrar» retoma o seguimento"
+    ]
+  },
   "2.40.17": {
     "description": "O terminal de atividades passa a registar só EVENTOS REAIS: quando não há nada a acontecer, fica parado (só o cursor pisca). A cada evento real — uma mensagem, um grupo, uma chamada, uma notificação ou uma atualização de localização — escreve o código e logo a seguir mostra o resultado, um evento de cada vez, sucessivamente. Cada linha do terminal é clicável e abre diretamente a origem do evento (a conversa, o grupo, as chamadas ou o mapa). As letras ficaram maiores e minúsculas, no estilo do PowerShell. As mensagens de grupo de todas as redes (WhatsApp, Telegram, etc.) juntam-se numa só conversa pelo nome do grupo, com o remetente dentro da mensagem. Removidos os textos «tconnect · monitor de atividade» e «canal seguro · tempo real» da consola, e nas Redes sociais fica só o botão «Relatório mensal (PDF)», sem a nota explicativa.",
     "changes": [
