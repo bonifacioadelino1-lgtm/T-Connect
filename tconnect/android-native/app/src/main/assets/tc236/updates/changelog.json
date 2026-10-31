@@ -1,4 +1,10 @@
 {
+  "2.40.10": {
+    "description": "Adiciona um «Diagnóstico de captura» no menu da Shield que mostra o estado real de cada elo da cadeia (acesso às notificações, serviço ligado, permissão de SMS, mensagens no buffer, SMS lidas, fila pendente) e testa o envio das mensagens diretamente, revelando o erro verdadeiro — que antes era engolido em silêncio.",
+    "changes": [
+      "Shield: novo «Diagnóstico de captura» no menu — estado real de cada elo e teste de envio que mostra o erro verdadeiro"
+    ]
+  },
   "2.40.9": {
     "description": "Reforça a captura de mensagens de apps na Shield. Quando o serviço de notificações liga, passa a ler imediatamente as notificações já presentes no ecrã (captura o WhatsApp/Telegram no momento, sem esperar por uma mensagem nova). E a Shield passa a mostrar o estado REAL da captura: só diz «Ativo» quando o serviço está mesmo ligado ao sistema, e avisa quando a permissão existe mas o serviço caiu (bastando desligar e voltar a ligar o Acesso às notificações).",
     "changes": [

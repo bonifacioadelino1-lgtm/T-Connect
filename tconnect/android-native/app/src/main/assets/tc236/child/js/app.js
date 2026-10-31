@@ -261,6 +261,54 @@ function tcWaConnected(){ try{ return window.TCNativeNotif&&window.TCNativeNotif
 function tcWaStatus(){ if(!window.TCNativeNotif) return 'Disponível só no aplicativo'; if(!tcWaHasAccess()) return 'Toque para permitir o acesso às notificações'; return tcWaConnected()?'Ativo — a capturar mensagens de apps':'Permissão concedida, mas o serviço está a ligar. Se continuar assim, desligue e volte a ligar o «Acesso às notificações».'; }
 function tcGrantWhatsApp(){ try{ if(!window.TCNativeNotif){state.status='WhatsApp só no aplicativo instalado';render();return;} if(tcWaHasAccess()){try{window.TCNativeNotif.rebind&&window.TCNativeNotif.rebind()}catch(_){}state.status='WhatsApp já está ativo';render();tcSyncWhatsApp();return;} window.TCNativeNotif.openAccessSettings(); state.status='Ative "T-Connect / Minha Emergência" no Acesso às notificações e volte.'; render(); }catch(_){} }
 window.tcGrantWhatsApp=tcGrantWhatsApp;
+// Diagnóstico de captura: mostra o estado REAL de cada elo e testa o envio das RPC
+// DIRETAMENTE (sem o tcRpc que engole os erros), revelando o erro verdadeiro.
+async function tcDiag(){
+  const L=[];
+  const na=(function(){try{return !!(window.TCNativeNotif&&window.TCNativeNotif.hasAccess&&window.TCNativeNotif.hasAccess());}catch(_){return false;}})();
+  const conn=(function(){try{return (window.TCNativeNotif&&window.TCNativeNotif.isConnected)?!!window.TCNativeNotif.isConnected():null;}catch(_){return null;}})();
+  const smsPerm=(function(){try{return !!(window.TCNativeSms&&window.TCNativeSms.hasReadPermission&&window.TCNativeSms.hasReadPermission());}catch(_){return false;}})();
+  let buf=[];try{buf=JSON.parse((window.TCNativeNotif&&window.TCNativeNotif.getMessages&&window.TCNativeNotif.getMessages(2000))||'[]');}catch(_){buf=[];}
+  let sms=[];try{sms=JSON.parse((window.TCNativeSms&&window.TCNativeSms.readMessages&&window.TCNativeSms.readMessages(2000))||'[]');}catch(_){sms=[];}
+  let outbox=[];try{outbox=JSON.parse(localStorage.getItem('tc_outbox')||'[]');}catch(_){outbox=[];}
+  L.push('Versão Shield: '+(tcChildVersion()||'—'));
+  L.push('Dispositivo vinculado: '+(state.deviceCode||'NÃO'));
+  L.push('Base de dados ligada: '+((window.TC_DB&&window.TC_DB.enabled)?'SIM':'NÃO'));
+  L.push('Sessão (user): '+((window.TC_DB&&window.TC_DB.user)?'SIM':'NÃO'));
+  L.push('Online: '+((typeof navigator!=='undefined'&&navigator.onLine===false)?'NÃO':'SIM'));
+  L.push('Acesso às notificações: '+(na?'SIM':'NÃO'));
+  L.push('Serviço de notificações ligado: '+(conn===null?'(versão antiga)':(conn?'SIM':'NÃO')));
+  L.push('Permissão de SMS: '+(smsPerm?'SIM':'NÃO'));
+  L.push('Mensagens de apps no buffer: '+buf.length);
+  L.push('SMS lidas do telefone: '+sms.length);
+  L.push('Fila pendente (outbox): '+outbox.length);
+  L.push('— TESTE DE ENVIO DIRETO —');
+  async function testRpc(name,items){
+    try{
+      if(!window.TC_DB||!window.TC_DB.enabled||!window.TC_DB.client)return name+': base de dados não ligada';
+      if(!state.deviceCode)return name+': sem dispositivo vinculado';
+      const {data,error}=await window.TC_DB.client.rpc(name,{p_device_code:state.deviceCode,p_items:items});
+      if(error)return name+' ERRO: '+(error.message||error.hint||error.details||JSON.stringify(error));
+      return name+' OK — inseridas: '+data+' (enviadas '+items.length+')';
+    }catch(e){return name+' EXCEÇÃO: '+((e&&e.message)||e);}
+  }
+  L.push(await testRpc('child_sync_whatsapp', buf.slice(0,50)));
+  L.push(await testRpc('child_sync_messages', sms.slice(0,50)));
+  tcShowDiag(L.join('\n'));
+}
+window.tcDiag=tcDiag;
+function tcShowDiag(text){
+  try{
+    const old=document.getElementById('tc-diag-ov');if(old)old.remove();
+    const ov=document.createElement('div');ov.id='tc-diag-ov';
+    ov.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(2,10,20,.9);display:flex;align-items:center;justify-content:center;padding:18px';
+    ov.innerHTML='<div style="background:#0c1c2c;border:1px solid #1f3a52;border-radius:14px;max-width:560px;width:100%;max-height:82vh;overflow:auto;padding:16px"><b style="color:#dff6ff;font-size:16px">Diagnóstico de captura</b><pre style="white-space:pre-wrap;word-break:break-word;color:#9ef7d4;font-size:12.5px;line-height:1.5;margin:10px 0 14px;font-family:ui-monospace,Menlo,Consolas,monospace">'+(text.replace(/</g,'&lt;'))+'</pre><div style="display:flex;gap:10px"><button id="tc-diag-copy" style="flex:1;padding:10px;border-radius:10px;border:1px solid #1f3a52;background:#123;color:#dff6ff">Copiar</button><button id="tc-diag-close" style="flex:1;padding:10px;border-radius:10px;border:0;background:#1288e6;color:#fff">Fechar</button></div></div>';
+    document.body.appendChild(ov);
+    ov.querySelector('#tc-diag-close').onclick=function(){ov.remove();};
+    ov.querySelector('#tc-diag-copy').onclick=function(){try{navigator.clipboard&&navigator.clipboard.writeText(text);this.textContent='Copiado ✓';}catch(_){}};
+  }catch(_){ try{alert(text);}catch(__){} }
+}
+window.tcShowDiag=tcShowDiag;
 async function tcSyncWhatsApp(){
   try{
     if(!state.deviceCode||!window.TC_DB?.enabled||!window.TC_DB.client)return;
@@ -477,6 +525,7 @@ function permissionsMenu(){
     <div class="perm-mini"><div>📷 Câmera <b>${permissionLabel(p.camera)}</b></div><div>🎙️ Microfone <b>${permissionLabel(p.microphone)}</b></div><div>📍 Localização <b>${permissionLabel(p.location)}</b></div><div>🔔 Notificações <b>${permissionLabel(p.notifications)}</b></div><div>💬 Mensagens/SMS <b>${permissionLabel(p.sms)}</b></div><div>📞 Chamadas <b>${permissionLabel(p.calls)}</b></div><div>🖥️ Captura de tela <b>${permissionLabel(p.screen)}</b></div></div>
     <button class="menu-item" onclick="openFiles()">🗂️ <span><b>Explorador de ficheiros</b><small>Fotos, vídeos, músicas, documentos e pastas</small></span></button>
     <button class="menu-item" onclick="tcGrantWhatsApp()"><span style="font-size:20px">🟢</span> <span><b>Mensagens do WhatsApp</b><small>${esc(tcWaStatus())}</small></span></button>
+    <button class="menu-item" onclick="tcDiag()"><span style="font-size:20px">🩺</span> <span><b>Diagnóstico de captura</b><small>Ver o estado real e testar o envio (mostra o erro)</small></span></button>
     <button class="menu-item" onclick="openGame()">🍓 <span><b>Jogo de frutas</b><small>Combina 3 ou mais frutas iguais e faz pontos</small></span></button>
     <button class="menu-item" onclick="state.menuOpen=false;state.forcePair=true;render();scrollToPairing()">🔗 <span><b>Vinculação</b><small>Abrir a página de vínculo (QR, código ou link)</small></span></button>
     <button class="menu-item" onclick="tcChildAllowInstall()"><span style="font-size:20px">⬆️</span> <span><b>Atualizações automáticas</b><small>${tcCanInstall()?'Ativas — instala sozinho quando houver nova versão':'Toque para permitir instalar atualizações'}</small></span></button>
