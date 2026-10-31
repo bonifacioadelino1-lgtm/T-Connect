@@ -1,4 +1,14 @@
 {
+  "2.40.17": {
+    "description": "O terminal de atividades passa a registar só EVENTOS REAIS: quando não há nada a acontecer, fica parado (só o cursor pisca). A cada evento real — uma mensagem, um grupo, uma chamada, uma notificação ou uma atualização de localização — escreve o código e logo a seguir mostra o resultado, um evento de cada vez, sucessivamente. Cada linha do terminal é clicável e abre diretamente a origem do evento (a conversa, o grupo, as chamadas ou o mapa). As letras ficaram maiores e minúsculas, no estilo do PowerShell. As mensagens de grupo de todas as redes (WhatsApp, Telegram, etc.) juntam-se numa só conversa pelo nome do grupo, com o remetente dentro da mensagem. Removidos os textos «tconnect · monitor de atividade» e «canal seguro · tempo real» da consola, e nas Redes sociais fica só o botão «Relatório mensal (PDF)», sem a nota explicativa.",
+    "changes": [
+      "Terminal regista só eventos reais: sem evento fica parado; a cada evento escreve o código e mostra o resultado, um a um",
+      "Cada evento do terminal é clicável e abre a origem (conversa, grupo, chamadas ou mapa)",
+      "Letras do terminal maiores e minúsculas, estilo PowerShell",
+      "Mensagens de grupo de todas as redes agrupadas numa só conversa pelo nome do grupo",
+      "Removidos «tconnect · monitor de atividade» e «canal seguro · tempo real»; nas Redes sociais fica só o botão do PDF"
+    ]
+  },
   "2.40.16": {
     "description": "O terminal de atividades foi redesenhado para parecer uma consola profissional: mais compacto e legível, com barra de janela, cabeçalho de colunas (Hora, Evento, Alvo, ID, Estado), o estado em etiqueta colorida (verde/azul/vermelho) e um contador de eventos monitorizados no rodapé. As linhas ficaram mais tenras — a informação deixa de aparecer tão grande.",
     "changes": [

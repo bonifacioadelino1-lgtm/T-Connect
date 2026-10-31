@@ -186,10 +186,15 @@ class TCNotificationListener : NotificationListenerService() {
                         val mtime = if (b.containsKey("time")) b.getLong("time") else ts
                         var person = if (android.os.Build.VERSION.SDK_INT >= 28) personName(b.get("sender_person")) else ""
                         if (person.isEmpty()) person = b.getCharSequence("sender")?.toString()?.trim() ?: ""
-                        if (isGroup && groupName.isNotEmpty()) {
-                            // Conversa = nome do grupo; mostra quem enviou dentro da mensagem.
-                            val disp = if (person.isNotEmpty() && !person.equals(groupName, true)) "$person: $mtext" else mtext
-                            collected.add(Triple(groupName, disp, mtime))
+                        // Nome da conversa = conversationTitle (se existir) ou o título da notificação.
+                        val convName = if (convTitle.isNotEmpty()) convTitle else title
+                        // É GRUPO se: a flag/título de conversa o diz, OU o remetente da mensagem é
+                        // DIFERENTE do nome da conversa (num 1:1 o remetente == o título; num grupo não).
+                        val grouped = (isGroup || (person.isNotEmpty() && convName.isNotEmpty() && !person.equals(convName, true))) && convName.isNotEmpty()
+                        if (grouped) {
+                            // Uma única conversa pelo NOME DO GRUPO; o remetente vai dentro da mensagem.
+                            val disp = if (person.isNotEmpty() && !person.equals(convName, true)) "$person: $mtext" else mtext
+                            collected.add(Triple(convName, disp, mtime))
                         } else {
                             if (person.isEmpty()) person = title
                             collected.add(Triple(person, mtext, mtime))
