@@ -43,6 +43,7 @@ import java.io.ByteArrayOutputStream
 
 class MainActivity : Activity() {
     private lateinit var web: WebView
+    private var printWeb: WebView? = null
     private var batteryReceiver: BroadcastReceiver? = null
     private var pendingWebPermissionRequest: PermissionRequest? = null
     private var tts: TextToSpeech? = null
@@ -135,6 +136,7 @@ class MainActivity : Activity() {
         web.addJavascriptInterface(NativeBg(), "TCNativeBg")
         web.addJavascriptInterface(NativeNotif(), "TCNativeNotif")
         web.addJavascriptInterface(NativeI18n(), "TCNativeI18n")
+        web.addJavascriptInterface(NativePdf(), "TCNativePdf")
         // For a production APK, bundle the tc236 web root into app/src/main/assets/tc236.
         web.loadUrl(BuildConfig.START_URL)
         setContentView(web)
@@ -353,6 +355,35 @@ class MainActivity : Activity() {
                     else -> null
                 }
             } catch (_: Exception) { null }
+        }
+    }
+
+    // Geração de PDF a partir de HTML, usando a impressão nativa do Android ("Guardar como PDF").
+    // Serve o relatório mensal do Guardião. Carrega o HTML numa WebView fora do ecrã e imprime.
+    inner class NativePdf {
+        @JavascriptInterface
+        fun available(): Boolean = true
+        @JavascriptInterface
+        fun printHtml(html: String, jobName: String) {
+            runOnUiThread {
+                try {
+                    val wv = WebView(this@MainActivity)
+                    wv.settings.javaScriptEnabled = false
+                    wv.webViewClient = object : WebViewClient() {
+                        override fun onPageFinished(view: WebView, url: String?) {
+                            try {
+                                val name = if (jobName.isNotBlank()) jobName else "T-Connect"
+                                val pm = getSystemService(Context.PRINT_SERVICE) as android.print.PrintManager
+                                val adapter = view.createPrintDocumentAdapter(name)
+                                pm.print(name, adapter, android.print.PrintAttributes.Builder().build())
+                            } catch (_: Exception) {}
+                            try { view.postDelayed({ printWeb = null }, 120000) } catch (_: Exception) {}
+                        }
+                    }
+                    printWeb = wv
+                    wv.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
+                } catch (_: Exception) {}
+            }
         }
     }
 

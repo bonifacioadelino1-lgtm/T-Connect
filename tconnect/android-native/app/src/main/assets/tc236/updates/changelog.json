@@ -1,4 +1,12 @@
 {
+  "2.40.14": {
+    "description": "Como os registos se apagam aos 3 dias, há agora um «Relatório mensal (PDF)» nas Redes sociais que gera e guarda um PDF com tudo o que foi capturado nos últimos 30 dias — redes sociais, mensagens e chamadas, com datas e horas, separados por categoria, e um gráfico de atividade por dia. O PDF inclui mesmo o que já foi apagado da base de dados aos 3 dias, porque existe um arquivo de 30 dias só para o relatório. Usa a impressão nativa do Android: toca no botão e escolhe «Guardar como PDF» para abrir e partilhar.",
+    "changes": [
+      "Novo «Relatório mensal (PDF)» nas Redes sociais: 30 dias de redes sociais, mensagens e chamadas com datas/horas + gráfico por dia",
+      "Inclui o que já foi apagado aos 3 dias (arquivo de 30 dias só para o relatório)",
+      "Gera via impressão nativa do Android (Guardar como PDF)"
+    ]
+  },
   "2.40.13": {
     "description": "O mapa deixa de perder o zoom e o arrasto: a localização passa a atualizar-se em tempo real (como o Google Maps) sem reconstruir a página, por isso a tua vista fica intacta enquanto o ponto se move. E a retenção passa para 3 dias: notificações, mensagens, chamadas e localização guardam no máximo 3 dias — o que completar 3 dias é apagado automaticamente da base de dados, para o armazenamento não sobrecarregar. O sino de notificações também fica limitado a 3 dias.",
     "changes": [
