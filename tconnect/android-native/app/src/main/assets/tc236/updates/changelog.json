@@ -1,4 +1,11 @@
 {
+  "2.40.15": {
+    "description": "O guia «Sobre o T-Connect» nas Definições foi atualizado com todas as funcionalidades recentes: captura de redes sociais e agrupamento de mensagens de grupo, relatório mensal em PDF, armazenamento otimizado de 3 dias, interface em vários idiomas, melhorias no mapa e no funcionamento em segundo plano. O site também passou a ter uma secção «Sobre o aplicativo» com a mesma informação.",
+    "changes": [
+      "Guia «Sobre o T-Connect» (Definições) atualizado com todas as funcionalidades novas",
+      "Site com nova secção «Sobre o aplicativo»"
+    ]
+  },
   "2.40.14": {
     "description": "Como os registos se apagam aos 3 dias, há agora um «Relatório mensal (PDF)» nas Redes sociais que gera e guarda um PDF com tudo o que foi capturado nos últimos 30 dias — redes sociais, mensagens e chamadas, com datas e horas, separados por categoria, e um gráfico de atividade por dia. O PDF inclui mesmo o que já foi apagado da base de dados aos 3 dias, porque existe um arquivo de 30 dias só para o relatório. Usa a impressão nativa do Android: toca no botão e escolhe «Guardar como PDF» para abrir e partilhar.",
     "changes": [

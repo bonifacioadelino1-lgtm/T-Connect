@@ -1,4 +1,4 @@
-window.TC_APP_VERSION='2.40.14';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
+window.TC_APP_VERSION='2.40.15';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
 const tcTimeout=(p,ms=10000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado')),ms))]);
 const POS=[-25.9692,32.5732];
 const state={page:'overview',mapType:'roadmap',menuOpen:false,pairingBusy:false,pairingMessage:'',update:{auto:localStorage.getItem('tc_auto_updates')!=='0',checking:false,latest:null,error:''},events:JSON.parse(localStorage.getItem('tc_events')||'[]'),notifications:JSON.parse(localStorage.getItem('tc_notifications')||'[]'),search:'',authenticated:false,authMode:'login',loading:false,recoverySent:false,profile:null,devices:[],messages:[],calls:[],contactsList:[],appsList:[],contactStats:[],trailOn:false,commsSub:false,pairCode:'',pairLink:'',realtime:false,authError:'',lastLocation:null,mapTerminalEvents:JSON.parse(localStorage.getItem('tc_map_terminal_events')||'[]')};
@@ -794,6 +794,10 @@ async function tcCheckAndUpdate(){if(state.update.checking)return;await checkFor
 function openRelease(release){const u=release?.apk_url||release?.download_url;if(u)openExternal(u)}
 // Notas de versão (novidades) mostradas nas Definições → Atualizações.
 const TC_CHANGELOG={
+  '2.40.15':{changes:[
+    'Guia «Sobre o T-Connect» (Definições) atualizado com todas as funcionalidades novas: redes sociais e grupos, relatório mensal em PDF, armazenamento de 3 dias, vários idiomas, mapa e segundo plano',
+    'Site atualizado com uma secção «Sobre o aplicativo»'
+  ]},
   '2.40.14':{changes:[
     'Novo «Relatório mensal (PDF)» nas Redes sociais: gera e guarda um PDF com TUDO o que foi capturado em 30 dias (redes sociais, mensagens e chamadas, com datas e horas) e um gráfico por dia',
     'O PDF inclui mesmo o que já foi apagado da base de dados aos 3 dias (há um arquivo de 30 dias só para o relatório)',
@@ -1393,22 +1397,27 @@ function openAbout(){
   const old=document.getElementById('tc-about-overlay'); if(old){old.remove();return}
   const ver=esc(window.TC_APP_VERSION||'');
   const feats=[
-    ['📍','Localização em tempo real','Veja o local exato da criança no mapa, com ponto animado que segue o movimento e endereço (rua, bairro, cidade).'],
+    ['📍','Localização em tempo real','Local exato no mapa, com ponto que segue o movimento e endereço (rua, bairro, cidade). GPS de alta precisão em segundo plano — o mapa mantém o teu zoom e arrasto enquanto o ponto se move.'],
     ['🎥','Câmera ao vivo','Peça a câmera da criança; após ela aceitar, vê o vídeo em direto. Botão para trocar entre câmara da frente e de trás.'],
     ['🎙️','Áudio ao vivo','Escute o ambiente da criança, sempre com autorização explícita no telemóvel dela.'],
-    ['🆘','Emergência (SOS)','A criança aciona o SOS; o Guardian recebe alerta sonoro cinematográfico, vibração e a localização.'],
-    ['💬','Mensagens e chamadas','Histórico de SMS e chamadas (recebidas/efetuadas) com o nome do contacto, quando autorizado.'],
+    ['🆘','Emergência (SOS)','A criança aciona o SOS; o Guardian recebe alerta sonoro, vibração e a localização.'],
+    ['💬','Mensagens (SMS)','SMS recebidas e enviadas, capturadas pela fonte nativa do telemóvel — entram mesmo com a Shield fechada (segundo plano).'],
+    ['🌐','Redes sociais','Mensagens de WhatsApp, Telegram, Messenger, Instagram e outras apps (pelas notificações). As mensagens de GRUPO juntam-se numa única conversa com o nome real do grupo, mostrando quem enviou cada uma.'],
+    ['📞','Chamadas','Histórico de chamadas recebidas e efetuadas, com o nome do contacto quando disponível. Sincroniza em segundo plano.'],
+    ['📄','Relatório mensal (PDF)','Gera um PDF com tudo o que foi capturado em 30 dias (redes sociais, mensagens e chamadas, com datas e horas) e um gráfico por dia — inclui mesmo o que já foi apagado aos 3 dias.'],
+    ['🗄️','Armazenamento otimizado','Para não sobrecarregar, os registos são apagados automaticamente da base de dados ao fim de 3 dias (o relatório mensal preserva o histórico).'],
+    ['🔔','Alertas e notificações','Sino com os alertas mais recentes (até 20, dos últimos 3 dias); botão «Limpar» para zerar.'],
+    ['🌍','Vários idiomas','Interface completa em Português, Inglês, Francês e Chinês.'],
     ['👥','Contactos e apps','Agenda sincronizada e lista de aplicações com tempo de uso.'],
-    ['🔔','Alertas e notificações','Avisos de emergência, online/offline e atividades; deslize para apagar.'],
-    ['🛰️','Segundo plano','O app da criança continua detetável mesmo fechado, graças a um serviço de proteção contínua.']
+    ['🛰️','Segundo plano','O app da criança continua a proteger mesmo fechado, com religação automática dos serviços após atualizações.']
   ];
   const steps=[
     ['1','Vincular','No Guardian gere um código/QR e introduza-o no app Minha Emergência da criança.'],
-    ['2','Autorizar','A criança concede as permissões (localização, câmara, microfone, SMS, contactos) no Android.'],
-    ['3','Monitorar','No Guardian acompanha localização, pede câmera/áudio e recebe alertas em tempo real.']
+    ['2','Autorizar','A criança concede as permissões (localização, câmara, microfone, SMS, chamadas, contactos) e ativa o «Acesso às notificações» para ler as mensagens de apps.'],
+    ['3','Monitorar','No Guardian acompanha localização, mensagens, chamadas e redes sociais, pede câmera/áudio e recebe alertas em tempo real.']
   ];
-  const pros=['Localização precisa e em tempo real','Câmera e áudio só com consentimento da criança','Alertas de emergência imediatos (SOS)','Funciona em segundo plano','Dois apps separados (pais e criança)','Dados protegidos por conta e permissões'];
-  const cons=['Câmera/áudio ao vivo exigem 2 telemóveis','Depende das permissões concedidas no Android','Precisa de internet nos dois aparelhos','Projeção de tela ainda não disponível','Consome bateria por usar GPS/segundo plano'];
+  const pros=['Localização precisa e em tempo real (mapa não perde o zoom)','SMS e redes sociais capturadas, mensagens de grupo numa só conversa','Câmera e áudio só com consentimento da criança','Relatório mensal em PDF com 30 dias de histórico','Armazenamento leve (limpeza automática aos 3 dias)','Interface em 4 idiomas','Funciona em segundo plano','Dois apps separados (pais e criança)'];
+  const cons=['As mensagens de apps (WhatsApp/Telegram) exigem o «Acesso às notificações» ligado na criança','Câmera/áudio ao vivo exigem 2 telemóveis','Depende das permissões concedidas no Android','Precisa de internet nos dois aparelhos','Consome bateria por usar GPS/segundo plano'];
   // Mockups demonstrativos (SVG)
   const mapShot=tcAboutPhone('<svg viewBox="0 0 150 240" width="100%" height="100%" preserveAspectRatio="xMidYMid slice"><rect width="150" height="240" fill="#0b2233"/><g stroke="#19425c" stroke-width="2"><path d="M0 60H150M0 120H150M0 180H150M40 0V240M100 0V240"/></g><path d="M0 150 Q50 120 90 160 T150 150" stroke="#2b6f8f" stroke-width="6" fill="none"/><circle cx="86" cy="120" r="9" fill="#ff3b3b"/><circle cx="86" cy="120" r="16" fill="none" stroke="#ff3b3b" stroke-opacity=".5" stroke-width="2"/><rect x="10" y="12" width="92" height="20" rx="6" fill="#06151f" stroke="#22d3ee55"/><text x="18" y="26" fill="#9beaf7" font-size="10" font-family="monospace">● AO VIVO · GPS</text></svg>');
   const camShot=tcAboutPhone('<svg viewBox="0 0 150 240" width="100%" height="100%"><rect width="150" height="240" fill="#02070c"/><rect x="12" y="24" width="126" height="150" rx="10" fill="#0a1a26" stroke="#22d3ee66"/><circle cx="75" cy="99" r="30" fill="#0e2b3a"/><circle cx="75" cy="92" r="12" fill="#1b4c63"/><path d="M55 120 Q75 104 95 120" stroke="#2b6f8f" stroke-width="4" fill="none"/><rect x="20" y="30" width="60" height="16" rx="8" fill="#06151f" stroke="#22d3ee55"/><text x="27" y="42" fill="#aef0ff" font-size="9" font-family="monospace">● AO VIVO</text><g><circle cx="48" cy="196" r="16" fill="#0a1a26" stroke="#8df7ff"/><circle cx="90" cy="196" r="16" fill="#0a1a26" stroke="#8df7ff"/><text x="40" y="200" fill="#dff6ff" font-size="12">↻</text><text x="84" y="200" fill="#8df7c0" font-size="12">🔊</text></g></svg>');
@@ -1419,7 +1428,7 @@ function openAbout(){
     +'<div class="tc-about-body">'
     +'<span class="tc-about-ver">Versão v'+ver+'</span>'
     +'<h2>O que é o T‑Connect?</h2>'
-    +'<p>O T‑Connect é uma plataforma de <b>segurança familiar</b> composta por dois aplicativos: o <b>Guardian</b> (para os pais/responsáveis) e o <b>Minha Emergência</b> (para a criança). Permite acompanhar a localização em tempo real, pedir câmera e áudio ao vivo (sempre com autorização da criança), receber alertas de emergência (SOS) e consultar mensagens, chamadas e contactos autorizados — tudo de forma segura e transparente.</p>'
+    +'<p>O T‑Connect é uma plataforma de <b>segurança familiar</b> composta por dois aplicativos: o <b>Guardian</b> (para os pais/responsáveis) e o <b>Minha Emergência</b> (para a criança). Permite acompanhar a <b>localização em tempo real</b>, ver <b>mensagens (SMS)</b>, <b>chamadas</b> e <b>redes sociais</b> (WhatsApp, Telegram, Messenger…), pedir <b>câmera e áudio ao vivo</b> (sempre com autorização da criança) e receber <b>alertas de emergência (SOS)</b>. Para poupar armazenamento, os registos são limpos aos 3 dias, mas um <b>relatório mensal em PDF</b> preserva 30 dias de histórico. A interface está disponível em <b>4 idiomas</b>. Tudo de forma segura, consentida e transparente.</p>'
     +'<h3>Demonstração</h3>'
     +'<div class="tc-about-shots"><div class="tc-ab-demo">'+mapShot+'<div class="tc-ab-cap">Localização ao vivo</div></div><div class="tc-ab-demo">'+camShot+'<div class="tc-ab-cap">Câmera autorizada</div></div><div class="tc-ab-demo">'+sosShot+'<div class="tc-ab-cap">Emergência SOS</div></div></div>'
     +'<h3>Funcionalidades</h3>'
