@@ -1,4 +1,10 @@
 {
+  "2.40.16": {
+    "description": "O terminal de atividades foi redesenhado para parecer uma consola profissional: mais compacto e legível, com barra de janela, cabeçalho de colunas (Hora, Evento, Alvo, ID, Estado), o estado em etiqueta colorida (verde/azul/vermelho) e um contador de eventos monitorizados no rodapé. As linhas ficaram mais tenras — a informação deixa de aparecer tão grande.",
+    "changes": [
+      "Terminal de atividades como consola profissional: compacto, com colunas, estado em etiqueta e contador de eventos"
+    ]
+  },
   "2.40.15": {
     "description": "O guia «Sobre o T-Connect» nas Definições foi atualizado com todas as funcionalidades recentes: captura de redes sociais e agrupamento de mensagens de grupo, relatório mensal em PDF, armazenamento otimizado de 3 dias, interface em vários idiomas, melhorias no mapa e no funcionamento em segundo plano. O site também passou a ter uma secção «Sobre o aplicativo» com a mesma informação.",
     "changes": [
