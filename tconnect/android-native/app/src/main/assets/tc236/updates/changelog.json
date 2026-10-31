@@ -1,4 +1,12 @@
 {
+  "2.40.13": {
+    "description": "O mapa deixa de perder o zoom e o arrasto: a localização passa a atualizar-se em tempo real (como o Google Maps) sem reconstruir a página, por isso a tua vista fica intacta enquanto o ponto se move. E a retenção passa para 3 dias: notificações, mensagens, chamadas e localização guardam no máximo 3 dias — o que completar 3 dias é apagado automaticamente da base de dados, para o armazenamento não sobrecarregar. O sino de notificações também fica limitado a 3 dias.",
+    "changes": [
+      "Mapa: zoom e arrasto deixam de voltar atrás; a localização atualiza em tempo real sem reconstruir a página",
+      "Retenção de 3 dias: notificações, mensagens, chamadas e localização apagam-se sozinhas após 3 dias (menos armazenamento)",
+      "Sino de notificações limitado a 3 dias"
+    ]
+  },
   "2.40.12": {
     "description": "Nas Redes sociais, as mensagens de grupo (WhatsApp, Telegram, etc.) passam a ser agrupadas numa única conversa com o nome real do grupo, em vez de criarem uma lista separada por cada pessoa. Dentro dessa conversa, cada mensagem mostra quem a enviou (Remetente: mensagem) e as novas mensagens entram na mesma conversa do grupo.",
     "changes": [

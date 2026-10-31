@@ -1,4 +1,4 @@
-window.TC_APP_VERSION='2.40.12';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
+window.TC_APP_VERSION='2.40.13';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
 const tcTimeout=(p,ms=10000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado')),ms))]);
 const POS=[-25.9692,32.5732];
 const state={page:'overview',mapType:'roadmap',menuOpen:false,pairingBusy:false,pairingMessage:'',update:{auto:localStorage.getItem('tc_auto_updates')!=='0',checking:false,latest:null,error:''},events:JSON.parse(localStorage.getItem('tc_events')||'[]'),notifications:JSON.parse(localStorage.getItem('tc_notifications')||'[]'),search:'',authenticated:false,authMode:'login',loading:false,recoverySent:false,profile:null,devices:[],messages:[],calls:[],contactsList:[],appsList:[],contactStats:[],trailOn:false,commsSub:false,pairCode:'',pairLink:'',realtime:false,authError:'',lastLocation:null,mapTerminalEvents:JSON.parse(localStorage.getItem('tc_map_terminal_events')||'[]')};
@@ -257,8 +257,9 @@ function tcBellClearAll(){try{localStorage.setItem('tc_bell_cleared',String(Date
 window.tcBellClearAll=tcBellClearAll;
 function tcBellItems(limit){
   const out=[];const baseline=tcBellSeen();const read=tcBellReadSet();const cleared=tcBellCleared();
-  (state.messages||[]).forEach(m=>{ if(m.deleted)return; const t=tcMsgTime(m)||0; if(cleared&&t<=cleared)return; const social=tcIsSocialMsg(m); const app=tcMsgApp(m); const ic=social?tcAppIcon(app):tcSmsIcon(); const nm=social?(m.address||'—'):(tcContactName(m.address)||m.address||'—'); const bid='m:'+String(m.id||m.source_id||'')+'|'+String(m.direction||''); const unread=(t>baseline)&&!read[bid]; out.push({kind:'msg', bid:bid, icon:ic, title:social?tcImAppName(app):'Mensagem', name:nm, detail:(m.body||''), ts:t, at:tcFmtWhen(m.epoch_ms), page:social?'whatsapp':'messages', ck:(social?('soc:'+app+'|'+(m.address||'—')):('sms:'+(m.address||'—'))), unread:unread}); });
-  (state.notifications||[]).forEach(n=>{ const ts=Number(n.ts||0); if(cleared&&ts<=cleared)return; const bid='s:'+String(n.id); out.push({kind:'sys', bid:bid, id:n.id, icon:'<span class="tc-notification-icon">'+(n.icon||'🔔')+'</span>', title:n.title||'Alerta', name:n.name||'', detail:n.detail||'', ts:ts, at:n.at||'', unread:!read[bid]}); });
+  const cutoff3=Date.now()-3*86400*1000; // notificações no sino: no máximo 3 dias
+  (state.messages||[]).forEach(m=>{ if(m.deleted)return; const t=tcMsgTime(m)||0; if(cleared&&t<=cleared)return; if(t&&t<cutoff3)return; const social=tcIsSocialMsg(m); const app=tcMsgApp(m); const ic=social?tcAppIcon(app):tcSmsIcon(); const nm=social?(m.address||'—'):(tcContactName(m.address)||m.address||'—'); const bid='m:'+String(m.id||m.source_id||'')+'|'+String(m.direction||''); const unread=(t>baseline)&&!read[bid]; out.push({kind:'msg', bid:bid, icon:ic, title:social?tcImAppName(app):'Mensagem', name:nm, detail:(m.body||''), ts:t, at:tcFmtWhen(m.epoch_ms), page:social?'whatsapp':'messages', ck:(social?('soc:'+app+'|'+(m.address||'—')):('sms:'+(m.address||'—'))), unread:unread}); });
+  (state.notifications||[]).forEach(n=>{ const ts=Number(n.ts||0); if(cleared&&ts<=cleared)return; if(ts&&ts<cutoff3)return; const bid='s:'+String(n.id); out.push({kind:'sys', bid:bid, id:n.id, icon:'<span class="tc-notification-icon">'+(n.icon||'🔔')+'</span>', title:n.title||'Alerta', name:n.name||'', detail:n.detail||'', ts:ts, at:n.at||'', unread:!read[bid]}); });
   out.sort((a,b)=>(b.ts||0)-(a.ts||0));
   return out.slice(0,limit||20);
 }
@@ -360,12 +361,28 @@ function handleDeviceUpdate(d){
   if(_activeUpd && Number.isFinite(lat) && Number.isFinite(lng)){
     state.lastLocation={lat,lng,accuracy:Number(d?.accuracy_m)||60};
   }
-  render();
+  // Nas páginas com MAPA (overview/map) NÃO reconstruímos a página a cada atualização de GPS
+  // (~4s), senão o mapa recria-se e perde o teu zoom/arrasto. Atualizamos só os dados ao vivo
+  // em tempo real (como o Google Maps) e movemos o marcador; a vista fica intacta.
+  const __onMap=(state.page==='overview'||state.page==='map');
+  if(__onMap){ try{ tcLiveMapUpdate(d); }catch(_){} }
+  else { render(); }
   if(_activeUpd && Number.isFinite(lat) && Number.isFinite(lng)){
     setTimeout(()=>{
       if(window.TC_MAP) window.TC_MAP.setLocation(lat,lng,Number(d?.accuracy_m)||60,true);
     },90);
   }
+}
+// Atualiza os elementos ao vivo da página do mapa SEM reconstruir o DOM (preserva o zoom/arrasto).
+function tcLiveMapUpdate(d){
+  try{
+    const online=isDeviceOnline(d);
+    document.querySelectorAll('.mapkey').forEach(mk=>{const b=mk.querySelector('b');if(b)b.textContent=online?'Online':'Offline';const s=mk.querySelector('.muted');if(s&&d&&d.last_lat!=null)s.textContent=Number(d.last_lat).toFixed(6)+', '+Number(d.last_lng).toFixed(6);});
+    if(d&&d.battery!=null){const bv=document.querySelector('.metric-battery .compact-value');if(bv)bv.textContent=d.battery+'%';}
+    const ov=document.querySelector('.metric-online .compact-value');if(ov)ov.textContent=online?'Online':'Offline';
+    document.querySelectorAll('.location-status-text').forEach(e=>{e.textContent=(online&&d&&d.last_lat!=null)?'LOCALIZADO':'LOCALIZANDO...';});
+    try{tcUpdateBellBadge();}catch(_){}
+  }catch(_){}
 }
 async function refreshDevices(){if(window.TC_DB.enabled&&window.TC_DB.user){try{state.devices=await tcDevices();applyActiveOrder()}catch(e){console.warn(e)}}render()}
 // ---- Troca de pessoa/dispositivo (quando há vários vinculados) ----
@@ -777,6 +794,11 @@ async function tcCheckAndUpdate(){if(state.update.checking)return;await checkFor
 function openRelease(release){const u=release?.apk_url||release?.download_url;if(u)openExternal(u)}
 // Notas de versão (novidades) mostradas nas Definições → Atualizações.
 const TC_CHANGELOG={
+  '2.40.13':{changes:[
+    'Mapa: o zoom e o arrasto deixam de voltar atrás — a localização atualiza em tempo real (como o Google Maps) sem reconstruir a página nem perder a tua vista',
+    'Retenção: notificações/mensagens/chamadas e localização passam a guardar no máximo 3 dias; o que passar 3 dias é apagado automaticamente da base de dados (menos armazenamento)',
+    'Sino de notificações: também limitado a 3 dias'
+  ]},
   '2.40.12':{changes:[
     'Redes sociais: mensagens de grupo (WhatsApp/Telegram/...) passam a juntar-se numa ÚNICA conversa com o nome real do grupo — já não cria uma lista por cada pessoa',
     'Dentro do grupo, cada mensagem mostra quem a enviou (Remetente: mensagem), com as novas a entrar na mesma conversa'
@@ -2398,7 +2420,7 @@ boot().then(()=>{
   // Reavalia online/offline periodicamente, mas só re-renderiza se o estado mudou de
   // facto — evitar reconstruir o DOM à toa (que causava um "piscar" da tela).
   let __lastOnline=null;
-  setInterval(()=>{ if(!state.authenticated||document.visibilityState==='hidden')return; if(!['overview','status','map'].includes(state.page))return; const on=isDeviceOnline(state.devices[0]); if(on!==__lastOnline){__lastOnline=on;render();} },30000);
+  setInterval(()=>{ if(!state.authenticated||document.visibilityState==='hidden')return; if(!['overview','status','map'].includes(state.page))return; const on=isDeviceOnline(state.devices[0]); if(on!==__lastOnline){__lastOnline=on; if(state.page==='overview'||state.page==='map'){try{tcLiveMapUpdate(state.devices[0]||{})}catch(_){}} else {render();}} },30000);
   // Verifica a expiração do plano a cada minuto: se expirar durante o uso, bloqueia já.
   setInterval(()=>{ if(state.authenticated&&!isSuperAdmin()&&isPlanExpired()){enforcePlan();} },60000);
   // Rede de segurança: recarrega mensagens/chamadas/contactos de tempos a tempos,
