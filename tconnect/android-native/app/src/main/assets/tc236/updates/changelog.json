@@ -1,4 +1,11 @@
 {
+  "2.40.12": {
+    "description": "Nas Redes sociais, as mensagens de grupo (WhatsApp, Telegram, etc.) passam a ser agrupadas numa única conversa com o nome real do grupo, em vez de criarem uma lista separada por cada pessoa. Dentro dessa conversa, cada mensagem mostra quem a enviou (Remetente: mensagem) e as novas mensagens entram na mesma conversa do grupo.",
+    "changes": [
+      "Mensagens de grupo juntam-se numa única conversa com o nome real do grupo — não cria uma lista por pessoa",
+      "Dentro do grupo, cada mensagem mostra o remetente; as novas mensagens entram na mesma conversa"
+    ]
+  },
   "2.40.11": {
     "description": "A Shield passa a mostrar um aviso grande e vermelho no ecrã principal sempre que o «Acesso às notificações» está desligado — a única coisa que impede a captura do WhatsApp/Telegram — com um botão que abre diretamente o ecrã certo para ligar. Assim nunca mais fica por capturar sem se notar. Com o acesso ligado, captura e envia todas as mensagens novas de apps (serviço de notificações + sincronização a cada poucos segundos e em segundo plano). As SMS continuam a ser capturadas pela fonte nativa, como as chamadas.",
     "changes": [

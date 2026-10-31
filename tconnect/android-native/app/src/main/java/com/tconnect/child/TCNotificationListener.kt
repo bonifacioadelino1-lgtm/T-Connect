@@ -163,6 +163,13 @@ class TCNotificationListener : NotificationListenerService() {
             val app = appKeyFor(pkg)
             val title = ex.getCharSequence("android.title")?.toString()?.trim() ?: ""
             val ts = sbn.postTime
+            // Deteção de GRUPO: o Android dá o nome do grupo em conversationTitle (e/ou a flag
+            // isGroupConversation). Mensagens de grupo são agrupadas por NOME DO GRUPO, numa única
+            // conversa; o remetente de cada mensagem aparece DENTRO do texto. Assim não se cria uma
+            // lista por pessoa.
+            val convTitle = ex.getCharSequence("android.conversationTitle")?.toString()?.trim() ?: ""
+            val isGroup = convTitle.isNotEmpty() || (try { ex.getBoolean("android.isGroupConversation", false) } catch (_: Throwable) { false })
+            val groupName = if (convTitle.isNotEmpty()) convTitle else title
 
             // Reúne TODAS as mensagens desta notificação — não apenas a última linha.
             // Assim, quando chegam várias mensagens de uma vez, o Guardian recebe cada uma.
@@ -177,21 +184,29 @@ class TCNotificationListener : NotificationListenerService() {
                         val mtext = b.getCharSequence("text")?.toString()?.trim() ?: ""
                         if (mtext.isEmpty()) continue
                         val mtime = if (b.containsKey("time")) b.getLong("time") else ts
-                        var msender = if (android.os.Build.VERSION.SDK_INT >= 28) personName(b.get("sender_person")) else ""
-                        if (msender.isEmpty()) msender = b.getCharSequence("sender")?.toString()?.trim() ?: ""
-                        if (msender.isEmpty()) msender = title
-                        collected.add(Triple(msender, mtext, mtime))
+                        var person = if (android.os.Build.VERSION.SDK_INT >= 28) personName(b.get("sender_person")) else ""
+                        if (person.isEmpty()) person = b.getCharSequence("sender")?.toString()?.trim() ?: ""
+                        if (isGroup && groupName.isNotEmpty()) {
+                            // Conversa = nome do grupo; mostra quem enviou dentro da mensagem.
+                            val disp = if (person.isNotEmpty() && !person.equals(groupName, true)) "$person: $mtext" else mtext
+                            collected.add(Triple(groupName, disp, mtime))
+                        } else {
+                            if (person.isEmpty()) person = title
+                            collected.add(Triple(person, mtext, mtime))
+                        }
                     }
                 }
             } catch (_: Throwable) {}
 
-            // 2) InboxStyle (android.textLines): cada linha é uma mensagem.
+            // 2) InboxStyle (android.textLines): cada linha é uma mensagem. Em grupo, usa o nome
+            //    do grupo como conversa (as linhas já costumam trazer "Remetente: mensagem").
             if (collected.isEmpty()) {
                 val lines = ex.getCharSequenceArray("android.textLines")
                 if (lines != null && lines.isNotEmpty()) {
+                    val key = if (isGroup && groupName.isNotEmpty()) groupName else title
                     for (ln in lines) {
                         val s = ln?.toString()?.trim() ?: ""
-                        if (s.isNotEmpty()) collected.add(Triple(title, s, ts))
+                        if (s.isNotEmpty()) collected.add(Triple(key, s, ts))
                     }
                 }
             }
