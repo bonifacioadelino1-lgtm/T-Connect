@@ -795,7 +795,7 @@ try{ if(!window.__tcFastSyncTimer) window.__tcFastSyncTimer=setInterval(async()=
   window.__tcFastBusy=false;
 }, 5000); }catch(_){}
 // Assim que a Shield volta ao primeiro plano, envia já (sem esperar os 5s).
-try{ document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible'){ try{ window.TCNativeNotif&&window.TCNativeNotif.rebind&&window.TCNativeNotif.rebind(); }catch(_){} if(!window.__tcFastBusy&&state.deviceCode&&window.TC_DB?.enabled&&window.TC_DB.client){ window.__tcFastBusy=true; Promise.resolve().then(async()=>{ try{ await tcSyncWhatsApp(); await tcSyncComms(); }catch(_){} window.__tcFastBusy=false; }); } } }); }catch(_){}
+try{ document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible'){ try{ window.TCNativeNotif&&window.TCNativeNotif.rebind&&window.TCNativeNotif.rebind(); }catch(_){} try{ render(); }catch(_){} if(!window.__tcFastBusy&&state.deviceCode&&window.TC_DB?.enabled&&window.TC_DB.client){ window.__tcFastBusy=true; Promise.resolve().then(async()=>{ try{ await tcSyncWhatsApp(); await tcSyncComms(); }catch(_){} window.__tcFastBusy=false; }); } } }); }catch(_){}
 // Arranque: religa o serviço de notificações (caso o Android o tenha desligado na atualização).
 try{ setTimeout(function(){ try{ window.TCNativeNotif&&window.TCNativeNotif.rebind&&window.TCNativeNotif.rebind(); }catch(_){} }, 1500); }catch(_){}
 function scrollToPairing(){setTimeout(()=>document.getElementById('pairing-area')?.scrollIntoView({behavior:'smooth',block:'start'}),60)}
@@ -840,9 +840,24 @@ function tcChildStatusText(){
 function tcChildTime(){ return new Date().toLocaleTimeString('pt-PT'); }
 function tcChildOnline(){ return !/offline/i.test(String(state.status||'')); }
 // ===== Design próprio, profissional e funcional (Minha Segurança) =====
+// Aviso GRANDE e impossível de ignorar quando o "Acesso às notificações" está desligado —
+// sem ele, WhatsApp/Telegram não são capturados. Se o acesso está ligado mas o serviço caiu,
+// tenta religar em silêncio (sem alarmar). Desaparece sozinho quando tudo fica ativo.
+function tcNotifWarningCard(){
+  if(!window.TCNativeNotif||!window.TCNativeNotif.hasAccess) return '';
+  let access=false; try{access=!!window.TCNativeNotif.hasAccess();}catch(_){access=false;}
+  if(access){
+    try{ if(window.TCNativeNotif.rebind&&window.TCNativeNotif.isConnected&&!window.TCNativeNotif.isConnected()) window.TCNativeNotif.rebind(); }catch(_){}
+    return '';
+  }
+  return '<div class="tc-notif-warn" style="position:relative;z-index:9;margin:12px;padding:15px;border-radius:14px;background:linear-gradient(135deg,#c0152b,#7a0f1e);box-shadow:0 10px 30px rgba(192,21,43,.4);border:1px solid rgba(255,255,255,.15)">'
+    +'<div style="display:flex;align-items:center;gap:10px"><span style="font-size:26px">⚠️</span><b style="color:#fff;font-size:15px">Mensagens de apps DESLIGADAS</b></div>'
+    +'<p style="color:#ffe3e7;font-size:13px;line-height:1.5;margin:8px 0 12px">O WhatsApp, Telegram e outras apps <b>não estão a ser capturados</b> porque falta ligar o «Acesso às notificações» para a Minha Emergência. Toque abaixo e ligue o interruptor (se vir duas «Minha Emergência» na lista, ligue as duas).</p>'
+    +'<button onclick="tcGrantWhatsApp()" style="width:100%;padding:13px;border:0;border-radius:10px;background:#fff;color:#c0152b;font-weight:800;font-size:14px">Ativar captura de mensagens →</button></div>';
+}
 function linkedView(){
   const st=esc(tcChildStatusText()); const time=esc(tcChildTime()); const on=tcChildOnline();
-  return `<section class="cm-home">
+  return `<section class="cm-home">${tcNotifWarningCard()}
     <div class="cm-bg" aria-hidden="true">
       <span class="cm-a cm-a1"></span><span class="cm-a cm-a2"></span><span class="cm-a cm-a3"></span>
       <span class="cm-stars"></span><span class="cm-grid2"></span><span class="cm-glow"></span><span class="cm-vign"></span>

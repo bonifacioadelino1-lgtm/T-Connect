@@ -1,4 +1,11 @@
 {
+  "2.40.11": {
+    "description": "A Shield passa a mostrar um aviso grande e vermelho no ecrã principal sempre que o «Acesso às notificações» está desligado — a única coisa que impede a captura do WhatsApp/Telegram — com um botão que abre diretamente o ecrã certo para ligar. Assim nunca mais fica por capturar sem se notar. Com o acesso ligado, captura e envia todas as mensagens novas de apps (serviço de notificações + sincronização a cada poucos segundos e em segundo plano). As SMS continuam a ser capturadas pela fonte nativa, como as chamadas.",
+    "changes": [
+      "Shield: aviso grande e vermelho quando o «Acesso às notificações» está desligado, com botão que abre já o ecrã certo",
+      "Com o acesso ligado, captura e envia todas as mensagens novas de apps (listener + sincronização frequente e em segundo plano)"
+    ]
+  },
   "2.40.10": {
     "description": "Adiciona um «Diagnóstico de captura» no menu da Shield que mostra o estado real de cada elo da cadeia (acesso às notificações, serviço ligado, permissão de SMS, mensagens no buffer, SMS lidas, fila pendente) e testa o envio das mensagens diretamente, revelando o erro verdadeiro — que antes era engolido em silêncio.",
     "changes": [
