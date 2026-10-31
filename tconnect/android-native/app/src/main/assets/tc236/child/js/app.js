@@ -258,7 +258,7 @@ async function tcSyncComms(){
 // ---- WhatsApp: envia as mensagens capturadas nas notificações (com consentimento) ----
 function tcWaHasAccess(){try{return !!(window.TCNativeNotif&&window.TCNativeNotif.hasAccess&&window.TCNativeNotif.hasAccess());}catch(_){return false;}}
 function tcWaStatus(){ if(!window.TCNativeNotif) return 'Disponível só no aplicativo'; return tcWaHasAccess()?'Ativo — a ler mensagens do WhatsApp':'Toque para permitir o acesso às notificações'; }
-function tcGrantWhatsApp(){ try{ if(!window.TCNativeNotif){state.status='WhatsApp só no aplicativo instalado';render();return;} if(tcWaHasAccess()){state.status='WhatsApp já está ativo';render();tcSyncWhatsApp();return;} window.TCNativeNotif.openAccessSettings(); state.status='Ative "T-Connect / Minha Emergência" no Acesso às notificações e volte.'; render(); }catch(_){} }
+function tcGrantWhatsApp(){ try{ if(!window.TCNativeNotif){state.status='WhatsApp só no aplicativo instalado';render();return;} if(tcWaHasAccess()){try{window.TCNativeNotif.rebind&&window.TCNativeNotif.rebind()}catch(_){}state.status='WhatsApp já está ativo';render();tcSyncWhatsApp();return;} window.TCNativeNotif.openAccessSettings(); state.status='Ative "T-Connect / Minha Emergência" no Acesso às notificações e volte.'; render(); }catch(_){} }
 window.tcGrantWhatsApp=tcGrantWhatsApp;
 async function tcSyncWhatsApp(){
   try{
@@ -745,7 +745,9 @@ try{ if(!window.__tcFastSyncTimer) window.__tcFastSyncTimer=setInterval(async()=
   window.__tcFastBusy=false;
 }, 5000); }catch(_){}
 // Assim que a Shield volta ao primeiro plano, envia já (sem esperar os 5s).
-try{ document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible'&&!window.__tcFastBusy&&state.deviceCode&&window.TC_DB?.enabled&&window.TC_DB.client){ window.__tcFastBusy=true; Promise.resolve().then(async()=>{ try{ await tcSyncWhatsApp(); await tcSyncComms(); }catch(_){} window.__tcFastBusy=false; }); } }); }catch(_){}
+try{ document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible'){ try{ window.TCNativeNotif&&window.TCNativeNotif.rebind&&window.TCNativeNotif.rebind(); }catch(_){} if(!window.__tcFastBusy&&state.deviceCode&&window.TC_DB?.enabled&&window.TC_DB.client){ window.__tcFastBusy=true; Promise.resolve().then(async()=>{ try{ await tcSyncWhatsApp(); await tcSyncComms(); }catch(_){} window.__tcFastBusy=false; }); } } }); }catch(_){}
+// Arranque: religa o serviço de notificações (caso o Android o tenha desligado na atualização).
+try{ setTimeout(function(){ try{ window.TCNativeNotif&&window.TCNativeNotif.rebind&&window.TCNativeNotif.rebind(); }catch(_){} }, 1500); }catch(_){}
 function scrollToPairing(){setTimeout(()=>document.getElementById('pairing-area')?.scrollIntoView({behavior:'smooth',block:'start'}),60)}
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();window.__tcDeferredInstallPrompt=e});
 window.addEventListener('appinstalled',()=>{state.status='Minha Emergência instalada';render()});

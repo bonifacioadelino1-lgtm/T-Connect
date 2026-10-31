@@ -1,4 +1,4 @@
-window.TC_APP_VERSION='2.40.7';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
+window.TC_APP_VERSION='2.40.8';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
 const tcTimeout=(p,ms=10000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado')),ms))]);
 const POS=[-25.9692,32.5732];
 const state={page:'overview',mapType:'roadmap',menuOpen:false,pairingBusy:false,pairingMessage:'',update:{auto:localStorage.getItem('tc_auto_updates')!=='0',checking:false,latest:null,error:''},events:JSON.parse(localStorage.getItem('tc_events')||'[]'),notifications:JSON.parse(localStorage.getItem('tc_notifications')||'[]'),search:'',authenticated:false,authMode:'login',loading:false,recoverySent:false,profile:null,devices:[],messages:[],calls:[],contactsList:[],appsList:[],contactStats:[],trailOn:false,commsSub:false,pairCode:'',pairLink:'',realtime:false,authError:'',lastLocation:null,mapTerminalEvents:JSON.parse(localStorage.getItem('tc_map_terminal_events')||'[]')};
@@ -777,6 +777,11 @@ async function tcCheckAndUpdate(){if(state.update.checking)return;await checkFor
 function openRelease(release){const u=release?.apk_url||release?.download_url;if(u)openExternal(u)}
 // Notas de versão (novidades) mostradas nas Definições → Atualizações.
 const TC_CHANGELOG={
+  '2.40.8':{changes:[
+    'Shield: SMS passam a sincronizar em SEGUNDO PLANO (nativo), mesmo com a app fechada — antes só entravam com a Shield aberta',
+    'Shield: religa automaticamente o serviço de notificações (WhatsApp/Telegram) que o Android desliga após atualizar/reinstalar — volta a capturar sozinho',
+    'Religação no arranque, ao abrir a Shield e a cada ciclo do serviço; e reconexão automática se o Android desligar o serviço'
+  ]},
   '2.40.7':{changes:[
     'Sino de notificações limitado a 20: ao passar das 20, as mais antigas são removidas e o contador acompanha',
     'Base de dados com limitadores automáticos (localização 7 dias, mensagens/chamadas 1000, sinais de captura 1h, atividades 300) — não volta a encher',

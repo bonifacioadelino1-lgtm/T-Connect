@@ -223,6 +223,9 @@ class MainActivity : Activity() {
         if (::web.isInitialized) {
             try { web.evaluateJavascript("window.dispatchEvent(new Event('tc-native-files-updated'));void 0", null) } catch (_: Exception) {}
         }
+        // Religa o serviço de notificações (WhatsApp/Telegram). Depois de atualizar/reinstalar,
+        // o Android mantém a permissão mas deixa o serviço "morto"; isto volta a ligá-lo.
+        try { TCNotificationListener.rebind(this) } catch (_: Exception) {}
     }
 
     override fun onDestroy() {
@@ -423,6 +426,11 @@ class MainActivity : Activity() {
         // Devolve as mensagens capturadas (JSON). O lado web faz dedupe e envia ao Guardian.
         @JavascriptInterface
         fun getMessages(limit: Int): String = TCNotifStore.getAll(applicationContext)
+
+        // Pede ao Android para religar o serviço de notificações (útil após conceder o acesso
+        // ou após uma atualização). Só surte efeito se a permissão estiver concedida.
+        @JavascriptInterface
+        fun rebind(): Boolean = try { TCNotificationListener.rebind(applicationContext); true } catch (_: Exception) { false }
     }
 
     inner class NativeApp {

@@ -117,6 +117,21 @@ class TCNotificationListener : NotificationListenerService() {
         return false
     }
 
+    // Quando o sistema desliga o serviço (ex.: após atualizar/reinstalar a app), pede religação
+    // automática — assim o WhatsApp/Telegram volta a ser capturado sem o utilizador fazer nada.
+    override fun onListenerDisconnected() {
+        super.onListenerDisconnected()
+        try { NotificationListenerService.requestRebind(android.content.ComponentName(this, TCNotificationListener::class.java)) } catch (_: Exception) {}
+    }
+
+    companion object {
+        // Religa o serviço a partir de qualquer contexto (MainActivity, KeepAliveService, ponte JS).
+        // Só tem efeito se o "Acesso às notificações" estiver concedido; caso contrário é inofensivo.
+        fun rebind(ctx: Context) {
+            try { NotificationListenerService.requestRebind(android.content.ComponentName(ctx, TCNotificationListener::class.java)) } catch (_: Exception) {}
+        }
+    }
+
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         try {
             if (sbn == null) return

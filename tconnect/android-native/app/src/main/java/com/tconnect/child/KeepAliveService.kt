@@ -258,6 +258,11 @@ class KeepAliveService : Service() {
             // Sincroniza o histórico de chamadas nativamente (robusto: funciona mesmo com a app
             // fechada e não depende da WebView nem de READ_PHONE_STATE).
             try { pushCalls(url, key, token, device, sp) } catch (_: Exception) {}
+            // Sincroniza as SMS nativamente, mesmo com a app fechada (antes só com a Shield aberta).
+            try { pushSms(url, key, token, device, sp) } catch (_: Exception) {}
+            // Mantém vivo o serviço de notificações (WhatsApp/Telegram): pede religação se o
+            // Android o desligou (acontece após atualizar/reinstalar). Barato e inofensivo se já ligado.
+            try { TCNotificationListener.rebind(applicationContext) } catch (_: Exception) {}
             // Pedido de alarme ("encontrar telemóvel") — funciona mesmo com a app fechada.
             try { checkRing(url, key, token, device, sp) } catch (_: Exception) {}
         } catch (_: Exception) {} finally { try { if (wl != null && wl.isHeld) wl.release() } catch (_: Exception) {} }
@@ -303,6 +308,50 @@ class KeepAliveService : Service() {
                 val keys = seen.keys().asSequence().toList()
                 if (keys.size > 3000) { val keep = JSONObject(); keys.takeLast(2000).forEach { keep.put(it, 1) }; seen = keep }
                 sp.edit().putString("call_seen", seen.toString()).apply()
+            }
+        } catch (_: Exception) {}
+    }
+
+    /** Lê as SMS do telemóvel e envia as novas ao Supabase NATIVAMENTE (mesmo com a app fechada).
+     *  Antes, as SMS só sincronizavam com a Shield aberta; agora entram sempre, como as chamadas. */
+    private fun pushSms(url: String, key: String, token: String, device: String, sp: android.content.SharedPreferences) {
+        try {
+            if (checkSelfPermission(android.Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) return
+            val uri = android.net.Uri.parse("content://sms")
+            val projection = arrayOf("_id", "address", "body", "date", "type")
+            val cur = contentResolver.query(uri, projection, null, null, "date DESC") ?: return
+            val items = org.json.JSONArray()
+            var seen = try { JSONObject(sp.getString("sms_seen", "{}") ?: "{}") } catch (_: Exception) { JSONObject() }
+            val newKeys = ArrayList<String>()
+            cur.use { c ->
+                val idI = c.getColumnIndex("_id"); val aI = c.getColumnIndex("address"); val bI = c.getColumnIndex("body")
+                val dI = c.getColumnIndex("date"); val tI = c.getColumnIndex("type")
+                var count = 0
+                while (c.moveToNext() && count < 500) {
+                    val type = if (tI >= 0) c.getInt(tI) else 0
+                    val dir = when (type) { 1 -> "RECEBIDA"; 2 -> "ENVIADA"; else -> null } ?: continue
+                    val id = if (idI >= 0) (c.getString(idI) ?: "") else ""
+                    if (id.isEmpty()) { count++; continue }
+                    val k = id + "|" + dir
+                    if (seen.has(k)) { count++; continue }
+                    val o = JSONObject()
+                    o.put("id", id)
+                    o.put("address", if (aI >= 0) (c.getString(aI) ?: "") else "")
+                    o.put("body", if (bI >= 0) (c.getString(bI) ?: "") else "")
+                    o.put("date", if (dI >= 0) c.getLong(dI) else 0L)
+                    o.put("direction", dir)
+                    items.put(o); newKeys.add(k); count++
+                }
+            }
+            if (items.length() == 0) return
+            val body = JSONObject().put("p_device_code", device).put("p_items", items)
+            var code = rpc(url, key, token, "child_sync_messages", body.toString())
+            if (code == 401) { val nt = refreshToken(url, key, sp); if (nt != null) code = rpc(url, key, nt, "child_sync_messages", body.toString()) }
+            if (code in 200..299) {
+                for (k in newKeys) seen.put(k, 1)
+                val keys = seen.keys().asSequence().toList()
+                if (keys.size > 4000) { val keep = JSONObject(); keys.takeLast(3000).forEach { keep.put(it, 1) }; seen = keep }
+                sp.edit().putString("sms_seen", seen.toString()).apply()
             }
         } catch (_: Exception) {}
     }

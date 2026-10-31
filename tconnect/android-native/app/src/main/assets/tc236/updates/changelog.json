@@ -1,4 +1,12 @@
 {
+  "2.40.8": {
+    "description": "Corrige a captura de mensagens na Shield. As SMS passam a sincronizar em segundo plano, nativamente, mesmo com a Shield fechada (antes só entravam com a app aberta). E o serviço que lê as notificações do WhatsApp/Telegram passa a religar-se sozinho — depois de atualizar ou reinstalar, o Android mantém a permissão mas deixa o serviço inativo, e agora a Shield volta a ligá-lo no arranque, ao abrir a app, a cada ciclo do serviço e automaticamente se o Android o desligar.",
+    "changes": [
+      "SMS sincronizam em segundo plano (nativo), mesmo com a Shield fechada — antes só com a app aberta",
+      "Serviço de notificações (WhatsApp/Telegram) religa-se automaticamente após atualizar/reinstalar — volta a capturar sozinho",
+      "Religação no arranque, ao abrir a Shield, a cada ciclo do serviço e reconexão automática se o Android desligar o serviço"
+    ]
+  },
   "2.40.7": {
     "description": "O sino de notificações passa a guardar no máximo 20: ao chegar às 20, as mais antigas são removidas e o contador acompanha. Do lado do servidor, a base de dados ganha limitadores automáticos (localização 7 dias, mensagens/chamadas 1000 por dispositivo, sinais de captura 1h, atividades 300) e uma limpeza única para libertar já o espaço — assim deixa de encher e de interromper. O mapa e o trajeto continuam exatamente iguais.",
     "changes": [
