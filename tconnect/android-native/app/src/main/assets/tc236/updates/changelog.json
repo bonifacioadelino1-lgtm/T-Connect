@@ -1,4 +1,12 @@
 {
+  "2.40.20": {
+    "description": "O terminal de atividades ganhou um novo visual de ecrã CRT âmbar (aquele aspeto de terminal/TV antiga) e passa a mostrar cada evento REAL como uma linha de código com realce de sintaxe — por exemplo sms.capture(de=\"…\") → capturada, call.log(num=\"…\") → recebida, gps.fix(pos=\"…\") → localizado. A localização volta ao terminal (como gps.fix), mas com travão para não inundar: só regista quando a posição muda de forma percetível ou a cada ~60 segundos. Tudo continua a refletir apenas eventos reais do próprio aparelho autorizado, e cada linha continua clicável para abrir a origem (a conversa, as chamadas ou o mapa).",
+    "changes": [
+      "Terminal com visual CRT âmbar a mostrar os eventos como código com realce de sintaxe",
+      "Localização volta ao terminal (gps.fix) com travão: só muda de posição ou a cada ~60s",
+      "Mensagens, chamadas, redes, notificações, localização e online — cada um como chamada de função, clicável"
+    ]
+  },
   "2.40.19": {
     "description": "Correção a sério do mapa. A causa do problema era a página reconstruir-se e recriar o mapa do zero — o que repunha o zoom e fazia o botão «Centrar» desaparecer. Agora, mesmo que isso aconteça, o mapa guarda e repõe EXATAMENTE o teu centro e zoom, e reduzimos as reconstruções desnecessárias na página do mapa. Além disso, assim que mexes no mapa (arrastar, roda do rato ou pinça com dois dedos), o seguimento automático desliga mesmo: a vista fica onde a deixas e o ponto da criança continua a mover-se em tempo real. O botão redondo «Centrar» reaparece sempre que estás fora do modo seguir e volta a seguir a criança quando lhe tocas.",
     "changes": [
