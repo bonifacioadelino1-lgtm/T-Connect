@@ -355,7 +355,7 @@
       b.type='button'; b.className='tc-recenter-btn'; b.title='Centrar na criança'; b.setAttribute('aria-label','Centrar na criança');
       b.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>';
       b.style.cssText='position:absolute;right:12px;bottom:88px;z-index:1200;width:46px;height:46px;border-radius:50%;border:1px solid #1f4a66;background:rgba(11,28,46,.92);color:#7fd4ff;display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.45);backdrop-filter:blur(4px)';
-      b.onclick=function(){ try{ tcFollow=true; tcShowRecenter(false); if(map&&lastKnownLocation){ tcProgrammaticAt=Date.now(); map.setView([lastKnownLocation.lat,lastKnownLocation.lng], map.getZoom(), {animate:true,duration:.6}); } }catch(_){} };
+      b.onclick=function(){ try{ tcFollow=true; tcShowRecenter(false); if(map){ try{ if(map.setBearing) map.setBearing(0); }catch(_){} if(lastKnownLocation){ tcProgrammaticAt=Date.now(); map.setView([lastKnownLocation.lat,lastKnownLocation.lng], map.getZoom(), {animate:true,duration:.6}); } } }catch(_){} };
       el.appendChild(b);
     }catch(_){}
   }
@@ -416,7 +416,10 @@
     if (_preserved) { _startCenter = _preserved.center; _startZoom = _preserved.zoom; }
     else { _startCenter = lastKnownLocation ? [lastKnownLocation.lat, lastKnownLocation.lng] : DEFAULT; _startZoom = lastKnownLocation ? 17 : 13; tcFollow = true; }
     // maxZoom 21: com tiles Google o satélite tem a MESMA qualidade/aproximação do Google Maps.
-    map = window.L.map(el, { zoomControl: true, attributionControl: false, preferCanvas: true, minZoom: 3, maxZoom: 21, zoomSnap: 1, zoomDelta: 1, wheelDebounceTime: 40, wheelPxPerZoomLevel: 120 }).setView(_startCenter, _startZoom);
+    // rotate/touchRotate: permite girar o mapa com DOIS DEDOS (gesto de rotação). bearing começa
+    // a 0 (norte para cima); o utilizador roda à vontade e o botão "Centrar" repõe o norte.
+    const _rotateOpts = window.L.Map && window.L.Map.TouchRotate ? { rotate: true, touchRotate: true, rotateControl: false, bearing: 0 } : {};
+    map = window.L.map(el, Object.assign({ zoomControl: true, attributionControl: false, preferCanvas: true, minZoom: 3, maxZoom: 21, zoomSnap: 1, zoomDelta: 1, wheelDebounceTime: 40, wheelPxPerZoomLevel: 120 }, _rotateOpts)).setView(_startCenter, _startZoom);
     const BLANK_TILE0 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
     roadLayer = window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxNativeZoom: 19,

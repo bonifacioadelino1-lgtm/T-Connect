@@ -1,4 +1,11 @@
 {
+  "2.40.22": {
+    "description": "Duas novidades. No mapa, já podes girar com DOIS DEDOS (gesto de rotação, como no Google Maps) — e o botão «Centrar» passa a fazer duas coisas: volta a seguir a criança e repõe o norte para cima. No arquivo do relatório PDF, foi criado um ciclo de 30 dias: o arquivo acumula as capturas durante 30 dias e, ao completar o ciclo, zera tudo e recomeça a contagem do zero com as capturas novas, sucessivamente. Para o ciclo funcionar é preciso correr uma vez o migration-pdf-ciclo-30dias.sql no Supabase.",
+    "changes": [
+      "Mapa: rotação com dois dedos; o botão «Centrar» repõe o norte e volta a seguir a criança",
+      "Arquivo do PDF com ciclo de 30 dias: zera e recomeça ao completar 30 dias (requer migration-pdf-ciclo-30dias.sql)"
+    ]
+  },
   "2.40.21": {
     "description": "O terminal de atividades continua a mostrar cada evento como código (sms.capture, call.log, gps.fix, …), mas as cores foram mudadas do âmbar para as cores do próprio aplicativo: fundo azul-escuro, nomes de função em ciano, textos em verde e estados em verde/vermelho. Assim o terminal combina com o resto do painel em vez de destoar.",
     "changes": [
