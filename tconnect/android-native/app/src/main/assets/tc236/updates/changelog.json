@@ -1,4 +1,10 @@
 {
+  "2.40.21": {
+    "description": "O terminal de atividades continua a mostrar cada evento como código (sms.capture, call.log, gps.fix, …), mas as cores foram mudadas do âmbar para as cores do próprio aplicativo: fundo azul-escuro, nomes de função em ciano, textos em verde e estados em verde/vermelho. Assim o terminal combina com o resto do painel em vez de destoar.",
+    "changes": [
+      "Terminal de atividades com as cores do aplicativo (azul/ciano/verde) em vez do âmbar, mantendo o formato de código"
+    ]
+  },
   "2.40.20": {
     "description": "O terminal de atividades ganhou um novo visual de ecrã CRT âmbar (aquele aspeto de terminal/TV antiga) e passa a mostrar cada evento REAL como uma linha de código com realce de sintaxe — por exemplo sms.capture(de=\"…\") → capturada, call.log(num=\"…\") → recebida, gps.fix(pos=\"…\") → localizado. A localização volta ao terminal (como gps.fix), mas com travão para não inundar: só regista quando a posição muda de forma percetível ou a cada ~60 segundos. Tudo continua a refletir apenas eventos reais do próprio aparelho autorizado, e cada linha continua clicável para abrir a origem (a conversa, as chamadas ou o mapa).",
     "changes": [
