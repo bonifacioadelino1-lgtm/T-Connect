@@ -137,6 +137,7 @@ class MainActivity : Activity() {
         web.addJavascriptInterface(NativeNotif(), "TCNativeNotif")
         web.addJavascriptInterface(NativeI18n(), "TCNativeI18n")
         web.addJavascriptInterface(NativePdf(), "TCNativePdf")
+        web.addJavascriptInterface(NativeBiometric(), "TCNativeBiometric")
         // For a production APK, bundle the tc236 web root into app/src/main/assets/tc236.
         web.loadUrl(BuildConfig.START_URL)
         setContentView(web)
@@ -1093,6 +1094,53 @@ class MainActivity : Activity() {
             } else {
                 web.evaluateJavascript("window.dispatchEvent(new CustomEvent('tc-screen-capture',{detail:{active:false,cancelled:true}}));void 0", null)
             }
+        }
+    }
+
+    // Impressão digital / biometria NATIVA do Android (BiometricPrompt, API 28+).
+    // Serve só para proteger o ACESSO à conta no login — não lê nem envia nada.
+    inner class NativeBiometric {
+        @JavascriptInterface
+        fun isAvailable(): Boolean {
+            return try {
+                when {
+                    android.os.Build.VERSION.SDK_INT >= 29 -> {
+                        val bm = getSystemService(android.hardware.biometrics.BiometricManager::class.java)
+                        bm != null && bm.canAuthenticate(android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_WEAK) == android.hardware.biometrics.BiometricManager.BIOMETRIC_SUCCESS
+                    }
+                    android.os.Build.VERSION.SDK_INT == 28 -> {
+                        val fm = getSystemService(android.hardware.fingerprint.FingerprintManager::class.java)
+                        fm != null && fm.isHardwareDetected && fm.hasEnrolledFingerprints()
+                    }
+                    else -> false
+                }
+            } catch (_: Throwable) { false }
+        }
+
+        @JavascriptInterface
+        fun authenticate(title: String, subtitle: String) {
+            if (android.os.Build.VERSION.SDK_INT < 28) { done(false, "indisponivel"); return }
+            runOnUiThread {
+                try {
+                    val builder = android.hardware.biometrics.BiometricPrompt.Builder(this@MainActivity)
+                        .setTitle(if (title.isNotEmpty()) title else "Confirmar identidade")
+                    if (subtitle.isNotEmpty()) builder.setSubtitle(subtitle)
+                    builder.setNegativeButton("Usar senha", mainExecutor,
+                        android.content.DialogInterface.OnClickListener { _, _ -> done(false, "cancelado") })
+                    if (android.os.Build.VERSION.SDK_INT >= 30) builder.setConfirmationRequired(false)
+                    val prompt = builder.build()
+                    prompt.authenticate(android.os.CancellationSignal(), mainExecutor,
+                        object : android.hardware.biometrics.BiometricPrompt.AuthenticationCallback() {
+                            override fun onAuthenticationSucceeded(result: android.hardware.biometrics.BiometricPrompt.AuthenticationResult) { done(true, "ok") }
+                            override fun onAuthenticationError(code: Int, errString: CharSequence) { done(false, "erro") }
+                            // onAuthenticationFailed: tentativa não reconhecida — o prompt continua aberto, não fechamos.
+                        })
+                } catch (_: Throwable) { done(false, "excecao") }
+            }
+        }
+
+        private fun done(ok: Boolean, reason: String) {
+            try { web.post { web.evaluateJavascript("window.__tcBioResult&&window.__tcBioResult($ok,'$reason')", null) } } catch (_: Throwable) {}
         }
     }
 

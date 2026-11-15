@@ -1,4 +1,11 @@
 {
+  "2.40.23": {
+    "description": "O login do Guardian passa a ter entrada por IMPRESSÃO DIGITAL, usando a biometria nativa do Android (o mesmo leitor do telemóvel). Depois de entrares uma vez com a senha, a app ativa a impressão digital nos aparelhos que a têm; a partir daí, ao reabrir a app com a sessão guardada, ela pede a tua impressão digital para desbloquear. Há sempre a opção «Entrar com senha» e «Desativar impressão digital», por isso nunca ficas bloqueado. A impressão digital serve só para proteger o acesso à conta — não lê nem envia nada.",
+    "changes": [
+      "Login por impressão digital (biometria nativa do Android) para desbloquear a conta",
+      "Ativa-se no 1.º acesso em aparelhos compatíveis; com escape por senha e opção de desativar"
+    ]
+  },
   "2.40.22": {
     "description": "Duas novidades. No mapa, já podes girar com DOIS DEDOS (gesto de rotação, como no Google Maps) — e o botão «Centrar» passa a fazer duas coisas: volta a seguir a criança e repõe o norte para cima. No arquivo do relatório PDF, foi criado um ciclo de 30 dias: o arquivo acumula as capturas durante 30 dias e, ao completar o ciclo, zera tudo e recomeça a contagem do zero com as capturas novas, sucessivamente. Para o ciclo funcionar é preciso correr uma vez o migration-pdf-ciclo-30dias.sql no Supabase.",
     "changes": [
