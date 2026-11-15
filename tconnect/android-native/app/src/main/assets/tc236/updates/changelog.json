@@ -1,4 +1,11 @@
 {
+  "2.40.27": {
+    "description": "As Definições foram reorganizadas de forma mais profissional: saiu o cartão de instalar PWA, o idioma passou a um cartão «Google Tradutor» e o guia ganhou um cartão novo, mais bem desenhado. Além disso, a versão web (PWA) do Guardian e do Child continua publicada no site oficial e passa a atualizar-se sozinha no próximo arranque — sem precisar de reinstalar nada. A cada publicação, a versão é carimbada no service worker, por isso o navegador deteta a atualização, limpa a cache antiga e aplica a nova versão automaticamente.",
+    "changes": [
+      "Definições mais profissionais: cartão de instalar PWA removido; «Google Tradutor» e guia redesenhados",
+      "PWA (Guardian e Child) no site oficial, com auto-update: atualiza-se sozinho no próximo arranque, sem reinstalar"
+    ]
+  },
   "2.40.26": {
     "description": "Tirámos o «olho» do painel de monitoramento. No modo Profissional, os cartões de online, bateria e alertas ficaram mais refinados e, ao tocar neles, abrem painéis de vidro transparentes (com desfoque), e cada aba mostra os painéis translúcidos. O seletor de idioma passa a chamar-se «Google Tradutor» e continua a traduzir a página toda — tudo o que aparece no ecrã, em todas as abas.",
     "changes": [

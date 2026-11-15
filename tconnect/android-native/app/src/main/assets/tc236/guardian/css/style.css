@@ -1652,3 +1652,12 @@ body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Ari
 /* Cada aba em vidro: terminais e blocos internos ganham o translúcido no pro */
 .tc-pro .terminal{background:rgba(6,16,26,.55) !important;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-color:rgba(140,190,230,.14) !important}
 .tc-pro .permission-box,.tc-pro .notice,.tc-pro .integration{background:rgba(15,30,48,.45) !important;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+
+/* ===== Definições: cartão IDIOMA e cartão GUIA redesenhados ===== */
+.tc-lang-card-row{margin-top:12px;display:flex}
+.tc-lang-card .tc-trad{position:relative;display:inline-flex}
+.tc-lang-card .tc-trad .tc-trad-menu{left:0;right:auto}
+.tc-guide-card .tc-guide-head{display:flex;gap:14px;align-items:flex-start;margin:8px 0 16px}
+.tc-guide-card .tc-guide-ic{width:48px;height:48px;border-radius:14px;flex:none;display:grid;place-items:center;background:rgba(14,165,233,.14);border:1px solid rgba(14,165,233,.32);color:#38bdf8}
+.tc-guide-card .tc-guide-ic svg{width:24px;height:24px}
+.tc-guide-card .tc-guide-head h3{margin:0 0 4px}

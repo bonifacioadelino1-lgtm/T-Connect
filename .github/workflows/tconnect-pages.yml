@@ -40,6 +40,13 @@ jobs:
           # junto com o codigo, sem depender de nenhum commit extra.
           VN=$(grep -oE "TC_APP_VERSION='[0-9.]+'" "$TC/guardian/js/app.js" | head -1 | grep -oE "[0-9.]+")
           [ -z "$VN" ] && VN="2.39.0"
+          # Carimba a versao no Service Worker dos PWAs (Guardian e Child). Assim, a cada
+          # publicacao o sw.js muda, o navegador deteta a atualizacao, limpa a cache antiga
+          # e aplica a nova versao sozinho no proximo arranque — sem reinstalar nada.
+          sed -i -E "s/const VERSION = '[0-9.]+'/const VERSION = '$VN'/" _site/sw.js 2>/dev/null || true
+          sed -i -E "s/const CACHE_NAME = 't-connect-v' \\+ VERSION/const CACHE_NAME = 't-connect-v' + VERSION/" _site/sw.js 2>/dev/null || true
+          sed -i -E "s/const CACHE = 'tc-child-v[0-9.]+'/const CACHE = 'tc-child-v$VN'/" _site/child/sw.js 2>/dev/null || true
+          echo "Service Workers carimbados -> v$VN"
           DATE=$(date +%F)
           RELISO=$(date --iso-8601=seconds)
           APK_URL="https://github.com/bonifacioadelino1-lgtm/T-Connect/raw/main/apks-build/TConnect-Guardian.apk"
