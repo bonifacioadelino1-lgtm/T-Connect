@@ -1,4 +1,12 @@
 {
+  "2.40.26": {
+    "description": "Tirámos o «olho» do painel de monitoramento. No modo Profissional, os cartões de online, bateria e alertas ficaram mais refinados e, ao tocar neles, abrem painéis de vidro transparentes (com desfoque), e cada aba mostra os painéis translúcidos. O seletor de idioma passa a chamar-se «Google Tradutor» e continua a traduzir a página toda — tudo o que aparece no ecrã, em todas as abas.",
+    "changes": [
+      "Removido o «olho» do painel de monitoramento",
+      "Modo Profissional: cartões mais refinados que abrem painéis de vidro transparentes ao tocar; abas translúcidas",
+      "Seletor de idioma renomeado «Google Tradutor», traduz a página toda em todas as abas"
+    ]
+  },
   "2.40.25": {
     "description": "Agora existem dois modos de interface, que escolhes em Definições → Aparência → Modo de interface. O «Clássico» é o visual de sempre (e continua a ser o predefinido). O «Profissional» aplica um tema de vidro: a barra de menu fica transparente e os painéis translúcidos, sobre um fundo com gradiente. Em ambos os modos os menus, as abas e todo o conteúdo são exatamente iguais — só muda o estilo. Podes trocar de modo quando quiseres.",
     "changes": [

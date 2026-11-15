@@ -1623,3 +1623,32 @@ body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Ari
 .tc-pro .child-mini,.tc-pro .side-status,.tc-pro .profile{background:rgba(255,255,255,.055) !important;border-color:rgba(140,190,230,.16) !important}
 .tc-pro .notice,.tc-pro .permission-box,.tc-pro .permission-row{border-color:rgba(140,190,230,.14) !important}
 .tc-pro .nav button.active,.tc-pro .nav-link.active{background:linear-gradient(90deg,rgba(56,189,248,.24),rgba(56,189,248,.04)) !important}
+
+/* ===== MODO PROFISSIONAL: cartões clicáveis + painéis (popups) em vidro ===== */
+/* Cartões de métrica (Online / Bateria / Alertas) mais profissionais */
+.tc-pro .compact-metric,.tc-pro .metric-interactive{transition:transform .15s ease,border-color .2s ease,box-shadow .2s ease}
+.tc-pro .compact-metric:hover,.tc-pro .metric-interactive:hover{transform:translateY(-2px);border-color:rgba(56,189,248,.42) !important;box-shadow:0 18px 44px rgba(0,0,0,.38) !important}
+.tc-pro .compact-metric:active,.tc-pro .metric-interactive:active{transform:translateY(0)}
+/* Ao clicar, os painéis abrem como VIDRO transparente */
+.tc-pro .tc-metric-popup-card,
+.tc-pro .tc-notification-card,
+.tc-pro .tc-contact-card,
+.tc-pro .modal,
+.tc-pro .tc-popup-card{
+  background:rgba(13,27,44,.6) !important;
+  backdrop-filter:blur(26px) saturate(150%);
+  -webkit-backdrop-filter:blur(26px) saturate(150%);
+  border:1px solid rgba(140,190,230,.22) !important;
+  box-shadow:0 26px 70px rgba(0,0,0,.5) !important;
+}
+.tc-pro .tc-metric-popup,
+.tc-pro .tc-notification-layer,
+.tc-pro .tc-contact-overlay,
+.tc-pro .modal-backdrop{
+  background:rgba(3,8,14,.42) !important;
+  backdrop-filter:blur(3px);
+  -webkit-backdrop-filter:blur(3px);
+}
+/* Cada aba em vidro: terminais e blocos internos ganham o translúcido no pro */
+.tc-pro .terminal{background:rgba(6,16,26,.55) !important;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-color:rgba(140,190,230,.14) !important}
+.tc-pro .permission-box,.tc-pro .notice,.tc-pro .integration{background:rgba(15,30,48,.45) !important;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
