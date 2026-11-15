@@ -1,4 +1,12 @@
 {
+  "2.40.24": {
+    "description": "A tela de login foi redesenhada para ficar mais profissional: logótipo em escudo, campos com ícones (e-mail e cadeado), botão para mostrar/ocultar a senha e o ícone de impressão digital bem visível. O seletor de idioma passou a ser o «Tradutor», com Português, English, 中文 (Chinês) e Français — e traduz todo o app, incluindo o painel de Monitoramento (o mesmo Tradutor aparece nas Definições). O ecrã de desbloqueio por impressão digital ganhou o mesmo visual novo.",
+    "changes": [
+      "Nova tela de login profissional (escudo, campos com ícones, mostrar/ocultar senha, ícone de impressão digital)",
+      "Seletor de idioma agora é o «Tradutor» (PT, EN, 中文, FR) e traduz todo o app, incluindo o painel",
+      "Ecrã de desbloqueio por impressão digital com o novo visual"
+    ]
+  },
   "2.40.23": {
     "description": "O login do Guardian passa a ter entrada por IMPRESSÃO DIGITAL, usando a biometria nativa do Android (o mesmo leitor do telemóvel). Depois de entrares uma vez com a senha, a app ativa a impressão digital nos aparelhos que a têm; a partir daí, ao reabrir a app com a sessão guardada, ela pede a tua impressão digital para desbloquear. Há sempre a opção «Entrar com senha» e «Desativar impressão digital», por isso nunca ficas bloqueado. A impressão digital serve só para proteger o acesso à conta — não lê nem envia nada.",
     "changes": [

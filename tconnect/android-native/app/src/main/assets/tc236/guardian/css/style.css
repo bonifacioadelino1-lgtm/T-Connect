@@ -1539,3 +1539,58 @@ body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Ari
 .tc-bio-fab.loading{animation:tcBioPulse 1.3s infinite}
 @keyframes tcBioPulse{0%{box-shadow:0 0 0 0 rgba(56,189,248,.45)}70%{box-shadow:0 0 0 18px rgba(56,189,248,0)}100%{box-shadow:0 0 0 0 rgba(56,189,248,0)}}
 .tc-bio-off{opacity:.55;font-size:12px}
+
+/* ===== Tradutor (seletor de idioma) ===== */
+.tc-trad{position:relative;display:inline-flex}
+.tc-login2 .tc-trad.top-lang{position:absolute;top:14px;right:14px;z-index:30}
+.tc-trad-btn{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:#cfe3f0;border:1px solid #28465c;background:#0b1a2a;padding:7px 11px;border-radius:999px;cursor:pointer}
+.tc-trad-btn:hover{border-color:#3a6a8c}
+.tc-trad-glyph{font-weight:800;color:#38bdf8}
+.tc-trad-car{color:#5a7389;font-size:10px}
+.tc-trad-menu{position:absolute;top:44px;right:0;width:244px;background:#0c1d2e;border:1px solid #28465c;border-radius:14px;box-shadow:0 20px 50px rgba(0,0,0,.55);overflow:hidden;z-index:60;text-align:left}
+.tc-trad.settings-lang .tc-trad-menu{right:auto;left:0}
+.tc-trad-menu[hidden]{display:none}
+.tc-trad-h{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid #1d4058}
+.tc-trad-hic{width:30px;height:30px;border-radius:9px;background:rgba(56,189,248,.16);display:grid;place-items:center;color:#38bdf8;font-weight:800;font-size:12px}
+.tc-trad-ht b{font-size:13px;display:block}
+.tc-trad-ht small{font-size:10px;color:#5a7389}
+.tc-trad-item{display:flex;align-items:center;gap:11px;width:100%;padding:11px 14px;background:none;border:0;color:#edf6ff;cursor:pointer;text-align:left;font:inherit}
+.tc-trad-item:hover{background:#0e2134}
+.tc-trad-item.sel{background:rgba(14,165,233,.1)}
+.tc-trad-fl{font-size:18px;width:22px;text-align:center}
+.tc-trad-nm{flex:1;font-size:13.5px;font-weight:600}
+.tc-trad-ck{color:#38bdf8;font-weight:800}
+
+/* ===== Login / Desbloqueio (novo design) ===== */
+.tc-auth2{background:radial-gradient(1000px 650px at 50% 10%,#0f2d44,transparent 55%),#050d18}
+.tc-login2{position:relative;width:min(400px,94vw);background:#0a1a2a;border:1px solid #1e4058;border-radius:24px;padding:34px 26px 24px;box-shadow:0 30px 70px rgba(0,0,0,.5);text-align:center}
+.tc-lg-logo{width:62px;height:62px;border-radius:18px;margin:8px auto 0;background:linear-gradient(135deg,#1dc8ff,#0872b0);display:grid;place-items:center;box-shadow:0 14px 34px rgba(7,149,217,.4)}
+.tc-lg-word{font-size:21px;font-weight:800;letter-spacing:.5px;margin-top:13px;font-family:Manrope,Inter,sans-serif}
+.tc-lg-word span{color:#38bdf8}
+.tc-lg-tag{font-size:8.5px;letter-spacing:2.5px;color:#4a7897;font-weight:800;margin-top:5px}
+.tc-lg-h{font-size:22px;font-weight:800;margin-top:20px}
+.tc-lg-sub{font-size:13px;margin:6px auto 0;max-width:300px}
+.tc-lg-form{margin-top:20px;display:flex;flex-direction:column;gap:12px;text-align:left}
+.tc-lg-field{position:relative}
+.tc-lg-ic{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#5a7389;display:grid;place-items:center}
+.tc-lg-field input{width:100%;background:#071521;border:1px solid #28465c;color:#edf6ff;border-radius:13px;padding:14px 44px;font-size:14px;outline:none}
+.tc-lg-field input:focus{border-color:#0ea5e9;box-shadow:0 0 0 3px rgba(14,165,233,.15)}
+.tc-lg-eye{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:0;color:#5a7389;cursor:pointer;padding:6px}
+.tc-lg-eye.on{color:#38bdf8}
+.tc-lg-frow{display:flex;justify-content:flex-end;margin-top:-4px}
+.tc-lg-frow .text-btn{margin:0;font-size:12px}
+.tc-lg-div{display:flex;align-items:center;gap:12px;margin:20px 0 6px;color:#5a7389;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.tc-lg-div::before,.tc-lg-div::after{content:"";flex:1;height:1px;background:#1d4058}
+.tc-lg-bio{display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:6px}
+.tc-lg-biobtn{width:66px;height:66px;border-radius:50%;display:grid;place-items:center;cursor:pointer;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.4);color:#38bdf8;transition:.15s}
+.tc-lg-biobtn:hover{background:rgba(56,189,248,.18)}
+.tc-lg-bio small{font-size:12px;color:#8299ad}
+.tc-lg-foot{margin-top:20px;font-size:13px;color:#8299ad}
+.tc-lg-foot b{color:#38bdf8;cursor:pointer}
+.tc-unlock2{text-align:center}
+.tc-unlock-bio{width:150px;height:150px;border-radius:50%;margin:34px auto 0;display:grid;place-items:center;cursor:pointer;color:#38bdf8;background:radial-gradient(circle,rgba(56,189,248,.14),transparent 70%);border:1px solid rgba(56,189,248,.3);position:relative;animation:tcBioPulse 1.7s infinite}
+.tc-unlock-bio::before{content:"";position:absolute;inset:-10px;border-radius:50%;border:1px solid rgba(56,189,248,.18)}
+.tc-unlock-hint{display:flex;align-items:center;justify-content:center;gap:9px;margin-top:28px;font-size:12.5px;color:#8299ad}
+.tc-unlock-hint .d{width:8px;height:8px;border-radius:50%;background:#34d399;box-shadow:0 0 9px #34d399}
+.tc-unlock2 .btn.primary.wide{margin-top:30px}
+.tc-unlock2 .tc-bio-off{opacity:.55;font-size:12px}
