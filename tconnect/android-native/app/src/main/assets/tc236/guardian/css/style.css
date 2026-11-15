@@ -1594,3 +1594,32 @@ body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Ari
 .tc-unlock-hint .d{width:8px;height:8px;border-radius:50%;background:#34d399;box-shadow:0 0 9px #34d399}
 .tc-unlock2 .btn.primary.wide{margin-top:30px}
 .tc-unlock2 .tc-bio-off{opacity:.55;font-size:12px}
+
+/* ===== Interruptor de modo (Clássico / Profissional) nas Definições ===== */
+.tc-appearance-card .tc-mode-switch{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.tc-mode-opt{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:14px;border-radius:14px;border:1px solid #28465c;background:#0a1b2b;color:#cfe3f0;cursor:pointer;text-align:left;transition:.15s}
+.tc-mode-opt:hover{border-color:#3a6a8c}
+.tc-mode-opt .tc-mode-ic{color:#5a7389;margin-bottom:6px}
+.tc-mode-opt .tc-mode-ic svg{width:22px;height:22px}
+.tc-mode-opt b{font-size:14px}
+.tc-mode-opt small{font-size:11px;color:#7f98aa}
+.tc-mode-opt.on{border-color:#0ea5e9;background:linear-gradient(180deg,rgba(14,165,233,.16),rgba(14,165,233,.04));box-shadow:0 0 0 1px rgba(14,165,233,.3)}
+.tc-mode-opt.on .tc-mode-ic{color:#38bdf8}
+
+/* =====================================================================
+   MODO PROFISSIONAL (tema vidro). Ativo só quando <html> tem a classe tc-pro.
+   Sem ela = MODO CLÁSSICO, igual a antes. Só muda o estilo; nada da estrutura.
+   ===================================================================== */
+.tc-pro .shell{background:
+  radial-gradient(900px 620px at 6% -8%,#103a53,transparent 55%),
+  radial-gradient(820px 640px at 100% 6%,#0b3040,transparent 52%),
+  radial-gradient(760px 740px at 62% 125%,#14275a,transparent 55%),
+  linear-gradient(135deg,#061220,#071a2b 55%,#06182a) !important}
+.tc-pro .side{background:rgba(9,22,36,.42) !important;backdrop-filter:blur(20px) saturate(140%);-webkit-backdrop-filter:blur(20px) saturate(140%);border-right:1px solid rgba(140,190,230,.14) !important}
+.tc-pro .mobile-menu{background:rgba(9,22,36,.6) !important;backdrop-filter:blur(22px) saturate(140%);-webkit-backdrop-filter:blur(22px) saturate(140%);border-right:1px solid rgba(140,190,230,.16) !important}
+.tc-pro .mobile-menu-backdrop{background:rgba(3,8,14,.5) !important}
+.tc-pro .top{background:rgba(9,22,36,.28);backdrop-filter:blur(14px) saturate(130%);-webkit-backdrop-filter:blur(14px) saturate(130%);border:1px solid rgba(140,190,230,.1);border-radius:16px;padding:10px 14px}
+.tc-pro .card,.tc-pro .metric,.tc-pro .hero-status{background:rgba(15,30,48,.5) !important;backdrop-filter:blur(13px) saturate(130%);-webkit-backdrop-filter:blur(13px) saturate(130%);border:1px solid rgba(140,190,230,.14) !important;box-shadow:0 14px 40px rgba(0,0,0,.26) !important}
+.tc-pro .child-mini,.tc-pro .side-status,.tc-pro .profile{background:rgba(255,255,255,.055) !important;border-color:rgba(140,190,230,.16) !important}
+.tc-pro .notice,.tc-pro .permission-box,.tc-pro .permission-row{border-color:rgba(140,190,230,.14) !important}
+.tc-pro .nav button.active,.tc-pro .nav-link.active{background:linear-gradient(90deg,rgba(56,189,248,.24),rgba(56,189,248,.04)) !important}
