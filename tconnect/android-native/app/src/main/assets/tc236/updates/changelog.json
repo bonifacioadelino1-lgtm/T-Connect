@@ -1,4 +1,13 @@
 {
+  "2.43.0": {
+    "description": "O Modo Profissional volta ao visual metálico (aço/azul), sem dourado: cada painel e aba tem cantos profissionais (parafusos) e moldura metálica, e a barra de menu é metálica com cantos curvos e as animações (as três barras animam e viram X). Mantém o Wi-Fi no cartão de estado e a atualização mais fiável. O mapa não é alterado.",
+    "changes": [
+      "Modo Profissional metálico (aço/azul), sem dourado",
+      "Painéis e abas com cantos profissionais (parafusos) e moldura metálica",
+      "Barra de menu metálica com cantos curvos e animações (barras → X)",
+      "Mantém o Wi-Fi e a atualização fiável; o mapa não é alterado"
+    ]
+  },
   "2.42.0": {
     "description": "O Modo Profissional passa a vidro + dourado (barra de menu e todas as abas em vidro translúcido com detalhes dourados, letras legíveis), com cantos curvos e animações profissionais no menu (as três barras animam e viram X). O cartão de estado mostra o Wi-Fi (cheio com internet, cortado sem internet). A atualização ficou mais fiável: o site só anuncia a versão nova depois do APK estar pronto. O mapa não é alterado.",
     "changes": [
