@@ -1,4 +1,14 @@
 {
+  "2.42.0": {
+    "description": "O Modo Profissional passa a vidro + dourado (barra de menu e todas as abas em vidro translúcido com detalhes dourados, letras legíveis), com cantos curvos e animações profissionais no menu (as três barras animam e viram X). O cartão de estado mostra o Wi-Fi (cheio com internet, cortado sem internet). A atualização ficou mais fiável: o site só anuncia a versão nova depois do APK estar pronto. O mapa não é alterado.",
+    "changes": [
+      "Modo Profissional em vidro + dourado (menu e abas), letras legíveis",
+      "Menu com cantos curvos e animações: as três barras animam e viram X",
+      "Cartão de estado com Wi-Fi: cheio (online) / cortado vermelho (offline)",
+      "Atualização mais fiável: só anuncia a versão nova com o APK já pronto",
+      "O mapa continua igual ao clássico (não é alterado)"
+    ]
+  },
   "2.41.0": {
     "description": "Novo segundo modo de interface nas Definições: um visual metálico e robusto (placas de metal com parafusos, barra de menu e painéis), a par do modo clássico (1.º). Aplica-se a toda a app, aos menus e às definições; muda apenas o estilo — a estrutura e o conteúdo ficam iguais, e o mapa não é alterado.",
     "changes": [

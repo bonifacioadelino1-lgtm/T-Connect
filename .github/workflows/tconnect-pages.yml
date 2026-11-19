@@ -6,6 +6,12 @@ on:
       - 'tconnect/**'
       - 'apks-build/**'
       - '.github/workflows/tconnect-pages.yml'
+  # Reprocessa o site DEPOIS de o APK ser compilado, para o manifesto apontar
+  # sempre ao APK já pronto (sem a janela em que se anunciava a versão nova
+  # antes do ficheiro existir).
+  workflow_run:
+    workflows: [ "T-Connect APK (debug)" ]
+    types: [ completed ]
   workflow_dispatch:
 permissions:
   contents: read
@@ -38,7 +44,11 @@ jobs:
           # Carimba o manifesto de atualizacoes com a versao REAL do app.js,
           # a cada deploy. Assim a "contagem de versao" na web sobe sempre
           # junto com o codigo, sem depender de nenhum commit extra.
-          VN=$(grep -oE "TC_APP_VERSION='[0-9.]+'" "$TC/guardian/js/app.js" | head -1 | grep -oE "[0-9.]+")
+          # A versão anunciada vem do MANIFESTO COMMITADO (que o workflow do APK só
+          # atualiza quando o APK novo já foi compilado e gravado). Assim o site nunca
+          # anuncia uma versão cujo APK ainda não existe. Fallback: app.js.
+          VN=$(grep -oE '"version"[[:space:]]*:[[:space:]]*"[0-9.]+"' "$TC/updates/t-connect-update.json" 2>/dev/null | grep -oE "[0-9.]+" | head -1)
+          [ -z "$VN" ] && VN=$(grep -oE "TC_APP_VERSION='[0-9.]+'" "$TC/guardian/js/app.js" | head -1 | grep -oE "[0-9.]+")
           [ -z "$VN" ] && VN="2.39.0"
           # Carimba a versao no Service Worker dos PWAs (Guardian e Child). Assim, a cada
           # publicacao o sw.js muda, o navegador deteta a atualizacao, limpa a cache antiga

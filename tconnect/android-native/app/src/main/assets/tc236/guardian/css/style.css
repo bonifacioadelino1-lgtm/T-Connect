@@ -1607,57 +1607,71 @@ body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Ari
 .tc-mode-opt.on .tc-mode-ic{color:#38bdf8}
 
 /* =====================================================================
-   MODO PROFISSIONAL (tema METÁLICO / robusto). Ativo só quando <html> tem
-   a classe tc-pro. Sem ela = MODO CLÁSSICO, igual a antes. Só muda o estilo;
-   a estrutura, os menus e todo o conteúdo ficam iguais. O MAPA NÃO é alterado
-   (o cartão .map-card fica propositadamente de fora deste tema).
+   MODO PROFISSIONAL (tema VIDRO + DOURADO). Ativo só quando <html> tem a
+   classe tc-pro. Sem ela = MODO CLÁSSICO, igual a antes. Só muda o estilo;
+   a estrutura, os menus e o conteúdo ficam iguais. O MAPA (.map-card) NÃO é
+   alterado. Inclui animações profissionais no menu.
    ===================================================================== */
 .tc-pro .shell{background:
-  radial-gradient(760px 500px at 8% -6%,#123a55,transparent 55%),
-  radial-gradient(700px 520px at 104% 4%,#0d2c42,transparent 52%),
-  linear-gradient(180deg,#070c16,#0b1220) !important}
-.tc-pro .side{background:linear-gradient(180deg,#223049,#161f2e) !important;backdrop-filter:none;-webkit-backdrop-filter:none;border-right:1px solid #3a475e !important;box-shadow:inset -1px 0 0 rgba(255,255,255,.06),4px 0 24px rgba(0,0,0,.5)}
-.tc-pro .mobile-menu{background:linear-gradient(180deg,#223049,#161f2e) !important;backdrop-filter:none;-webkit-backdrop-filter:none;border-right:1px solid #3a475e !important;box-shadow:4px 0 28px rgba(0,0,0,.6)}
-.tc-pro .mobile-menu-backdrop{background:rgba(3,8,14,.55) !important;backdrop-filter:none;-webkit-backdrop-filter:none}
-.tc-pro .top{background:linear-gradient(180deg,#1b2436,#141b29) !important;backdrop-filter:none;-webkit-backdrop-filter:none;border:1px solid #39465c;border-radius:14px;padding:10px 14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 8px 22px rgba(0,0,0,.45)}
-/* Painéis metálicos com parafusos nos cantos (o MAPA .map-card fica de fora) */
-.tc-pro .card:not(.map-card),.tc-pro .metric,.tc-pro .hero-status{position:relative;background:
-  radial-gradient(circle at 10px 10px,#cfd5e3 0 2px,rgba(0,0,0,.5) 2.5px 3.3px,transparent 3.6px),
-  radial-gradient(circle at calc(100% - 10px) 10px,#cfd5e3 0 2px,rgba(0,0,0,.5) 2.5px 3.3px,transparent 3.6px),
-  radial-gradient(circle at 10px calc(100% - 10px),#cfd5e3 0 2px,rgba(0,0,0,.5) 2.5px 3.3px,transparent 3.6px),
-  radial-gradient(circle at calc(100% - 10px) calc(100% - 10px),#cfd5e3 0 2px,rgba(0,0,0,.5) 2.5px 3.3px,transparent 3.6px),
-  linear-gradient(180deg,#141d2f,#0f1625) !important;
-  background-repeat:no-repeat !important;
-  border:1px solid #434f66 !important;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 0 0 1px rgba(0,0,0,.35),0 14px 34px rgba(0,0,0,.5) !important}
-.tc-pro .child-mini,.tc-pro .side-status,.tc-pro .profile{background:rgba(255,255,255,.045) !important;border-color:#333e52 !important}
-.tc-pro .notice,.tc-pro .permission-box,.tc-pro .permission-row{border-color:#33425a !important}
-/* Barra de navegação: itens em placa metálica */
-.tc-pro .nav button,.tc-pro .nav-link{background:linear-gradient(180deg,#1c2639,#141c2b) !important;border:1px solid #333e52 !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.08) !important}
-.tc-pro .nav button.active,.tc-pro .nav-link.active{background:linear-gradient(180deg,rgba(67,199,230,.22),rgba(28,111,174,.1)) !important;border-color:rgba(95,216,255,.5) !important;box-shadow:inset 0 0 0 1px rgba(95,216,255,.3),0 6px 16px rgba(0,0,0,.4) !important}
+  radial-gradient(640px 420px at 100% -4%, rgba(230,190,110,.14), transparent 58%),
+  radial-gradient(620px 460px at -6% 12%, rgba(73,180,230,.16), transparent 56%),
+  radial-gradient(600px 620px at 60% 120%, rgba(120,90,180,.10), transparent 55%),
+  linear-gradient(180deg,#070d18,#0b1322) !important}
+/* Barra de menu em VIDRO com moldura dourada; gaveta com cantos curvos em cima e em baixo */
+.tc-pro .side{background:linear-gradient(180deg,rgba(243,217,138,.12),transparent 12%,transparent 88%,rgba(243,217,138,.10)),rgba(20,30,50,.5) !important;backdrop-filter:blur(24px) saturate(150%);-webkit-backdrop-filter:blur(24px) saturate(150%);border:1px solid rgba(232,200,120,.38) !important;border-radius:22px !important;box-shadow:inset 0 2px 0 rgba(255,255,255,.14),0 24px 60px rgba(0,0,0,.55)}
+.tc-pro .mobile-menu{background:linear-gradient(180deg,rgba(243,217,138,.14),transparent 12%,transparent 88%,rgba(243,217,138,.12)),rgba(20,30,50,.52) !important;backdrop-filter:blur(26px) saturate(150%);-webkit-backdrop-filter:blur(26px) saturate(150%);border:1px solid rgba(232,200,120,.42) !important;border-radius:0 24px 24px 0 !important;box-shadow:inset 0 2px 0 rgba(255,255,255,.14),0 30px 70px rgba(0,0,0,.6)}
+.tc-pro .mobile-menu-backdrop{background:rgba(3,8,14,.5) !important;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.tc-pro .top{background:rgba(22,32,52,.5) !important;backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);border:1px solid rgba(232,200,120,.30);border-radius:16px;padding:10px 14px}
+/* Painéis em vidro com moldura dourada (o MAPA .map-card fica de fora) */
+.tc-pro .card:not(.map-card),.tc-pro .metric,.tc-pro .hero-status{background:rgba(22,32,52,.5) !important;backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);border:1px solid rgba(232,200,120,.30) !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 16px 40px rgba(0,0,0,.45) !important}
+.tc-pro .child-mini,.tc-pro .side-status,.tc-pro .profile{background:rgba(255,255,255,.05) !important;border-color:rgba(232,200,120,.28) !important}
+.tc-pro .notice,.tc-pro .permission-box,.tc-pro .permission-row{border-color:rgba(232,200,120,.26) !important}
+/* Dourado na interface principal: marca/logo */
+.tc-pro .brand-mark{background:linear-gradient(145deg,#f3d98a,#d9b45e) !important;color:#1a1204 !important;border:1px solid #9c7a32 !important}
 
-/* Cartões clicáveis (Online / Bateria / Alertas): leve relevo ao passar/clicar */
+/* ===== Animações profissionais no MENU (as três barras + itens) ===== */
+.mm-burger{display:inline-flex;flex-direction:column;justify-content:center;gap:4px;width:22px;height:18px;vertical-align:middle}
+.mm-burger i{display:block;height:2.5px;border-radius:2px;background:currentColor;transition:transform .28s cubic-bezier(.4,0,.2,1),opacity .2s,width .28s}
+.mm-burger i:nth-child(1){width:22px}.mm-burger i:nth-child(2){width:16px}.mm-burger i:nth-child(3){width:20px}
+.tc-pro .mm-burger i{background:linear-gradient(90deg,#f3d98a,#6fdcff)}
+.tc-pro .mobile-menu-trigger{transition:transform .15s ease}
+.tc-pro .mobile-menu-trigger:active{transform:scale(.9)}
+.tc-pro .mobile-menu-trigger:active .mm-burger{animation:tcBurgerTap .3s ease}
+@keyframes tcBurgerTap{0%{transform:scale(1)}42%{transform:scale(.78)}100%{transform:scale(1)}}
+/* Quando o menu está aberto, as três barras formam um X */
+.tc-pro .mobile-menu-trigger[aria-expanded="true"] .mm-burger i{width:22px}
+.tc-pro .mobile-menu-trigger[aria-expanded="true"] .mm-burger i:nth-child(1){transform:translateY(6.5px) rotate(45deg)}
+.tc-pro .mobile-menu-trigger[aria-expanded="true"] .mm-burger i:nth-child(2){opacity:0;transform:scaleX(.2)}
+.tc-pro .mobile-menu-trigger[aria-expanded="true"] .mm-burger i:nth-child(3){transform:translateY(-6.5px) rotate(-45deg)}
+/* Itens do menu: relevo ao passar/clicar */
+.tc-pro .nav button,.tc-pro .nav-link{background:rgba(28,40,62,.46) !important;border:1px solid rgba(232,200,120,.22) !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.08) !important;transition:transform .14s ease,border-color .2s ease,box-shadow .2s ease,background .2s ease}
+.tc-pro .nav button:hover,.tc-pro .nav-link:hover{border-color:rgba(232,200,120,.5) !important;transform:translateX(2px)}
+.tc-pro .nav button:active,.tc-pro .nav-link:active{transform:scale(.975)}
+.tc-pro .nav button.active,.tc-pro .nav-link.active{background:linear-gradient(100deg,rgba(86,207,232,.26),rgba(28,111,174,.12)) !important;border-color:rgba(111,220,255,.55) !important;animation:tcActiveGlow 2.6s ease-in-out infinite}
+@keyframes tcActiveGlow{0%,100%{box-shadow:inset 0 0 0 1px rgba(111,220,255,.3),0 0 14px rgba(86,207,232,.18)}50%{box-shadow:inset 0 0 0 1px rgba(111,220,255,.45),0 0 22px rgba(86,207,232,.32)}}
+
+/* Cartões clicáveis + painéis (popups) em vidro */
 .tc-pro .compact-metric,.tc-pro .metric-interactive{transition:transform .15s ease,border-color .2s ease,box-shadow .2s ease}
-.tc-pro .compact-metric:hover,.tc-pro .metric-interactive:hover{transform:translateY(-2px);border-color:rgba(95,216,255,.5) !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 18px 42px rgba(0,0,0,.55) !important}
-.tc-pro .compact-metric:active,.tc-pro .metric-interactive:active{transform:translateY(0)}
-/* Popups / painéis em metal (em vez de vidro) */
+.tc-pro .compact-metric:hover,.tc-pro .metric-interactive:hover{transform:translateY(-2px);border-color:rgba(232,200,120,.5) !important}
+.tc-pro .compact-metric:active,.tc-pro .metric-interactive:active{transform:scale(.98)}
 .tc-pro .tc-metric-popup-card,
 .tc-pro .tc-notification-card,
 .tc-pro .tc-contact-card,
 .tc-pro .modal,
 .tc-pro .tc-popup-card{
-  background:linear-gradient(180deg,#151f31,#0f1625) !important;
-  backdrop-filter:none;-webkit-backdrop-filter:none;
-  border:1px solid #3a475e !important;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 26px 64px rgba(0,0,0,.6) !important}
+  background:rgba(18,28,48,.62) !important;
+  backdrop-filter:blur(28px) saturate(150%);
+  -webkit-backdrop-filter:blur(28px) saturate(150%);
+  border:1px solid rgba(232,200,120,.34) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 26px 64px rgba(0,0,0,.6) !important}
 .tc-pro .tc-metric-popup,
 .tc-pro .tc-notification-layer,
 .tc-pro .tc-contact-overlay,
 .tc-pro .modal-backdrop{
-  background:rgba(3,8,14,.55) !important;
-  backdrop-filter:none;-webkit-backdrop-filter:none}
-.tc-pro .terminal{background:linear-gradient(180deg,#0e1726,#0a1119) !important;backdrop-filter:none;-webkit-backdrop-filter:none;border-color:#33425a !important}
-.tc-pro .permission-box,.tc-pro .notice,.tc-pro .integration{background:linear-gradient(180deg,#141d2f,#0f1625) !important;backdrop-filter:none;-webkit-backdrop-filter:none}
+  background:rgba(3,8,14,.5) !important;
+  backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.tc-pro .terminal{background:rgba(8,16,28,.55) !important;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-color:rgba(232,200,120,.24) !important}
+.tc-pro .permission-box,.tc-pro .notice,.tc-pro .integration{background:rgba(22,32,52,.46) !important;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 
 /* ===== Definições: cartão IDIOMA e cartão GUIA redesenhados ===== */
 .tc-lang-card-row{margin-top:12px;display:flex}

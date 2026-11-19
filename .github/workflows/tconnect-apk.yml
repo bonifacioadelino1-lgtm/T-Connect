@@ -30,7 +30,13 @@ jobs:
           echo "A compilar versao $VN (code $VC)"
           # Mantem o manifesto de atualizacoes sincronizado com a versao do build (nunca fica preso numa versao antiga)
           MAN="app/src/main/assets/tc236/updates/t-connect-update.json"
-          [ -f "$MAN" ] && sed -i -E 's/"version"[[:space:]]*:[[:space:]]*"[0-9.]+"/"version": "'"$VN"'"/' "$MAN" && echo "manifesto -> $VN"
+          if [ -f "$MAN" ]; then
+            sed -i -E 's/"version"[[:space:]]*:[[:space:]]*"[0-9.]+"/"version": "'"$VN"'"/' "$MAN"
+            sed -i -E 's/"title"[[:space:]]*:[[:space:]]*"[^"]*"/"title": "T-Connect v'"$VN"'"/' "$MAN"
+            sed -i -E 's/"date"[[:space:]]*:[[:space:]]*"[^"]*"/"date": "'"$(date +%F)"'"/' "$MAN"
+            sed -i -E 's/"released_at"[[:space:]]*:[[:space:]]*"[^"]*"/"released_at": "'"$(date --iso-8601=seconds)"'"/' "$MAN"
+            echo "manifesto completo -> v$VN"
+          fi
           ./gradlew assembleChildDebug assembleGuardianDebug --no-daemon --stacktrace -PappVersionName="$VN" -PappVersionCode="$VC"
       - name: Gravar APKs no repositório
         run: |
