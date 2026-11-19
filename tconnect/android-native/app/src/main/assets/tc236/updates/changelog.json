@@ -1,4 +1,13 @@
 {
+  "2.45.0": {
+    "description": "Resolvido o menu a piscar (deixa de ser reconstruído enquanto está aberto). O botão do menu passa para baixo ao centro, estilo Windows 11 (as três barras saem do topo) e abre o menu central. Nova barra inferior estilo Windows com ícones pequenos: Wi-Fi, bateria, notificações e relógio com data. O mapa continua igual e o modo clássico fica igual.",
+    "changes": [
+      "Resolvido o menu a piscar (não é reconstruído enquanto aberto)",
+      "Botão do menu em baixo ao centro, estilo Windows 11",
+      "Barra inferior estilo Windows: Wi-Fi, bateria, notificações e relógio+data",
+      "Mapa e modo clássico ficam iguais"
+    ]
+  },
   "2.44.0": {
     "description": "O Modo Profissional passa ao estilo Windows 11: fundo 'bloom' azul com painéis em acrílico transparente, e o menu passa a um painel CENTRAL com os ícones ao meio numa grelha (estilo Start do Windows 11), mantendo os mesmos itens. Mantém as animações do menu e o Wi-Fi no cartão de estado. O modo clássico fica igual e o mapa não é alterado.",
     "changes": [

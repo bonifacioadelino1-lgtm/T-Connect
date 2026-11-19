@@ -1693,3 +1693,28 @@ body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Ari
 .tc-guide-card .tc-guide-ic{width:48px;height:48px;border-radius:14px;flex:none;display:grid;place-items:center;background:rgba(14,165,233,.14);border:1px solid rgba(14,165,233,.32);color:#38bdf8}
 .tc-guide-card .tc-guide-ic svg{width:24px;height:24px}
 .tc-guide-card .tc-guide-head h3{margin:0 0 4px}
+
+/* ===== Barra inferior estilo Windows (só no modo profissional) ===== */
+.tc-pro .mobile-menu-trigger{display:none !important} /* as três barras saem do topo */
+.tc-pro .main{padding-bottom:80px}
+.tc-w11-backdrop{z-index:1000 !important}
+.tc-taskbar{position:fixed;left:0;right:0;bottom:0;height:56px;z-index:900;display:flex;align-items:center;justify-content:center;
+  background:rgba(20,32,52,.6);backdrop-filter:blur(40px) saturate(160%);-webkit-backdrop-filter:blur(40px) saturate(160%);
+  border-top:1px solid rgba(185,215,248,.2);box-shadow:0 -8px 30px rgba(0,0,0,.45)}
+.tc-start{width:46px;height:40px;border-radius:12px;display:grid;place-items:center;cursor:pointer;
+  background:rgba(255,255,255,.08);border:1px solid rgba(185,215,248,.22);color:#cfe3ff;transition:transform .14s ease,background .18s ease,border-color .18s ease}
+.tc-start:hover{background:rgba(95,216,255,.2);border-color:rgba(95,216,255,.5)}
+.tc-start:active{transform:scale(.9)}
+.tc-start svg{width:21px;height:21px}
+.tc-tray{position:absolute;right:12px;display:flex;align-items:center;gap:5px}
+.tc-tray-ic{display:inline-flex;align-items:center;gap:4px;position:relative;padding:6px 7px;border-radius:9px;background:transparent;border:0;cursor:pointer;color:#cfe0f5}
+.tc-tray-ic:hover{background:rgba(255,255,255,.08)}
+.tc-tray-ic svg{width:16px;height:16px}
+.tc-tray-ic.on{color:#4fe0a0}
+.tc-tray-ic.off{color:#ff6b6b}
+.tc-tray-bat b{font-size:11px;font-weight:700;font-family:Arial,sans-serif;color:#dfeaf9}
+.tc-tray-bell em{position:absolute;top:0;right:0;background:#ff5c6c;color:#fff;font-size:8px;font-weight:800;padding:0 4px;border-radius:999px;font-style:normal}
+.tc-tray-clock{display:flex;flex-direction:column;align-items:flex-end;line-height:1.05;padding:4px 8px;border-radius:9px;background:transparent;border:0;cursor:pointer;color:#eaf2fb;font-family:Arial,sans-serif}
+.tc-tray-clock:hover{background:rgba(255,255,255,.08)}
+.tc-tray-clock b{font-size:12.5px;font-weight:700}
+.tc-tray-clock small{font-size:9.5px;color:#aebdd6}
