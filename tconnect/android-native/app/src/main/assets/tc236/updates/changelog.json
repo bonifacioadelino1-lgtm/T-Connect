@@ -1,4 +1,13 @@
 {
+  "2.44.0": {
+    "description": "O Modo Profissional passa ao estilo Windows 11: fundo 'bloom' azul com painéis em acrílico transparente, e o menu passa a um painel CENTRAL com os ícones ao meio numa grelha (estilo Start do Windows 11), mantendo os mesmos itens. Mantém as animações do menu e o Wi-Fi no cartão de estado. O modo clássico fica igual e o mapa não é alterado.",
+    "changes": [
+      "Estilo Windows 11: fundo bloom + painéis acrílicos transparentes",
+      "Menu central com os ícones ao meio em grelha (estilo Start do W11)",
+      "Mantém animações do menu e o ícone Wi-Fi; mapa não é alterado",
+      "Modo clássico (1.º) fica igual"
+    ]
+  },
   "2.43.0": {
     "description": "O Modo Profissional volta ao visual metálico (aço/azul), sem dourado: cada painel e aba tem cantos profissionais (parafusos) e moldura metálica, e a barra de menu é metálica com cantos curvos e as animações (as três barras animam e viram X). Mantém o Wi-Fi no cartão de estado e a atualização mais fiável. O mapa não é alterado.",
     "changes": [

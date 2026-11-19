@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="440" height="950" viewBox="0 0 440 950">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0%" stop-color="#1b3a6b"/>
+      <stop offset="45%" stop-color="#102446"/>
+      <stop offset="100%" stop-color="#060c1a"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="40%" r="42%">
+      <stop offset="0%" stop-color="#5aa6ff" stop-opacity=".55"/>
+      <stop offset="55%" stop-color="#2f6bd0" stop-opacity=".18"/>
+      <stop offset="100%" stop-color="#2f6bd0" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="p1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7fd7ff" stop-opacity=".0"/>
+      <stop offset="1" stop-color="#4f8dff" stop-opacity=".55"/>
+    </linearGradient>
+    <linearGradient id="p2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9b7bff" stop-opacity=".0"/>
+      <stop offset="1" stop-color="#6a7bff" stop-opacity=".5"/>
+    </linearGradient>
+    <linearGradient id="p3" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#36e0cf" stop-opacity=".0"/>
+      <stop offset="1" stop-color="#2fb6d8" stop-opacity=".5"/>
+    </linearGradient>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="9"/></filter>
+    <filter id="soft2" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="16"/></filter>
+  </defs>
+
+  <rect width="440" height="950" fill="url(#bg)"/>
+  <rect width="440" height="950" fill="url(#glow)"/>
+
+  <!-- bloom: pétalas/fitas translúcidas a fluir do centro (arte original) -->
+  <g filter="url(#soft)" transform="translate(220,390)">
+    <path d="M0,0 C -40,-150 60,-230 150,-250 C 70,-180 60,-80 0,0 Z" fill="url(#p1)"/>
+    <path d="M0,0 C 120,-60 230,-10 270,70 C 170,40 70,60 0,0 Z" fill="url(#p3)"/>
+    <path d="M0,0 C 70,110 40,230 -40,290 C 10,190 -20,90 0,0 Z" fill="url(#p2)"/>
+    <path d="M0,0 C -120,50 -240,20 -290,-50 C -180,-30 -70,-60 0,0 Z" fill="url(#p1)"/>
+    <path d="M0,0 C -70,-110 -170,-150 -250,-120 C -150,-120 -60,-70 0,0 Z" fill="url(#p3)"/>
+  </g>
+  <g filter="url(#soft2)" transform="translate(220,390)" opacity=".7">
+    <path d="M0,0 C 180,-120 300,-40 330,60 C 210,10 90,70 0,0 Z" fill="url(#p2)"/>
+    <path d="M0,0 C -160,120 -40,250 60,250 C -20,170 20,80 0,0 Z" fill="url(#p1)"/>
+  </g>
+  <!-- brilho central -->
+  <circle cx="220" cy="382" r="60" fill="#bfe0ff" opacity=".22" filter="url(#soft)"/>
+  <circle cx="220" cy="382" r="20" fill="#eaf5ff" opacity=".4" filter="url(#soft)"/>
+</svg>

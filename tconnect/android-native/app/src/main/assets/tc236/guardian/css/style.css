@@ -1607,39 +1607,25 @@ body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Ari
 .tc-mode-opt.on .tc-mode-ic{color:#38bdf8}
 
 /* =====================================================================
-   MODO PROFISSIONAL (tema METÁLICO / aço). Ativo só quando <html> tem a
-   classe tc-pro. Sem ela = MODO CLÁSSICO, igual a antes. Só muda o estilo;
-   a estrutura, os menus e o conteúdo ficam iguais. O MAPA (.map-card) NÃO é
-   alterado. Cantos profissionais (parafusos) em cada painel. Com animações
-   no menu. Sem dourado.
+   MODO PROFISSIONAL (tema WINDOWS 11 — fundo "bloom" + acrílico transparente).
+   Ativo só quando <html> tem a classe tc-pro. Sem ela = MODO CLÁSSICO, igual a
+   antes. O menu passa a painel CENTRAL com os ícones ao meio (grelha estilo
+   Start do Windows 11). O MAPA (.map-card) NÃO é alterado. Mantém animações e
+   o ícone Wi-Fi.
    ===================================================================== */
-.tc-pro .shell{background:
-  radial-gradient(760px 500px at 8% -6%,#123a55,transparent 55%),
-  radial-gradient(700px 520px at 104% 4%,#0d2c42,transparent 52%),
-  linear-gradient(180deg,#070c16,#0b1220) !important}
-/* Barra de menu em METAL escovado; gaveta com cantos curvos em cima e em baixo */
-.tc-pro .side{background:linear-gradient(180deg,#223049,#161f2e) !important;backdrop-filter:none;-webkit-backdrop-filter:none;border:1px solid #3a475e !important;border-radius:20px !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 24px 60px rgba(0,0,0,.55)}
-.tc-pro .mobile-menu{background:linear-gradient(180deg,#243352,#161f2e) !important;backdrop-filter:none;-webkit-backdrop-filter:none;border:1px solid #3a475e !important;border-radius:0 24px 24px 0 !important;box-shadow:inset 0 2px 0 rgba(255,255,255,.1),0 30px 70px rgba(0,0,0,.6)}
-.tc-pro .mobile-menu-backdrop{background:rgba(3,8,14,.55) !important;backdrop-filter:none;-webkit-backdrop-filter:none}
-.tc-pro .top{background:linear-gradient(180deg,#1b2436,#141b29) !important;backdrop-filter:none;-webkit-backdrop-filter:none;border:1px solid #39465c;border-radius:14px;padding:10px 14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 8px 22px rgba(0,0,0,.45)}
-/* Painéis metálicos com PARAFUSOS nos cantos (o MAPA .map-card fica de fora) */
-.tc-pro .card:not(.map-card),.tc-pro .metric,.tc-pro .hero-status{position:relative;background:
-  radial-gradient(circle at 10px 10px,#cfd5e3 0 2px,rgba(0,0,0,.5) 2.5px 3.3px,transparent 3.6px),
-  radial-gradient(circle at calc(100% - 10px) 10px,#cfd5e3 0 2px,rgba(0,0,0,.5) 2.5px 3.3px,transparent 3.6px),
-  radial-gradient(circle at 10px calc(100% - 10px),#cfd5e3 0 2px,rgba(0,0,0,.5) 2.5px 3.3px,transparent 3.6px),
-  radial-gradient(circle at calc(100% - 10px) calc(100% - 10px),#cfd5e3 0 2px,rgba(0,0,0,.5) 2.5px 3.3px,transparent 3.6px),
-  linear-gradient(180deg,#141d2f,#0f1625) !important;
-  background-repeat:no-repeat !important;
-  border:1px solid #434f66 !important;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 0 0 1px rgba(0,0,0,.35),0 14px 34px rgba(0,0,0,.5) !important}
-.tc-pro .child-mini,.tc-pro .side-status,.tc-pro .profile{background:rgba(255,255,255,.045) !important;border-color:#333e52 !important}
-.tc-pro .notice,.tc-pro .permission-box,.tc-pro .permission-row{border-color:#33425a !important}
+.tc-pro .shell{background:url(../../assets/wall-w11.svg) center top/cover no-repeat, linear-gradient(180deg,#0a1526,#060c1a) !important}
+.tc-pro .side{background:rgba(26,40,64,.5) !important;backdrop-filter:blur(40px) saturate(150%);-webkit-backdrop-filter:blur(40px) saturate(150%);border:1px solid rgba(185,215,248,.18) !important;border-radius:18px !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 24px 60px rgba(0,0,0,.5)}
+.tc-pro .top{background:rgba(26,40,64,.5) !important;backdrop-filter:blur(26px) saturate(150%);-webkit-backdrop-filter:blur(26px) saturate(150%);border:1px solid rgba(185,215,248,.2);border-radius:16px;padding:10px 14px}
+/* Painéis acrílicos translúcidos (o MAPA .map-card fica de fora) */
+.tc-pro .card:not(.map-card),.tc-pro .metric,.tc-pro .hero-status{background:rgba(24,38,60,.5) !important;backdrop-filter:blur(26px) saturate(150%);-webkit-backdrop-filter:blur(26px) saturate(150%);border:1px solid rgba(185,215,248,.2) !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 16px 40px rgba(0,0,0,.4) !important}
+.tc-pro .child-mini,.tc-pro .side-status,.tc-pro .profile{background:rgba(255,255,255,.06) !important;border-color:rgba(185,215,248,.2) !important}
+.tc-pro .notice,.tc-pro .permission-box,.tc-pro .permission-row{border-color:rgba(185,215,248,.2) !important}
 
-/* ===== Animações profissionais no MENU (as três barras + itens) ===== */
+/* ===== Animações do menu (três barras) ===== */
 .mm-burger{display:inline-flex;flex-direction:column;justify-content:center;gap:4px;width:22px;height:18px;vertical-align:middle}
 .mm-burger i{display:block;height:2.5px;border-radius:2px;background:currentColor;transition:transform .28s cubic-bezier(.4,0,.2,1),opacity .2s,width .28s}
 .mm-burger i:nth-child(1){width:22px}.mm-burger i:nth-child(2){width:16px}.mm-burger i:nth-child(3){width:20px}
-.tc-pro .mm-burger i{background:linear-gradient(90deg,#9fb6d6,#6fdcff)}
+.tc-pro .mm-burger i{background:linear-gradient(90deg,#9fd0ff,#6fdcff)}
 .tc-pro .mobile-menu-trigger{transition:transform .15s ease}
 .tc-pro .mobile-menu-trigger:active{transform:scale(.9)}
 .tc-pro .mobile-menu-trigger:active .mm-burger{animation:tcBurgerTap .3s ease}
@@ -1648,34 +1634,56 @@ body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Ari
 .tc-pro .mobile-menu-trigger[aria-expanded="true"] .mm-burger i:nth-child(1){transform:translateY(6.5px) rotate(45deg)}
 .tc-pro .mobile-menu-trigger[aria-expanded="true"] .mm-burger i:nth-child(2){opacity:0;transform:scaleX(.2)}
 .tc-pro .mobile-menu-trigger[aria-expanded="true"] .mm-burger i:nth-child(3){transform:translateY(-6.5px) rotate(-45deg)}
-/* Itens do menu: placa metálica com relevo ao passar/clicar */
-.tc-pro .nav button,.tc-pro .nav-link{background:linear-gradient(180deg,#1c2639,#141c2b) !important;border:1px solid #333e52 !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.08) !important;transition:transform .14s ease,border-color .2s ease,box-shadow .2s ease,background .2s ease}
-.tc-pro .nav button:hover,.tc-pro .nav-link:hover{border-color:#4a5a74 !important;transform:translateX(2px)}
+
+/* ===== MENU estilo Start do Windows 11: painel CENTRAL + ícones ao meio ===== */
+.tc-w11-backdrop{display:flex !important;align-items:center;justify-content:center;padding:18px}
+.tc-w11-start{position:static !important;inset:auto !important;left:auto !important;top:auto !important;right:auto !important;bottom:auto !important;transform:none !important;
+  width:min(420px,94vw) !important;max-width:94vw !important;height:auto !important;max-height:90vh;overflow:auto;
+  border-radius:22px !important;
+  background:rgba(26,40,64,.55) !important;backdrop-filter:blur(44px) saturate(160%);-webkit-backdrop-filter:blur(44px) saturate(160%);
+  border:1px solid rgba(185,215,248,.22) !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 40px 90px rgba(0,0,0,.55)}
+.tc-w11-start .mobile-menu-head{margin-bottom:12px}
+.tc-w11-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:4px 0 12px}
+.tc-w11-tile{display:flex !important;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:14px 6px !important;
+  border-radius:14px;position:relative;min-height:94px;text-align:center;cursor:pointer;
+  border:1px solid rgba(185,215,248,.14) !important;background:rgba(255,255,255,.05) !important;color:#e7eefb !important;transition:transform .14s ease,background .18s ease,border-color .18s ease}
+.tc-w11-tile:hover{background:rgba(255,255,255,.1) !important;transform:translateY(-1px)}
+.tc-w11-tile:active{transform:scale(.97)}
+.tc-w11-tile i{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-style:normal;background:linear-gradient(145deg,#2f6bb5,#1c4f86)}
+.tc-w11-tile i svg{width:22px;height:22px}
+.tc-w11-tile span{font-size:11.5px;font-weight:700;line-height:1.15;font-family:Arial,sans-serif;color:#e7eefb}
+.tc-w11-tile em{position:absolute;top:8px;right:14px;background:#2f8bd8;color:#fff;font-size:10px;font-weight:800;padding:1px 7px;border-radius:999px;font-style:normal}
+.tc-w11-tile.active{background:rgba(95,216,255,.2) !important;border-color:rgba(95,216,255,.5) !important;box-shadow:0 0 16px rgba(95,216,255,.2)}
+.tc-w11-tile.active i{background:linear-gradient(145deg,#5fd8ff,#1c6fae)}
+.tc-w11-tile.active i svg{stroke:#07141f}
+.tc-w11-start .tc-ss-wm{margin-top:6px;text-align:center}
+
+/* Itens de navegação (lateral) acrílicos */
+.tc-pro .nav button,.tc-pro .nav-link{background:rgba(255,255,255,.055) !important;border:1px solid rgba(185,215,248,.14) !important;transition:transform .14s ease,border-color .2s ease,box-shadow .2s ease,background .2s ease}
+.tc-pro .nav button:hover,.tc-pro .nav-link:hover{border-color:rgba(185,215,248,.4) !important;transform:translateX(2px)}
 .tc-pro .nav button:active,.tc-pro .nav-link:active{transform:scale(.975)}
-.tc-pro .nav button.active,.tc-pro .nav-link.active{background:linear-gradient(180deg,rgba(67,199,230,.22),rgba(28,111,174,.1)) !important;border-color:rgba(95,216,255,.5) !important;animation:tcActiveGlow 2.6s ease-in-out infinite}
+.tc-pro .nav button.active,.tc-pro .nav-link.active{background:rgba(95,216,255,.2) !important;border-color:rgba(95,216,255,.5) !important;animation:tcActiveGlow 2.6s ease-in-out infinite}
 @keyframes tcActiveGlow{0%,100%{box-shadow:inset 0 0 0 1px rgba(95,216,255,.3),0 0 14px rgba(67,199,230,.18)}50%{box-shadow:inset 0 0 0 1px rgba(95,216,255,.45),0 0 22px rgba(67,199,230,.3)}}
 
-/* Cartões clicáveis + painéis (popups) em metal */
+/* Cartões clicáveis + popups acrílicos */
 .tc-pro .compact-metric,.tc-pro .metric-interactive{transition:transform .15s ease,border-color .2s ease,box-shadow .2s ease}
-.tc-pro .compact-metric:hover,.tc-pro .metric-interactive:hover{transform:translateY(-2px);border-color:rgba(95,216,255,.5) !important}
+.tc-pro .compact-metric:hover,.tc-pro .metric-interactive:hover{transform:translateY(-2px);border-color:rgba(185,215,248,.4) !important}
 .tc-pro .compact-metric:active,.tc-pro .metric-interactive:active{transform:scale(.98)}
 .tc-pro .tc-metric-popup-card,
 .tc-pro .tc-notification-card,
 .tc-pro .tc-contact-card,
 .tc-pro .modal,
 .tc-pro .tc-popup-card{
-  background:linear-gradient(180deg,#151f31,#0f1625) !important;
-  backdrop-filter:none;-webkit-backdrop-filter:none;
-  border:1px solid #3a475e !important;
+  background:rgba(22,36,58,.6) !important;
+  backdrop-filter:blur(40px) saturate(160%);-webkit-backdrop-filter:blur(40px) saturate(160%);
+  border:1px solid rgba(185,215,248,.24) !important;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 26px 64px rgba(0,0,0,.6) !important}
 .tc-pro .tc-metric-popup,
 .tc-pro .tc-notification-layer,
 .tc-pro .tc-contact-overlay,
-.tc-pro .modal-backdrop{
-  background:rgba(3,8,14,.55) !important;
-  backdrop-filter:none;-webkit-backdrop-filter:none}
-.tc-pro .terminal{background:linear-gradient(180deg,#0e1726,#0a1119) !important;backdrop-filter:none;-webkit-backdrop-filter:none;border-color:#33425a !important}
-.tc-pro .permission-box,.tc-pro .notice,.tc-pro .integration{background:linear-gradient(180deg,#141d2f,#0f1625) !important;backdrop-filter:none;-webkit-backdrop-filter:none}
+.tc-pro .modal-backdrop{background:rgba(3,8,14,.45) !important;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.tc-pro .terminal{background:rgba(8,16,28,.52) !important;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-color:rgba(185,215,248,.18) !important}
+.tc-pro .permission-box,.tc-pro .notice,.tc-pro .integration{background:rgba(24,38,60,.46) !important;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 
 /* ===== Definições: cartão IDIOMA e cartão GUIA redesenhados ===== */
 .tc-lang-card-row{margin-top:12px;display:flex}
