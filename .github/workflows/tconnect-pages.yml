@@ -19,7 +19,9 @@ permissions:
   id-token: write
 concurrency:
   group: tconnect-pages
-  cancel-in-progress: false
+  # Se o deploy pós-APK (workflow_run) apanhar o deploy do push ainda a correr,
+  # cancela o antigo em vez de ambos colidirem no Pages (evita o erro "0 artifacts").
+  cancel-in-progress: true
 jobs:
   deploy:
     runs-on: ubuntu-latest
