@@ -1,4 +1,4 @@
-window.TC_APP_VERSION='2.45.0';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
+window.TC_APP_VERSION='2.46.0';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
 const tcTimeout=(p,ms=10000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado')),ms))]);
 const POS=[-25.9692,32.5732];
 const state={page:'overview',mapType:'roadmap',menuOpen:false,pairingBusy:false,pairingMessage:'',update:{auto:localStorage.getItem('tc_auto_updates')!=='0',checking:false,latest:null,error:''},events:JSON.parse(localStorage.getItem('tc_events')||'[]'),notifications:JSON.parse(localStorage.getItem('tc_notifications')||'[]'),search:'',authenticated:false,authMode:'login',loading:false,recoverySent:false,profile:null,devices:[],messages:[],calls:[],contactsList:[],appsList:[],contactStats:[],trailOn:false,commsSub:false,pairCode:'',pairLink:'',realtime:false,authError:'',lastLocation:null,mapTerminalEvents:JSON.parse(localStorage.getItem('tc_map_terminal_events')||'[]')};
@@ -857,6 +857,12 @@ async function tcCheckAndUpdate(){if(state.update.checking)return;await checkFor
 function openRelease(release){const u=release?.apk_url||release?.download_url;if(u)openExternal(u)}
 // Notas de versão (novidades) mostradas nas Definições → Atualizações.
 const TC_CHANGELOG={
+  '2.46.0':{changes:[
+    'Botão do menu fica mesmo ao centro da barra inferior (centro absoluto), bem separado dos ícones',
+    'Barra inferior mais transparente e com os ícones bem visíveis (Wi-Fi, bateria, notificações); calendário removido para dar espaço',
+    'Removidos os cartões de online, bateria e notificações do topo — ficam só na barra de baixo',
+    'O mapa e o modo clássico ficam iguais'
+  ]},
   '2.45.0':{changes:[
     'Resolvido o menu a piscar: deixa de ser reconstruído enquanto está aberto (atualizações em segundo plano já não o fazem piscar)',
     'Botão do menu passa para baixo ao centro, estilo Windows 11 (as três barras saem do topo); ao clicar abre o menu central',
@@ -2063,8 +2069,7 @@ function tcW11Taskbar(){
       +'<span class="tc-tray-ic '+(online?'on':'off')+'" onclick="showMetricPopup(\'connection\')" title="Conexão">'+wifi+'</span>'
       +'<span class="tc-tray-ic tc-tray-bat" title="Bateria">'+batSvg+(bat!=null?'<b>'+bat+'%</b>':'')+'</span>'
       +'<button class="tc-tray-ic tc-tray-bell" onclick="showNotifications()" title="Notificacoes">'+bell+(notif?'<em>'+notif+'</em>':'')+'</button>'
-      +'<button class="tc-tray-clock" onclick="showNotifications()" title="Data e hora"><b>'+hh+':'+mm+'</b><small>'+dd+'/'+mo+'/'+yy+'</small></button>'
-    +'</div></div>';
+      +'</div></div>';
 }
 function toggleMenu(){state.menuOpen=!state.menuOpen;window.__tcMenuAction=true;render()}
 function closeMenu(){if(state.menuOpen){state.menuOpen=false;window.__tcMenuAction=true;render()}}
@@ -2726,7 +2731,6 @@ boot().then(()=>{
   window.__tcFastPullBusy=false;
   async function tcFastPull(){ if(window.__tcFastPullBusy)return; if(!state.authenticated||document.visibilityState==='hidden')return; window.__tcFastPullBusy=true; try{ try{ if(typeof ensureCommsRealtime==='function')ensureCommsRealtime(); }catch(_){} if(state.page==='messages'){await loadMessages();} else if(state.page==='calls'){await loadCalls();} else if(state.page==='contacts'){await loadContacts();await loadCalls();await loadMessages();} else if(state.page==='whatsapp'){await loadMessages();} else if(state.page==='overview'||state.page==='status'){await loadMessages();await loadCalls();} }catch(_){}finally{ window.__tcFastPullBusy=false; } }
   setInterval(tcFastPull,5000);
-try{ if(!window.__tcClockTimer){ window.__tcClockTimer=setInterval(function(){ try{ var el=document.querySelector('.tc-taskbar .tc-tray-clock b'); if(el){ var n=new Date(); el.textContent=('0'+n.getHours()).slice(-2)+':'+('0'+n.getMinutes()).slice(-2); } }catch(_){} },30000); } }catch(_){}
 
   try{ document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible'){ tcFastPull(); } }); }catch(_){}
 });

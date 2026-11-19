@@ -1,4 +1,13 @@
 {
+  "2.46.0": {
+    "description": "O botão do menu fica mesmo ao centro da barra inferior (centro absoluto), bem separado dos ícones. A barra ficou mais transparente e com os ícones bem visíveis (Wi-Fi, bateria, notificações); o calendário foi removido para dar espaço. Os cartões de online, bateria e notificações saíram do topo — ficam só na barra de baixo. O mapa e o modo clássico ficam iguais.",
+    "changes": [
+      "Botão do menu mesmo ao centro da barra, separado dos ícones",
+      "Barra mais transparente, ícones visíveis; calendário removido",
+      "Cartões de online/bateria/notificações saem do topo (só na barra)",
+      "Mapa e modo clássico ficam iguais"
+    ]
+  },
   "2.45.0": {
     "description": "Resolvido o menu a piscar (deixa de ser reconstruído enquanto está aberto). O botão do menu passa para baixo ao centro, estilo Windows 11 (as três barras saem do topo) e abre o menu central. Nova barra inferior estilo Windows com ícones pequenos: Wi-Fi, bateria, notificações e relógio com data. O mapa continua igual e o modo clássico fica igual.",
     "changes": [
