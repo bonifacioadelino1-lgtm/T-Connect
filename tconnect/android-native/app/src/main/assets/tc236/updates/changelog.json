@@ -1,4 +1,12 @@
 {
+  "2.41.0": {
+    "description": "Novo segundo modo de interface nas Definições: um visual metálico e robusto (placas de metal com parafusos, barra de menu e painéis), a par do modo clássico (1.º). Aplica-se a toda a app, aos menus e às definições; muda apenas o estilo — a estrutura e o conteúdo ficam iguais, e o mapa não é alterado.",
+    "changes": [
+      "Novo 2.º modo: visual metálico/robusto (o 1.º continua a interface clássica)",
+      "Aplicado a toda a app, menus e definições — só o estilo muda",
+      "O mapa fica igual ao da interface clássica (não é alterado)"
+    ]
+  },
   "2.40.27": {
     "description": "As Definições foram reorganizadas de forma mais profissional: saiu o cartão de instalar PWA, o idioma passou a um cartão «Google Tradutor» e o guia ganhou um cartão novo, mais bem desenhado. Além disso, a versão web (PWA) do Guardian e do Child continua publicada no site oficial e passa a atualizar-se sozinha no próximo arranque — sem precisar de reinstalar nada. A cada publicação, a versão é carimbada no service worker, por isso o navegador deteta a atualização, limpa a cache antiga e aplica a nova versão automaticamente.",
     "changes": [
