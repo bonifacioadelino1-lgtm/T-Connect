@@ -1,4 +1,11 @@
 {
+  "2.48.0": {
+    "description": "Novo ícone do aplicativo no telemóvel (launcher): o medalhão «T-Connect» — o T com cabo e ficha a ligar na tomada — aplicado ao Guardian e à Child. O logótipo dentro da app mantém-se igual (só mudou o ícone de fora).",
+    "changes": [
+      "Novo ícone do app: medalhão T-Connect (T + cabo + tomada)",
+      "Aplicado ao Guardian e à Child; o logo de dentro fica igual"
+    ]
+  },
   "2.47.0": {
     "description": "Novo ecrã de arranque animado do T-Connect: a ficha liga à tomada, o T forma-se dentro do medalhão, escreve-se «T-CONNECT» e aparecem os pontos a processar antes de abrir a app. Aparece nos dois modos (clássico e profissional); o modo clássico continua igual no resto.",
     "changes": [
