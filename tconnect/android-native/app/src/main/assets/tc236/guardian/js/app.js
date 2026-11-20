@@ -1,4 +1,4 @@
-window.TC_APP_VERSION='2.48.0';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
+window.TC_APP_VERSION='2.49.0';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
 const tcTimeout=(p,ms=10000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado')),ms))]);
 const POS=[-25.9692,32.5732];
 const state={page:'overview',mapType:'roadmap',menuOpen:false,pairingBusy:false,pairingMessage:'',update:{auto:localStorage.getItem('tc_auto_updates')!=='0',checking:false,latest:null,error:''},events:JSON.parse(localStorage.getItem('tc_events')||'[]'),notifications:JSON.parse(localStorage.getItem('tc_notifications')||'[]'),search:'',authenticated:false,authMode:'login',loading:false,recoverySent:false,profile:null,devices:[],messages:[],calls:[],contactsList:[],appsList:[],contactStats:[],trailOn:false,commsSub:false,pairCode:'',pairLink:'',realtime:false,authError:'',lastLocation:null,mapTerminalEvents:JSON.parse(localStorage.getItem('tc_map_terminal_events')||'[]')};
@@ -857,6 +857,10 @@ async function tcCheckAndUpdate(){if(state.update.checking)return;await checkFor
 function openRelease(release){const u=release?.apk_url||release?.download_url;if(u)openExternal(u)}
 // Notas de versão (novidades) mostradas nas Definições → Atualizações.
 const TC_CHANGELOG={
+  '2.49.0':{changes:[
+    'A tela de processamento interna passa a mostrar a animação de ligação do T-Connect (ficha a ligar na tomada, o T, «T-CONNECT» e os pontos)',
+    'Letras «T-CONNECT» mais pequenas na animação (arranque e processamento)'
+  ]},
   '2.48.0':{changes:[
     'Novo ícone do aplicativo (o que aparece no telemóvel): medalhão «T-Connect» — o T com cabo e ficha na tomada. Aplicado ao Guardian e à Child',
     'O logótipo dentro da app mantém-se igual (só mudou o ícone de fora)'
@@ -1283,9 +1287,10 @@ function hasSeenWelcome(){try{return localStorage.getItem(welcomeKey())==='1'}ca
 function markWelcomeSeen(){try{localStorage.setItem(welcomeKey(),'1')}catch(_){}}
 function buildPreparationOverlay(){
   const old=document.getElementById('tc-preparation-overlay'); if(old) return null;
-  const el=document.createElement('div'); el.id='tc-preparation-overlay'; el.style.cssText='position:fixed;inset:0;z-index:100000;display:grid;place-items:center;background:radial-gradient(circle at 50% 18%,rgba(18,69,105,.94),rgba(3,9,16,.99) 64%);color:#fff;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;';
-  el.innerHTML='<div style="text-align:center;width:min(340px,86vw)"><img src="../assets/icons/tconnect-logo-192.png" alt="T-Connect" style="width:82px;height:82px;border-radius:22px;object-fit:cover;box-shadow:0 18px 55px rgba(0,174,255,.24);margin-bottom:22px"><div style="font-weight:900;letter-spacing:.12em;font-size:17px;margin-top:4px">T-CONNECT</div><div style="margin-top:8px;color:#8faabd;font-size:12px">Processando<span class="tcbe-dots"></span></div><div style="margin-top:5px;color:#5f7d93;font-size:11px">Pode demorar alguns segundos…</div></div>';
-  if(!document.getElementById('tc-prep-style')){const st=document.createElement('style');st.id='tc-prep-style';st.textContent='.tcbe-dots::after{content:"";animation:tcbeDots 1.4s steps(1) infinite}@keyframes tcbeDots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}';document.head.appendChild(st)}
+  const el=document.createElement('div'); el.id='tc-preparation-overlay';
+  el.style.cssText='position:fixed;inset:0;z-index:100000;display:grid;place-items:center;background:radial-gradient(520px 420px at 50% 36%,#123a63,transparent 60%),linear-gradient(180deg,#07101f,#040912);color:#fff;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;';
+  el.innerHTML='<div style="text-align:center;width:min(320px,88vw)"><svg width="210" height="210" viewBox="0 0 300 300" style="display:block;margin:0 auto"><defs><linearGradient id="tcpRingG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5fd8ff"/><stop offset="1" stop-color="#1663b8"/></linearGradient><linearGradient id="tcpMet" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#cfe2fb"/></linearGradient><radialGradient id="tcpSp" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#eafaff"/><stop offset="40%" stop-color="#7fe6ff" stop-opacity=".9"/><stop offset="100%" stop-color="#7fe6ff" stop-opacity="0"/></radialGradient></defs><circle id="tcp-ring" cx="150" cy="150" r="96" fill="none" stroke="url(#tcpRingG)" stroke-width="12" stroke-linecap="round" transform="rotate(-90 150 150)"/><g id="tcp-t"><rect x="104" y="86" width="92" height="19" rx="8" fill="url(#tcpMet)"/><rect x="140" y="86" width="19" height="44" rx="8" fill="url(#tcpMet)"/></g><path id="tcp-cable" d="M149 128 C149 150 149 156 149 168" fill="none" stroke="url(#tcpMet)" stroke-width="12" stroke-linecap="round"/><g id="tcp-plug"><rect x="133" y="162" width="32" height="20" rx="6" fill="url(#tcpMet)"/><rect x="139" y="180" width="6" height="11" rx="2" fill="#bcd6f2"/><rect x="153" y="180" width="6" height="11" rx="2" fill="#bcd6f2"/></g><g><rect x="112" y="190" width="76" height="30" rx="11" fill="#eef5ff"/><rect x="137" y="187" width="8" height="9" rx="3" fill="#9cc4ea"/><rect x="153" y="187" width="8" height="9" rx="3" fill="#9cc4ea"/></g><circle id="tcp-spark" cx="149" cy="198" r="26" fill="url(#tcpSp)"/></svg><div class="tcp-word">T-CONNECT</div><div class="tcp-dots"><i></i><i></i><i></i></div><div style="margin-top:10px;color:#5f7d93;font-size:11px">A ligar\u2026</div></div>';
+  if(!document.getElementById('tc-prep-style')){const st=document.createElement('style');st.id='tc-prep-style';st.textContent='.tcbe-dots::after{content:"";animation:tcbeDots 1.4s steps(1) infinite}@keyframes tcbeDots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}#tc-preparation-overlay #tcp-ring{stroke-dasharray:604;stroke-dashoffset:604;animation:tcpRing 1s ease .5s forwards}@keyframes tcpRing{to{stroke-dashoffset:0}}#tc-preparation-overlay #tcp-t{opacity:0;transform-box:fill-box;transform-origin:center;animation:tcpT .5s ease .9s forwards}@keyframes tcpT{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}#tc-preparation-overlay #tcp-cable,#tc-preparation-overlay #tcp-plug{opacity:0;animation:tcpPlug .55s ease 0s forwards}@keyframes tcpPlug{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}#tc-preparation-overlay #tcp-spark{opacity:0;animation:tcpSpark .5s ease .5s}@keyframes tcpSpark{0%{opacity:0}50%{opacity:1}100%{opacity:0}}#tc-preparation-overlay .tcp-word{display:inline-block;font-weight:900;font-size:24px;letter-spacing:2px;background:linear-gradient(180deg,#eaf4ff,#8fd0ff);-webkit-background-clip:text;background-clip:text;color:transparent;clip-path:inset(0 100% 0 0);animation:tcpWord .6s ease 1.4s forwards;margin-top:10px;white-space:nowrap}@keyframes tcpWord{to{clip-path:inset(0 0 0 0)}}#tc-preparation-overlay .tcp-dots{display:flex;gap:8px;justify-content:center;margin-top:12px;opacity:0;animation:tcpDotsIn .3s ease 2s forwards}#tc-preparation-overlay .tcp-dots i{width:9px;height:9px;border-radius:50%;background:#5fd8ff;box-shadow:0 0 9px #5fd8ff;animation:tcpDot 1s ease-in-out infinite}#tc-preparation-overlay .tcp-dots i:nth-child(2){animation-delay:.18s}#tc-preparation-overlay .tcp-dots i:nth-child(3){animation-delay:.36s}@keyframes tcpDotsIn{to{opacity:1}}@keyframes tcpDot{0%,100%{transform:scale(.6);opacity:.5}50%{transform:scale(1);opacity:1}}';document.head.appendChild(st)}
   document.body.appendChild(el);
   return el;
 }
@@ -1295,7 +1300,7 @@ function runPreparation(){
   const el=buildPreparationOverlay();
   const after=()=>{ if(el&&el.isConnected)el.remove(); if(needsPlanChoice())showPlanChooser(); };
   if(!el){ after(); return; }
-  setTimeout(after,2200);
+  setTimeout(after,2800);
 }
 // Plano escolhido pela conta (por utilizador). Persistido localmente.
 function userPlanKey(){const uid=window.TC_DB?.user?.id||'local';return 'tc_user_plan_'+uid}
@@ -1623,7 +1628,7 @@ function showPreparationThenContinue(){
     const el=buildPreparationOverlay();
     const after=()=>{ if(el&&el.isConnected)el.remove(); showWelcomeIfNeeded(); };
     if(!el){ showWelcomeIfNeeded(); return; }
-    setTimeout(after,2200);
+    setTimeout(after,2800);
   } else {
     runPreparation();
   }

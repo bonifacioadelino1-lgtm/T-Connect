@@ -1,4 +1,11 @@
 {
+  "2.49.0": {
+    "description": "A tela de processamento interna da app passa a mostrar a animação de ligação do T-Connect (a ficha a ligar na tomada, o T a formar-se, «T-CONNECT» e os pontos a processar), em vez do ecrã antigo. As letras «T-CONNECT» ficaram mais pequenas, tanto no arranque como no processamento.",
+    "changes": [
+      "Tela de processamento com a animação de ligação do T-Connect",
+      "Letras «T-CONNECT» mais pequenas na animação"
+    ]
+  },
   "2.48.0": {
     "description": "Novo ícone do aplicativo no telemóvel (launcher): o medalhão «T-Connect» — o T com cabo e ficha a ligar na tomada — aplicado ao Guardian e à Child. O logótipo dentro da app mantém-se igual (só mudou o ícone de fora).",
     "changes": [
