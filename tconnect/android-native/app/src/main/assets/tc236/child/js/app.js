@@ -509,8 +509,12 @@ async function requestCorePermissions(){
   state.status=core?(extras?'Todas as permissões concedidas':'Permissões principais concedidas (SMS/chamadas podem exigir confirmação à parte)'):'Algumas permissões continuam pendentes';
   render();
 }
-function toggleMenu(){state.menuOpen=!state.menuOpen;if(state.menuOpen)state.__menuAt=Date.now();render();}
-function closeMenu(){state.menuOpen=false;render();}
+function toggleMenu(){
+  state.menuOpen=!state.menuOpen;
+  if(state.menuOpen){ state.__menuAt=Date.now(); try{ var main=document.querySelector('.child'); if(main && !document.querySelector('.child-menu-backdrop')){ main.insertAdjacentHTML('beforeend', permissionsMenu()); } else { render(); } }catch(_){ render(); } }
+  else { try{ var m=document.querySelector('.child-menu-backdrop'); if(m){ m.remove(); } else { render(); } }catch(_){ render(); } }
+}
+function closeMenu(){ state.menuOpen=false; try{ var m=document.querySelector('.child-menu-backdrop'); if(m){ m.remove(); return; } }catch(_){ } render(); }
 // Evita o "ghost click": ao abrir o menu, o mesmo toque pode cair no fundo recém-criado
 // e fechá-lo logo. Ignora toques no fundo durante os primeiros 350ms.
 function tcMenuBackdrop(e){ if(Date.now()-(state.__menuAt||0)<350) return; closeMenu(); }
@@ -927,3 +931,13 @@ async function setupChildCaptureRealtime(){if(!window.TC_DB?.enabled||!window.TC
   if(!window.__tcChildReqPoll)window.__tcChildReqPoll=setInterval(async function(){try{if(!window.TC_DB?.enabled||!window.TC_DB.client||!window.TC_DB.user)return;const {data}=await window.TC_DB.client.from('capture_requests').select('*').eq('child_id',window.TC_DB.user.id).eq('status','PENDING').gt('expires_at',new Date().toISOString()).order('requested_at',{ascending:false}).limit(1);if(data&&data[0]&&!document.getElementById('tc-capture-request'))showCaptureRequest(data[0])}catch(_){}} ,4000)}
 window.answerCaptureRequest=answerCaptureRequest;window.setupChildCaptureRealtime=setupChildCaptureRealtime;
 boot();
+
+/* === Animacao de toque global (ripple) === */
+try{ document.addEventListener('pointerdown', function(ev){ try{
+  var t=ev.target.closest('button,.menu-item,.cm-sos,.tile,.child-menu-tile,[role=button],a,.toggle,.linkbtn,.pairbtn'); if(!t) return;
+  var r=t.getBoundingClientRect(); var sp=document.createElement('span'); sp.className='tc-ripple';
+  var size=Math.max(r.width,r.height)*1.2; sp.style.width=sp.style.height=size+'px';
+  sp.style.left=(ev.clientX-r.left-size/2)+'px'; sp.style.top=(ev.clientY-r.top-size/2)+'px';
+  var cs=getComputedStyle(t); if(cs.position==='static'){ t.style.position='relative'; } if(cs.overflow!=='hidden'){ t.dataset.tcov=cs.overflow; }
+  t.appendChild(sp); setTimeout(function(){ if(sp&&sp.parentNode) sp.parentNode.removeChild(sp); }, 560);
+}catch(_){ } }, {passive:true}); }catch(_){ }

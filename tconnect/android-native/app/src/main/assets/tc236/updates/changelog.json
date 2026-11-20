@@ -1,4 +1,11 @@
 {
+  "2.52.0": {
+    "description": "Na app Shield, o menu abre instantaneamente (deixa de reconstruir a tela toda) e passa a apresentar-se como um painel central em vidro vermelho com tiles, no estilo do menu profissional do Guardian — o botao do menu fica onde estava. Alem disso, todo o toque tem animacao (ripple).",
+    "changes": [
+      "Shield: menu instantaneo + painel central em vidro vermelho (estilo pro)",
+      "Shield: animacao de toque (ripple) em tudo o que se clica"
+    ]
+  },
   "2.51.0": {
     "description": "A app Shield (Child) passa a ter a interface com fundo bloom vermelho (como o do Guardian, mas vermelho) e painéis em vidro, com as letras bem visíveis: «MINHA SEGURANÇA» mais destacada, «PROTEÇÃO MÁXIMA» mais pequena, e os dois cartões de baixo removidos. O botão EMERGÊNCIA mantém a animação e o processamento da Shield mostra a animação de ligação em vermelho. No Guardian, a tela de processamento aparece depois do login.",
     "changes": [

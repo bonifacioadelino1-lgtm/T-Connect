@@ -1,4 +1,4 @@
-window.TC_APP_VERSION='2.51.0';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
+window.TC_APP_VERSION='2.52.0';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
 const tcTimeout=(p,ms=10000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado')),ms))]);
 const POS=[-25.9692,32.5732];
 const state={page:'overview',mapType:'roadmap',menuOpen:false,pairingBusy:false,pairingMessage:'',update:{auto:localStorage.getItem('tc_auto_updates')!=='0',checking:false,latest:null,error:''},events:JSON.parse(localStorage.getItem('tc_events')||'[]'),notifications:JSON.parse(localStorage.getItem('tc_notifications')||'[]'),search:'',authenticated:false,authMode:'login',loading:false,recoverySent:false,profile:null,devices:[],messages:[],calls:[],contactsList:[],appsList:[],contactStats:[],trailOn:false,commsSub:false,pairCode:'',pairLink:'',realtime:false,authError:'',lastLocation:null,mapTerminalEvents:JSON.parse(localStorage.getItem('tc_map_terminal_events')||'[]')};
@@ -857,6 +857,10 @@ async function tcCheckAndUpdate(){if(state.update.checking)return;await checkFor
 function openRelease(release){const u=release?.apk_url||release?.download_url;if(u)openExternal(u)}
 // Notas de versão (novidades) mostradas nas Definições → Atualizações.
 const TC_CHANGELOG={
+  '2.52.0':{changes:[
+    'Shield: o menu abre instantaneo (deixa de reconstruir a tela toda) e apresenta-se como um painel CENTRAL em vidro vermelho, com tiles — estilo do menu profissional do Guardian; o botao do menu fica onde estava',
+    'Shield: animacao de toque (ripple) em tudo o que se clica'
+  ]},
   '2.51.0':{changes:[
     'App Shield (Child) com nova interface: fundo bloom VERMELHO (como o do Guardian, mas vermelho) e painéis em vidro, letras bem visíveis',
     '«MINHA SEGURANÇA» mais visível, «PROTEÇÃO MÁXIMA» com letras mais pequenas, e os dois cartões de baixo removidos',
