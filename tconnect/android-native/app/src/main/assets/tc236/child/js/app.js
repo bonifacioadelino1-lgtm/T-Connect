@@ -822,7 +822,7 @@ function render(){
   }
   window.__tcGameMounted=false;
   const content=(state.deviceCode&&!state.forcePair)?linkedView():pairView();
-  app.innerHTML=`<main class="child"><header><div class="hbrand"><img class="brand-logo" src="../assets/icons/tconnect-logo-192.png" alt="T-Connect"><div><div class="brand">MINHA <span>SEGURANÇA</span></div><div class="child-subtitle">T-Connect Child</div></div></div><button class="dots" aria-label="Abrir configurações" onclick="toggleMenu()">⋮</button></header>${content}${state.menuOpen?permissionsMenu():''}</main>`;
+  app.innerHTML=`<main class="child"><header><div class="hbrand"><img class="brand-logo" src="../assets/icons/tconnect-logo-red-192.png" alt="T-Connect"><div><div class="brand">MINHA <span>SEGURANÇA</span></div><div class="child-subtitle">T-Connect Child</div></div></div><button class="dots" aria-label="Abrir configurações" onclick="toggleMenu()">⋮</button></header>${content}${state.menuOpen?permissionsMenu():''}</main>`;
   if(state.firstRun&&!document.getElementById('permissionWelcome')){
     app.insertAdjacentHTML('beforeend',`<div class="modal" id="permissionWelcome"><div class="modalbox"><div class="phone-install">🛡️</div><h2>Minha Segurança</h2><p>Na primeira abertura, precisamos configurar as permissões necessárias para comunicação e segurança do dispositivo.</p><p class="muted">Câmera · Microfone · Localização · Contactos · SMS · Chamadas · Notificações.</p><div class="confirm"><button class="btn confirmbtn" onclick="requestCorePermissions()">Permitir e continuar</button></div></div></div>`);
   }

@@ -1,4 +1,12 @@
 {
+  "2.50.0": {
+    "description": "O ícone da Shield (Child) passa a vermelho (o mesmo medalhão); o Guardian continua azul. O logótipo dentro das apps passa a ser o medalhão (azul no Guardian, vermelho na Child). A tela de arranque/processamento da Shield passa a mostrar a animação de ligação do T-Connect em vermelho, substituindo a antiga.",
+    "changes": [
+      "Ícone da Shield vermelho (mesmo medalhão); Guardian azul",
+      "Logótipo dentro das apps = medalhão (azul Guardian, vermelho Child)",
+      "Arranque/processamento da Shield com a animação de ligação (vermelha)"
+    ]
+  },
   "2.49.0": {
     "description": "A tela de processamento interna da app passa a mostrar a animação de ligação do T-Connect (a ficha a ligar na tomada, o T a formar-se, «T-CONNECT» e os pontos a processar), em vez do ecrã antigo. As letras «T-CONNECT» ficaram mais pequenas, tanto no arranque como no processamento.",
     "changes": [
