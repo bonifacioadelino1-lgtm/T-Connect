@@ -1,4 +1,10 @@
 {
+  "2.53.0": {
+    "description": "No cabecalho do Guardian, o logo do aplicativo fica um pouco maior e bem ajustado, e as letras «T CONNECT» ficam muito mais visiveis.",
+    "changes": [
+      "Cabecalho do Guardian: logo maior e letras «T CONNECT» mais visiveis"
+    ]
+  },
   "2.52.0": {
     "description": "Na app Shield, o menu abre instantaneamente (deixa de reconstruir a tela toda) e passa a apresentar-se como um painel central em vidro vermelho com tiles, no estilo do menu profissional do Guardian — o botao do menu fica onde estava. Alem disso, todo o toque tem animacao (ripple).",
     "changes": [
