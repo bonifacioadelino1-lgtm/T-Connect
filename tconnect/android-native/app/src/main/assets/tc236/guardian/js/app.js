@@ -1,4 +1,4 @@
-window.TC_APP_VERSION='2.53.0';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
+window.TC_APP_VERSION='2.54.0';try{if(window.TCNativeApp&&window.TCNativeApp.getVersion){var _tcv=window.TCNativeApp.getVersion();if(_tcv)window.TC_APP_VERSION=_tcv;}}catch(e){}
 const tcTimeout=(p,ms=10000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado')),ms))]);
 const POS=[-25.9692,32.5732];
 const state={page:'overview',mapType:'roadmap',menuOpen:false,pairingBusy:false,pairingMessage:'',update:{auto:localStorage.getItem('tc_auto_updates')!=='0',checking:false,latest:null,error:''},events:JSON.parse(localStorage.getItem('tc_events')||'[]'),notifications:JSON.parse(localStorage.getItem('tc_notifications')||'[]'),search:'',authenticated:false,authMode:'login',loading:false,recoverySent:false,profile:null,devices:[],messages:[],calls:[],contactsList:[],appsList:[],contactStats:[],trailOn:false,commsSub:false,pairCode:'',pairLink:'',realtime:false,authError:'',lastLocation:null,mapTerminalEvents:JSON.parse(localStorage.getItem('tc_map_terminal_events')||'[]')};
@@ -857,6 +857,11 @@ async function tcCheckAndUpdate(){if(state.update.checking)return;await checkFor
 function openRelease(release){const u=release?.apk_url||release?.download_url;if(u)openExternal(u)}
 // Notas de versão (novidades) mostradas nas Definições → Atualizações.
 const TC_CHANGELOG={
+  '2.54.0':{changes:[
+    'Mapa: correcao para abrir em TODOS os Androids. Se a rotacao (dois dedos) nao for compativel com o telefone, o mapa abre na mesma sem rotacao, em vez de nao abrir',
+    'Corrige o mapa que ficava cinzento/nao abria quando o ecra ainda nao tinha tamanho (reajuste automatico)',
+    'Se o mapa falhar a iniciar, mostra um aviso onde se toca para tentar de novo'
+  ]},
   '2.53.0':{changes:[
     'No cabecalho do Guardian, o logo do app fica um pouco maior e bem ajustado, e as letras «T CONNECT» ficam muito mais visiveis'
   ]},

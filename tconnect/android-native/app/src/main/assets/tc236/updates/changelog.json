@@ -1,4 +1,12 @@
 {
+  "2.54.0": {
+    "description": "Correcao do mapa para abrir em todos os telefones Android. Em alguns aparelhos o gesto de rotacao (leaflet-rotate) fazia o mapa nao abrir; agora, se a rotacao nao for compativel, o mapa abre na mesma sem rotacao. Corrige tambem o mapa cinzento/que nao abria por falta de tamanho do ecra (reajuste automatico) e, se mesmo assim falhar, mostra um aviso onde se toca para tentar de novo.",
+    "changes": [
+      "Mapa abre em TODOS os Androids (rotacao com fallback)",
+      "Corrige mapa cinzento/que nao abria (reajuste automatico)",
+      "Aviso tocavel para tentar de novo se o mapa falhar"
+    ]
+  },
   "2.53.0": {
     "description": "No cabecalho do Guardian, o logo do aplicativo fica um pouco maior e bem ajustado, e as letras «T CONNECT» ficam muito mais visiveis.",
     "changes": [

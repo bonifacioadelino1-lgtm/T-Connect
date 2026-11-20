@@ -418,8 +418,34 @@
     // maxZoom 21: com tiles Google o satélite tem a MESMA qualidade/aproximação do Google Maps.
     // rotate/touchRotate: permite girar o mapa com DOIS DEDOS (gesto de rotação). bearing começa
     // a 0 (norte para cima); o utilizador roda à vontade e o botão "Centrar" repõe o norte.
-    const _rotateOpts = window.L.Map && window.L.Map.TouchRotate ? { rotate: true, touchRotate: true, rotateControl: false, bearing: 0 } : {};
-    map = window.L.map(el, Object.assign({ zoomControl: true, attributionControl: false, preferCanvas: true, minZoom: 3, maxZoom: 21, zoomSnap: 1, zoomDelta: 1, wheelDebounceTime: 40, wheelPxPerZoomLevel: 120 }, _rotateOpts)).setView(_startCenter, _startZoom);
+    const _baseOpts = { zoomControl: true, attributionControl: false, preferCanvas: true, minZoom: 3, maxZoom: 21, zoomSnap: 1, zoomDelta: 1, wheelDebounceTime: 40, wheelPxPerZoomLevel: 120 };
+    // ROBUSTEZ — TODOS os Androids: em alguns WebViews o plugin de rotação (leaflet-rotate)
+    // faz o L.map() rebentar e o mapa não abre. Por isso tentamos primeiro COM rotação e,
+    // se falhar, abrimos SEM rotação (mapa normal). Assim o mapa abre em qualquer telefone;
+    // os aparelhos compatíveis continuam a ter o gesto de rotação com dois dedos.
+    const _canRotate = !!(window.L.Map && window.L.Map.TouchRotate);
+    map = null;
+    try {
+      map = window.L.map(el, Object.assign({}, _baseOpts, _canRotate ? { rotate: true, touchRotate: true, rotateControl: false, bearing: 0 } : {}));
+    } catch (eRot) {
+      try { map = window.L.map(el, _baseOpts); } catch (eBase) { map = null; }
+    }
+    if (!map) {
+      // Não foi possível iniciar o mapa neste dispositivo: mostra um aviso que, ao tocar,
+      // tenta de novo (sem rebentar a página).
+      try {
+        if (el && !el.querySelector('.map-provider-error')) {
+          el.innerHTML = '<div class="map-provider-error"><b>Mapa indisponível</b><span>Não foi possível iniciar o mapa neste aparelho. Toque para tentar de novo.</span></div>';
+          const _rt = el.querySelector('.map-provider-error'); if (_rt) _rt.onclick = function(){ try{ mapContainer = null; el.innerHTML = ''; init(); }catch(_){} };
+        }
+      } catch(_){}
+      return;
+    }
+    try { map.setView(_startCenter, _startZoom); } catch(_){}
+    // Corrige o caso de o mapa aparecer cinzento/não abrir quando o contentor ainda não
+    // tinha tamanho real no momento do arranque (comum em alguns WebViews Android).
+    setTimeout(function(){ try{ map && map.invalidateSize(true); }catch(_){} }, 200);
+    setTimeout(function(){ try{ map && map.invalidateSize(true); }catch(_){} }, 650);
     const BLANK_TILE0 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
     roadLayer = window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxNativeZoom: 19,
