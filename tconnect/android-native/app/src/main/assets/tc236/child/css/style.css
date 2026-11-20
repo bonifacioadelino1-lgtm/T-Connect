@@ -263,3 +263,36 @@ body{background:#060d1e}
 .fg-foot .fg-restart{padding:8px 10px;font-size:12px}
 .fg-tip{margin:6px auto 0;font-size:11.5px}
 @media(max-height:680px){.fg-tip{display:none}.fg-board{--fg-size:min(94vw, calc(100dvh - 250px), 460px)}}
+
+/* ===================== TEMA SHIELD — bloom VERMELHO + vidro ===================== */
+.cm-bg{background:url(../../assets/wall-red.svg) center/cover no-repeat, linear-gradient(180deg,#1b0a0e,#0a0406) !important}
+.cm-a1,.cm-a2,.cm-a3{display:none !important} /* o bloom vem da imagem */
+.cm-stars{opacity:.25 !important}
+.cm-grid2{opacity:.25 !important}
+.cm-glow{background:radial-gradient(circle,rgba(255,70,96,.2),transparent 62%) !important}
+/* Cabeçalho «MINHA SEGURANÇA» mais visível */
+.child header .brand{font-size:21px !important;color:#ffffff !important;text-shadow:0 2px 12px rgba(0,0,0,.6)}
+.child header .brand span{color:#ff8a98 !important}
+.child-subtitle{color:#e3b9bf !important}
+/* Logótipo (medalhão vermelho) com moldura limpa */
+.brand-logo{box-shadow:0 10px 30px rgba(226,39,63,.3) !important}
+/* Título «PROTEÇÃO MÁXIMA» mais pequeno */
+.cm-title{font-size:17px !important;color:#ffe6ea !important}
+.cm-title b{font-size:24px !important;background:linear-gradient(90deg,#ff9aa6,#ff4d6a) !important;-webkit-background-clip:text !important;background-clip:text !important;color:transparent !important}
+/* Estado «Pronto» em vidro vermelho, letras legíveis */
+.cm-status{border:1px solid rgba(255,130,150,.4) !important;background:rgba(40,16,22,.55) !important;backdrop-filter:blur(14px) !important;-webkit-backdrop-filter:blur(14px) !important}
+.cm-st-txt{color:#ffffff !important}
+.cm-time{color:#ffd9de !important}
+.cm-bars i{background:#ff6b7d !important}
+.cm-status.off .cm-bars i{background:#8a5560 !important}
+.cm-sep{background:rgba(255,150,165,.35) !important}
+/* Aviso em vidro vermelho */
+.cm-notice{border:1px solid rgba(255,130,150,.3) !important;background:rgba(40,16,22,.5) !important;backdrop-filter:blur(14px) !important;-webkit-backdrop-filter:blur(14px) !important}
+.cm-notice p{color:#ffdde2 !important}
+.cm-notice p b{color:#ffffff !important}
+/* Remover os dois cartões de baixo (Hora/Estado) — ficam só na informação de cima */
+.cm-foot{display:none !important}
+/* Fundo vermelho em toda a app Child (inclui o ecrã de vinculação) */
+body{background:url(../../assets/wall-red.svg) center/cover no-repeat, radial-gradient(circle at 50% 15%,#3a0d14,#0a0406 60%) !important}
+/* Painéis/cartões de vinculação em vidro vermelho + acento vermelho */
+.linkbtn.active,.pairbtn.active,.tab.active{background:linear-gradient(145deg,#ff5563,#c3182a) !important;border-color:transparent !important;color:#fff !important}

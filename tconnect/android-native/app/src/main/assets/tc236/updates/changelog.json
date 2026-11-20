@@ -1,4 +1,13 @@
 {
+  "2.51.0": {
+    "description": "A app Shield (Child) passa a ter a interface com fundo bloom vermelho (como o do Guardian, mas vermelho) e painéis em vidro, com as letras bem visíveis: «MINHA SEGURANÇA» mais destacada, «PROTEÇÃO MÁXIMA» mais pequena, e os dois cartões de baixo removidos. O botão EMERGÊNCIA mantém a animação e o processamento da Shield mostra a animação de ligação em vermelho. No Guardian, a tela de processamento aparece depois do login.",
+    "changes": [
+      "Shield: fundo bloom vermelho + vidro, letras visíveis",
+      "«MINHA SEGURANÇA» destacada, «PROTEÇÃO MÁXIMA» menor, sem cartões de baixo",
+      "EMERGÊNCIA com animação; processamento da Shield em vermelho",
+      "Guardian: processamento depois do login"
+    ]
+  },
   "2.50.0": {
     "description": "O ícone da Shield (Child) passa a vermelho (o mesmo medalhão); o Guardian continua azul. O logótipo dentro das apps passa a ser o medalhão (azul no Guardian, vermelho na Child). A tela de arranque/processamento da Shield passa a mostrar a animação de ligação do T-Connect em vermelho, substituindo a antiga.",
     "changes": [
