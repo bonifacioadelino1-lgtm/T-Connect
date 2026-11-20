@@ -1,4 +1,11 @@
 {
+  "2.47.0": {
+    "description": "Novo ecrã de arranque animado do T-Connect: a ficha liga à tomada, o T forma-se dentro do medalhão, escreve-se «T-CONNECT» e aparecem os pontos a processar antes de abrir a app. Aparece nos dois modos (clássico e profissional); o modo clássico continua igual no resto.",
+    "changes": [
+      "Ecrã de arranque animado do T-Connect (ficha→tomada, T, «T-CONNECT», pontos)",
+      "Aparece nos dois modos; o clássico continua igual no resto"
+    ]
+  },
   "2.46.0": {
     "description": "O botão do menu fica mesmo ao centro da barra inferior (centro absoluto), bem separado dos ícones. A barra ficou mais transparente e com os ícones bem visíveis (Wi-Fi, bateria, notificações); o calendário foi removido para dar espaço. Os cartões de online, bateria e notificações saíram do topo — ficam só na barra de baixo. O mapa e o modo clássico ficam iguais.",
     "changes": [
